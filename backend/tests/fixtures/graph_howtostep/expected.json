@@ -1,0 +1,22 @@
+{
+  "name": "Weeknight Shakshuka",
+  "image": "https://example.com/shakshuka.jpg",
+  "author": "Sam Cook",
+  "ingredients": [
+    "1 can crushed tomatoes",
+    "4 eggs",
+    "1 onion, diced",
+    "2 tsp cumin"
+  ],
+  "steps": [
+    "Sauté the onion until soft.",
+    "Add tomatoes and cumin, simmer 10 minutes.",
+    "Crack eggs into the sauce and cover until set."
+  ],
+  "prep_time_minutes": 10,
+  "cook_time_minutes": 20,
+  "total_time_minutes": 30,
+  "yields": "4 servings",
+  "source_url": "https://example.com/recipe",
+  "site_name": "Food Blog"
+}

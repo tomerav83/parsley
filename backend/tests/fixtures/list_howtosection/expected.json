@@ -1,0 +1,25 @@
+{
+  "name": "Layered Beef Lasagna",
+  "image": "https://example.com/lasagna-1x1.jpg",
+  "author": "Test Kitchen",
+  "ingredients": [
+    "500g ground beef",
+    "12 lasagna sheets",
+    "700ml tomato passata",
+    "250g mozzarella"
+  ],
+  "steps": [
+    "Make the sauce",
+    "Brown the beef in a large pan.",
+    "Add passata and simmer 30 minutes.",
+    "Assemble",
+    "Layer sauce, sheets, and cheese in a baking dish.",
+    "Bake at 200C for 40 minutes."
+  ],
+  "prep_time_minutes": null,
+  "cook_time_minutes": null,
+  "total_time_minutes": 120,
+  "yields": "12 servings",
+  "source_url": "https://example.com/recipe",
+  "site_name": null
+}
