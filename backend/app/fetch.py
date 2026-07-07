@@ -6,11 +6,23 @@ import socket
 import httpx
 
 # Many recipe sites sit behind Cloudflare/WP firewalls that reject default
-# python client User-Agents; a real browser UA gets the same HTML a person would.
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-)
+# python client headers; a full browser-like header set gets the same HTML a
+# person would. (IP-level blocks are handled by the paste-HTML fallback, not here.)
+BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+}
 TIMEOUT_SECONDS = 10.0
 MAX_REDIRECTS = 5
 MAX_BYTES = 3 * 1024 * 1024
@@ -73,7 +85,7 @@ async def fetch_page(url: str) -> str:
     target = validate_url(url)
     async with httpx.AsyncClient(
         timeout=TIMEOUT_SECONDS,
-        headers={"User-Agent": USER_AGENT},
+        headers=BROWSER_HEADERS,
         follow_redirects=False,
     ) as client:
         for _ in range(MAX_REDIRECTS + 1):

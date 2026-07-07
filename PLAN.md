@@ -41,7 +41,7 @@ parsley/
 
 **API:** `POST /api/extract` with `{"url": "..."}` → normalized `Recipe` JSON:
 `{ name, image, author, ingredients: string[], steps: string[], prep_time_minutes, cook_time_minutes, total_time_minutes, yield, source_url, site_name }`
-Plus `GET /api/health`. FastAPI auto-serves OpenAPI docs at `/docs`.
+Plus `POST /api/extract-html` with `{"html": "...", "url": "..."}` — same extraction on user-pasted page source, for sites that block server-side fetching at the IP level (e.g. AllRecipes/People Inc. return 402 to datacenter IPs; the user's own browser can still open the page, so they paste it). And `GET /api/health`. FastAPI auto-serves OpenAPI docs at `/docs`.
 
 **Extraction pipeline** (`extractor.py`):
 1. Validate URL (http/https only; reject private/loopback hosts — SSRF guard).
@@ -109,7 +109,7 @@ Once the scaffold exists, wire the repo up so Claude Code sessions are productiv
 1. Activate pre-commit hooks locally (`pre-commit install`) and verify they run on all files.
 2. Extraction pipeline + normalization + pytest fixtures — the core value, done early.
 3. `POST /api/extract` route wiring + error codes + SSRF guard + rate limiting.
-4. Frontend UI: URL form + API client + RecipeCard components.
+4. Frontend UI: URL form + API client + RecipeCard components. Includes the paste-HTML fallback: on `site_blocked`/`fetch_failed`, offer "this site blocks automated readers — paste the page source instead" backed by `POST /api/extract-html`.
 5. Polish: loading/error states, print CSS, responsive layout.
 6. Dockerfile + compose, verify `docker compose up` end-to-end.
 7. CD wiring: deploy live demo from master (Render/Fly.io), enable branch protection + Dependabot.
