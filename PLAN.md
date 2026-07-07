@@ -68,8 +68,8 @@ Single page: URL input + submit → loading state → **RecipeCard** (title, ima
 ## Code quality & formatting
 
 - **Backend:** `ruff` for linting + formatting (single tool, replaces black/flake8/isort), config in `pyproject.toml`. `mypy` (or ruff's type-aware rules) optional stretch.
-- **Frontend:** `eslint` (typescript-eslint) + `prettier`, wired as `npm run lint` / `npm run format`.
-- **Pre-commit hooks:** `pre-commit` framework running ruff, prettier, and eslint on staged files — quality enforced locally before it ever reaches CI.
+- **Frontend:** `oxlint` (shipped with the Vite template) + `prettier`, wired as `npm run lint` / `npm run format`.
+- **Pre-commit hooks:** `pre-commit` framework running ruff and prettier on staged files — quality enforced locally before it ever reaches CI.
 - Unified entry points documented in CLAUDE.md/README: `make lint`, `make test`, `make format` (simple Makefile at repo root delegating to backend/frontend).
 
 ## Git workflow & CI/CD
@@ -77,7 +77,7 @@ Single page: URL input + submit → loading state → **RecipeCard** (title, ima
 - **Branch model:** trunk-based — `master` is always deployable; work happens on short-lived feature branches (`feat/...`, `fix/...`) merged via PR. Conventional Commits style messages (`feat:`, `fix:`, `chore:`) for a readable history.
 - **CI (GitHub Actions, `.github/workflows/ci.yml`):** on every PR and push to master:
   1. Backend: ruff check + pytest
-  2. Frontend: eslint + `tsc --noEmit` + vite build
+  2. Frontend: oxlint + prettier check + `tsc -b` + vite build
   3. Docker image builds successfully
   Branch protection on `master`: CI must pass before merge.
 - **CD (GitOps-style):** merge to `master` = deploy. Render/Fly.io auto-deploys from the master branch (or a `deploy.yml` workflow builds the image and triggers the deploy). The repo is the single source of truth for what's running — no manual deploy steps.
@@ -105,16 +105,16 @@ Once the scaffold exists, wire the repo up so Claude Code sessions are productiv
 
 ## Implementation order
 
-1. Scaffold backend (`uv init`, FastAPI skeleton, health route) + ruff config, commit.
-2. Set up tooling early: pre-commit hooks, Makefile, GitHub Actions CI skeleton — so every later step lands through the quality gate.
-3. Extraction pipeline + normalization + pytest fixtures — the core value, done early.
-4. `POST /api/extract` route wiring + error codes + SSRF guard + rate limiting.
-5. Scaffold frontend (Vite React-TS) with eslint/prettier, URL form + API client + RecipeCard.
-6. Polish: loading/error states, print CSS, responsive layout.
-7. Dockerfile + compose, verify `docker compose up` end-to-end.
-8. CD wiring: deploy live demo from master (Render/Fly.io), enable branch protection + Dependabot.
-9. README with screenshots + live demo link.
-10. Claude Code layer: replace CLAUDE.md placeholder with real commands, add format-on-edit hook + permission allowlist in `.claude/settings.json`, create the verify and add-fixture skills.
+0. ✅ **Scaffolding (done)** — backend (uv, FastAPI skeleton, `/api/health`, ruff config, pytest), frontend (Vite React-TS with oxlint + prettier), Makefile, `.pre-commit-config.yaml`, GitHub Actions CI. Merged to master.
+1. Activate pre-commit hooks locally (`pre-commit install`) and verify they run on all files.
+2. Extraction pipeline + normalization + pytest fixtures — the core value, done early.
+3. `POST /api/extract` route wiring + error codes + SSRF guard + rate limiting.
+4. Frontend UI: URL form + API client + RecipeCard components.
+5. Polish: loading/error states, print CSS, responsive layout.
+6. Dockerfile + compose, verify `docker compose up` end-to-end.
+7. CD wiring: deploy live demo from master (Render/Fly.io), enable branch protection + Dependabot.
+8. README with screenshots + live demo link.
+9. Claude Code layer: replace CLAUDE.md placeholder with real commands, add format-on-edit hook + permission allowlist in `.claude/settings.json`, create the verify and add-fixture skills.
 
 ## Verification
 

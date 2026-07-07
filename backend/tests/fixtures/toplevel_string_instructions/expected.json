@@ -1,0 +1,23 @@
+{
+  "name": "Grandma's Lemon Cake",
+  "image": "https://example.com/lemon-cake.jpg",
+  "author": "Jane Doe",
+  "ingredients": [
+    "2 cups flour",
+    "1 cup sugar",
+    "3 eggs",
+    "1 lemon, zested and juiced"
+  ],
+  "steps": [
+    "Preheat oven to 180C.",
+    "Mix dry ingredients.",
+    "Add eggs and lemon.",
+    "Bake for 45 minutes."
+  ],
+  "prep_time_minutes": 15,
+  "cook_time_minutes": 45,
+  "total_time_minutes": 60,
+  "yields": "8 servings",
+  "source_url": "https://example.com/recipe",
+  "site_name": null
+}
