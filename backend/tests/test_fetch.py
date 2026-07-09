@@ -8,11 +8,14 @@
 
 import socket
 
+import brotli
 import httpx
 import pytest
 import respx
+from httpx._decoders import SUPPORTED_DECODERS
 
 from app.fetch import (
+    BROWSER_HEADERS,
     MAX_BYTES,
     BlockedUrlError,
     FetchError,
@@ -164,3 +167,30 @@ async def test_oversized_page_rejected() -> None:
 
     with pytest.raises(FetchError, match="large"):
         await fetch_page("https://example.com/huge")
+
+
+# --- Content-Encoding ---
+
+
+def test_advertised_encodings_are_all_decodable() -> None:
+    """Every coding in Accept-Encoding must have an installed httpx decoder.
+    Advertising one we can't decode (e.g. br without the `brotli` dep) makes the
+    server send bytes we hand back undecoded — a silent failure, not an error."""
+    advertised = [c.strip() for c in BROWSER_HEADERS["Accept-Encoding"].split(",")]
+    assert advertised  # guard against an empty/renamed header
+    for coding in advertised:
+        assert coding in SUPPORTED_DECODERS, f"advertised {coding!r} has no installed decoder"
+
+
+@respx.mock
+async def test_brotli_body_is_decoded() -> None:
+    """A brotli-compressed response (what Cloudflare/WP sites commonly send) must
+    come back as decoded HTML, not raw compressed bytes."""
+    html = "<html><body>brotli recipe</body></html>"
+    respx.get("https://example.com/br").respond(
+        200,
+        headers={"Content-Encoding": "br"},
+        content=brotli.compress(html.encode()),
+    )
+
+    assert await fetch_page("https://example.com/br") == html

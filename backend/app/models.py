@@ -5,6 +5,11 @@ class ExtractRequest(BaseModel):
     url: HttpUrl
 
 
+class ExtractHtmlRequest(BaseModel):
+    html: str
+    url: HttpUrl
+
+
 class Recipe(BaseModel):
     name: str
     image: str | None = None

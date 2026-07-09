@@ -11,7 +11,7 @@ from slowapi.util import get_remote_address
 
 from app.extractor import RecipeNotFoundError, extract_recipe
 from app.fetch import FetchError, fetch_page
-from app.models import ErrorResponse, ExtractRequest, Recipe
+from app.models import ErrorResponse, ExtractHtmlRequest, ExtractRequest, Recipe
 
 FetchPage = Callable[[str], Awaitable[str]]
 
@@ -90,3 +90,17 @@ async def extract(
     url = str(payload.url)
     html = await fetch(url)
     return extract_recipe(html, url)
+
+
+@app.post(
+    "/api/extract-html",
+    response_model=Recipe,
+    responses={
+        422: {"model": ErrorResponse},
+    },
+)
+@limiter.limit("10/minute")
+async def extract_html(request: Request, payload: ExtractHtmlRequest) -> Recipe:
+    """Extract from user-pasted page source — the fallback for sites that block
+    server-side fetching at the IP level. No network fetch, so no SSRF surface."""
+    return extract_recipe(payload.html, str(payload.url))
