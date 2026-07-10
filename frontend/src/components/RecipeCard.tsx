@@ -12,6 +12,13 @@ function byline(recipe: Recipe): string {
   return [recipe.author, recipe.site_name].filter(Boolean).join(" — ");
 }
 
+// The image URL comes from scraped/pasted page markup, so treat it as untrusted:
+// only render real http(s) images, never javascript:/data: or other schemes.
+function safeImage(image: string | null): string | null {
+  if (!image) return null;
+  return /^https?:\/\//i.test(image) ? image : null;
+}
+
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const sections: CarouselSection[] = [
     {
@@ -28,22 +35,37 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
     },
   ];
 
+  const line = byline(recipe);
+  const image = safeImage(recipe.image);
+
   return (
     <article className="recipe-card">
-      {/* Title + timing pinned on top */}
-      <p className="station-kicker">station · recipe</p>
-      <h1 className="recipe-title">{recipe.name}</h1>
-      {byline(recipe) && <p className="recipe-source">{byline(recipe)}</p>}
-
-      <TimingRow recipe={recipe} />
-
-      {recipe.image && (
-        <img
-          className="recipe-image"
-          src={recipe.image}
-          alt={recipe.name}
-          loading="lazy"
-        />
+      {image ? (
+        // Photo-behind-glass banner: title + timing sit over the image behind a
+        // gradient scrim, reclaiming the height a stacked photo would cost.
+        <header className="recipe-hero">
+          <img
+            className="recipe-hero-img"
+            src={image}
+            alt={recipe.name}
+            loading="lazy"
+          />
+          <div className="recipe-hero-scrim" aria-hidden />
+          <div className="recipe-hero-body">
+            <p className="station-kicker on-hero">station · recipe</p>
+            <h1 className="recipe-title on-hero">{recipe.name}</h1>
+            {line && <p className="recipe-source on-hero">{line}</p>}
+            <TimingRow recipe={recipe} variant="chips" />
+          </div>
+        </header>
+      ) : (
+        // No photo: fall back to the pinned title + specimen timing strip.
+        <header className="recipe-head">
+          <p className="station-kicker">station · recipe</p>
+          <h1 className="recipe-title">{recipe.name}</h1>
+          {line && <p className="recipe-source">{line}</p>}
+          <TimingRow recipe={recipe} />
+        </header>
       )}
 
       {/* Ingredients ⇄ Method carousel */}

@@ -8,7 +8,7 @@ import {
 import { UrlForm } from "./components/UrlForm";
 import { RecipeCard } from "./components/RecipeCard";
 import { RecipeSkeleton } from "./components/RecipeSkeleton";
-import { ErrorBanner } from "./components/ErrorBanner";
+import { FloatingError } from "./components/FloatingError";
 import { PasteHtmlForm } from "./components/PasteHtmlForm";
 import { Leaf } from "./components/Leaf";
 import "./App.css";
@@ -44,19 +44,33 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState<ExtractError | null>(null);
+  // A failed paste has no further fallback, so it surfaces as the corner widget in
+  // its terminal (report / not now) state rather than an inline error on the paste
+  // screen. This flag tells FloatingError to open straight into that state.
+  const [pasteFailed, setPasteFailed] = useState(false);
+  // Bumped every time the paste screen is opened. Used as PasteHtmlForm's key so it
+  // remounts fresh each visit — otherwise its textarea keeps the previous HTML.
+  const [pasteSession, setPasteSession] = useState(0);
   const urlInputRef = useRef<HTMLInputElement>(null);
 
-  async function runUrl(target: string) {
+  // `isRetry` comes from the floating error widget's "Try again". On a retry we
+  // deliberately keep the current error set while the request is in flight, so
+  // the widget stays mounted and can tell a second failure apart from a fresh one
+  // (see FloatingError). A fresh run clears the error first.
+  async function runUrl(target: string, isRetry = false) {
     setLastUrl(target);
-    setError(null);
+    if (!isRetry) setError(null);
+    setPasteFailed(false);
     setRecipe(null);
     setLoading(true);
-    setRoute("recipe"); // slide in and show the skeleton immediately
+    // Stay on home while the form spinner runs; only slide once we actually
+    // have a recipe. Sliding early meant a failed extract slid in then back.
     try {
       setRecipe(await extractRecipe(target));
+      setError(null);
+      setRoute("recipe");
     } catch (err) {
-      setError(toExtractError(err));
-      setRoute("home"); // slide back; the error shows on the home screen
+      setError(toExtractError(err)); // surfaced by the floating widget on home
     } finally {
       setLoading(false);
     }
@@ -70,12 +84,16 @@ function App() {
   async function submitPaste(html: string) {
     setError(null);
     setLoading(true);
-    setRoute("recipe");
     try {
       setRecipe(await extractRecipeFromHtml(html, lastUrl));
+      setRoute("recipe"); // slide only once the paste actually yields a recipe
     } catch (err) {
+      // A failed paste is the end of the recovery road — no further fallback to
+      // offer. Return to the corner widget in its report-only terminal state
+      // instead of showing an inline error on the paste screen.
       setError(toExtractError(err));
-      setRoute("paste"); // stay on paste so the HTML isn't lost
+      setPasteFailed(true);
+      setRoute("home");
     } finally {
       setLoading(false);
     }
@@ -83,16 +101,21 @@ function App() {
 
   function backToSearch() {
     setError(null);
+    setPasteFailed(false);
+    setUrl(""); // "new search" starts from a clean field
     setRoute("home");
   }
 
   function openPaste() {
     setError(null);
+    setPasteFailed(false);
+    setPasteSession((n) => n + 1); // remount the paste form so its textarea is empty
     setRoute("paste");
   }
 
   function editLink() {
     setError(null);
+    setPasteFailed(false);
     setRoute("home");
     // wait for the slide before focusing so it lands on the visible field
     setTimeout(() => urlInputRef.current?.focus(), 260);
@@ -154,16 +177,6 @@ function App() {
               ))}
             </div>
 
-            {error && route === "home" && (
-              <ErrorBanner
-                error={error}
-                sourceUrl={lastUrl}
-                onPaste={openPaste}
-                onEdit={editLink}
-                onRetry={() => runUrl(lastUrl)}
-              />
-            )}
-
             <p className="trust">
               <Leaf className="trust-leaf" />
               Nothing stored. Just you and the recipe.
@@ -179,6 +192,7 @@ function App() {
         >
           <div className="paste-inner">
             <PasteHtmlForm
+              key={pasteSession}
               url={lastUrl}
               error={route === "paste" ? error : null}
               onSubmit={submitPaste}
@@ -225,6 +239,24 @@ function App() {
           </div>
         </section>
       </div>
+
+      {/* Extraction failures on the search flow surface here, as a floating
+          mascot fixed to the viewport corner. The paste screen keeps its own
+          inline error so the pasted HTML isn't lost. */}
+      {error && route === "home" && (
+        <FloatingError
+          error={error}
+          sourceUrl={lastUrl}
+          terminal={pasteFailed}
+          onPaste={openPaste}
+          onEdit={editLink}
+          onRetry={() => runUrl(lastUrl, true)}
+          onDismiss={() => {
+            setError(null);
+            setPasteFailed(false);
+          }}
+        />
+      )}
     </div>
   );
 }

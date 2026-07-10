@@ -1,7 +1,7 @@
 import type { ErrorCode } from "./api";
 
 // UI copy for each error code: a plain-language title (cause) and hint (fix),
-// plus which recovery affordances the ErrorBanner should offer.
+// plus which recovery affordances the error UI should offer.
 //
 // `unexpected` marks codes that indicate a likely bug on our side (as opposed to
 // expected outcomes like a blocked site or a page with no recipe). Only these
@@ -84,6 +84,62 @@ const ERROR_INFO: Record<ErrorCode, ErrorInfo> = {
 
 export function errorInfo(code: ErrorCode): ErrorInfo {
   return ERROR_INFO[code] ?? ERROR_INFO.unknown;
+}
+
+// Playful voice for the floating "sad parsley" widget — same facts as ERROR_INFO,
+// warmer wording. Kept separate so the paste-fallback screen can stay neutral and
+// technical while the corner sprite has personality. Recovery affordances still
+// come from errorInfo() above; this is copy only.
+export interface SpriteCopy {
+  title: string;
+  hint: string;
+}
+
+const SPRITE_COPY: Record<ErrorCode, SpriteCopy> = {
+  invalid_url: {
+    title: "That's not quite a link",
+    hint: "Paste the full web address — it should start with https://.",
+  },
+  blocked_url: {
+    title: "Can't open that address",
+    hint: "Parsley only opens public recipe pages — local and private addresses are off-limits. Try a public link.",
+  },
+  no_recipe: {
+    title: "Nothing recipe-shaped here",
+    hint: "We loaded the page but couldn't find a recipe. Make sure the link opens the recipe itself, not a homepage or list.",
+  },
+  site_blocked: {
+    title: "That site shut the door",
+    hint: "Some sites block automated readers. Open it yourself and paste the page's HTML — we'll read straight from that.",
+  },
+  fetch_failed: {
+    title: "Well, this is awkward",
+    hint: "That site wouldn't answer us. Want to try another way?",
+  },
+  rate_limited: {
+    title: "Whoa, slow down a sec",
+    hint: "That's a lot of requests in a row. Give it a minute, then try again.",
+  },
+  network: {
+    title: "Can't reach the kitchen",
+    hint: "Check your connection and give it another go.",
+  },
+  unknown: {
+    title: "Something went sideways",
+    hint: "That's on us — an unexpected hiccup. Try again, and tell us if it sticks around.",
+  },
+};
+
+// Shown once a retry has failed a second time and the widget collapses to just the
+// "Report on GitHub" action — reached only for `unexpected` codes with no paste
+// fallback (paste, when available, is kept so it outlives a failed retry).
+export const SPRITE_FAILED: SpriteCopy = {
+  title: "Yeah… still stuck",
+  hint: "Two tries, no response — that one's on us, not you.",
+};
+
+export function spriteCopy(code: ErrorCode): SpriteCopy {
+  return SPRITE_COPY[code] ?? SPRITE_COPY.unknown;
 }
 
 const REPO = "tomerav83/parsley";

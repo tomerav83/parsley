@@ -43,6 +43,7 @@
   --danger-bg: #fbf0ee;
   --danger-bd: #eac7c0;
   --shadow: 0 24px 60px -34px rgba(4, 120, 87, 0.45);
+  --shadow-soft: 0 14px 34px -22px rgba(4, 120, 87, 0.4);
 
   --sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: "Space Mono", ui-monospace, Consolas, monospace;
@@ -77,6 +78,7 @@
     --danger-bg: #231512;
     --danger-bd: #4a2620;
     --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
+    --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
   }
 }
 
