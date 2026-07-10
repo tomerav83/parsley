@@ -78,6 +78,26 @@ def test_malformed_url_rejected_by_request_validation() -> None:
     assert response.status_code == 422  # pydantic HttpUrl validation
 
 
+def test_extract_html_returns_recipe() -> None:
+    html = (FIXTURES / "toplevel_string_instructions" / "page.html").read_text()
+
+    response = client.post("/api/extract-html", json={"html": html, "url": URL})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["name"] == "Grandma's Lemon Cake"
+    assert body["source_url"] == URL
+
+
+def test_extract_html_without_recipe_returns_422() -> None:
+    html = (FIXTURES / "no_recipe.html").read_text()
+
+    response = client.post("/api/extract-html", json={"html": html, "url": URL})
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "no_recipe"
+
+
 def test_rate_limit_returns_429() -> None:
     override_fetch(html=(FIXTURES / "toplevel_string_instructions" / "page.html").read_text())
 

@@ -4,11 +4,13 @@ version = "0.1.0"
 description = "Parsley API — extract clean recipes from noisy recipe pages"
 requires-python = ">=3.12"
 dependencies = [
+    "brotli>=1.2.0",
     "fastapi>=0.139.0",
     "httpx>=0.28.1",
     "recipe-scrapers>=15.11.0",
     "slowapi>=0.1.10",
     "uvicorn[standard]>=0.50.2",
+    "zstandard>=0.25.0",
 ]
 
 [dependency-groups]

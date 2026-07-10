@@ -1,111 +1,130 @@
+/* ==========================================================================
+   Parsley — foundation: fonts, design tokens, base elements.
+   Art direction "Mise en place": emerald + amber, Inter + Space Mono, a faint
+   dotted station grid, squared precise geometry. Tokens are theme-aware
+   (light default, dark via prefers-color-scheme). Components read tokens only.
+   ========================================================================== */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-variable.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/SpaceMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Space Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/SpaceMono-Bold.woff2") format("woff2");
+}
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
+  /* palette — Fresh Emerald / Mise en place (light) */
+  --e: #059669; /* brand emerald */
+  --ed: #047857; /* emerald, stronger */
+  --amber: #b5620a; /* quantities & data accent */
+  --bg: #ffffff;
+  --txt: #141c17;
+  --mut: #5c6a62;
+  --bd: #e3e9e5;
+  --chip: #f1f6f3;
   --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --grid: rgba(5, 150, 105, 0.15); /* dotted station grid */
+  --danger: #cb4a3b;
+  --danger-bg: #fbf0ee;
+  --danger-bd: #eac7c0;
+  --shadow: 0 24px 60px -34px rgba(4, 120, 87, 0.45);
 
-  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
-  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "Space Mono", ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+  --curve: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --slide: 0.42s;
+
   color-scheme: light dark;
-  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--txt);
   background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  text-rendering: optimizeLegibility;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+    --e: #10b981;
+    --ed: #34d399;
+    --amber: #f5a623;
+    --bg: #0d1411;
+    --txt: #e9f1ec;
+    --mut: #8fa69b;
+    --bd: #233029;
+    --chip: #16231d;
+    --code-bg: #171c19;
+    --grid: rgba(16, 185, 129, 0.14);
+    --danger: #f0796a;
+    --danger-bg: #231512;
+    --danger-bd: #4a2620;
+    --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
   }
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+* {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  min-height: 100dvh;
+  /* the faint dotted "mise en place" station grid, drawn on the app ground */
+  background:
+    radial-gradient(var(--grid) 1px, transparent 1.5px) 0 0 / 20px 20px,
+    var(--bg);
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
 h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+h2,
+h3 {
+  color: var(--txt);
+  margin: 0;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
 p {
   margin: 0;
 }
 
-code,
-.counter {
+/* a small uppercase mono "station" label used across the UI */
+.mono-label {
   font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--mut);
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* respect reduced motion globally as a safety net */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.08s !important;
+  }
 }

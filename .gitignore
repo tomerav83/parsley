@@ -14,3 +14,6 @@ frontend/dist/
 # Local env
 .env
 CLAUDE.local.md
+
+# Dev service manager runtime (PIDs + logs)
+.run/

@@ -8,6 +8,11 @@ import httpx
 # Many recipe sites sit behind Cloudflare/WP firewalls that reject default
 # python client headers; a full browser-like header set gets the same HTML a
 # person would. (IP-level blocks are handled by the paste-HTML fallback, not here.)
+#
+# Accept-Encoding must only list codings httpx can decode — advertising one we
+# can't (e.g. brotli without the `brotli` dep) returns undecodable bytes, not an
+# error. gzip/deflate are built in; br/zstd come from the `brotli` and
+# `zstandard` deps. This matches what Chrome sends; a test guards the invariant.
 BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -17,7 +22,7 @@ BROWSER_HEADERS = {
         "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
     ),
     "Accept-Language": "en-US,en;q=0.9",
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, deflate, br, zstd",
     "Upgrade-Insecure-Requests": "1",
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
