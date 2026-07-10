@@ -1,4 +1,8 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
+
+# Recipe page source is rarely over ~1-2 MB; cap generously so a crafted or
+# accidental giant paste can't tie up the HTML parser (CPU/memory).
+MAX_HTML_BYTES = 5_000_000
 
 
 class ExtractRequest(BaseModel):
@@ -6,7 +10,7 @@ class ExtractRequest(BaseModel):
 
 
 class ExtractHtmlRequest(BaseModel):
-    html: str
+    html: str = Field(max_length=MAX_HTML_BYTES)
     url: HttpUrl
 
 

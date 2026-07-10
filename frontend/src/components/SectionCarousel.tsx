@@ -19,37 +19,82 @@ interface SectionCarouselProps {
   sections: CarouselSection[];
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
+// Scrollable list area for a card. The scrollbar is hidden (it would clash with
+// the framed card), so scrollability is signalled instead by fading the content
+// out at whichever edge has more beyond it: a bottom fade means "more below", a
+// top fade means "you've scrolled". Both vanish at the boundaries, so the fade
+// itself tells you where the list starts and ends. The fade lengths are CSS
+// custom props toggled via data-* here; App.css animates them.
+function CardBody({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ top: false, bottom: false });
 
-// Horizontal carousel for the recipe sections (Ingredients ⇄ Method). Motion is
-// LTR/RTL only. Driven by the segmented switch or a swipe; the viewport height
-// animates to the active slide so the card doesn't jump between sections of
-// different length. Non-active slides are aria-hidden and kept out of tab order.
+  const update = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const top = el.scrollTop > 2;
+    const bottom = el.scrollTop + el.clientHeight < el.scrollHeight - 2;
+    setEdges((prev) =>
+      prev.top === top && prev.bottom === bottom ? prev : { top, bottom },
+    );
+  }, []);
+
+  // Recompute when the list first lays out and whenever its size changes (window
+  // resize, section swap changing available height, fonts loading).
+  useLayoutEffect(() => update(), [update, children]);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [update]);
+
+  return (
+    <div
+      ref={ref}
+      className="cf-body"
+      data-fade-top={edges.top}
+      data-fade-bottom={edges.bottom}
+      onScroll={update}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Coverflow carousel for the recipe sections (Ingredients ⇄ Method). The active
+// section faces the reader head-on; the adjacent section recedes at an angle and
+// peeks from the side — signalling there's another section without arrows or
+// dots. Switch by swipe, ← / → keys, or by tapping the peeking card. The card
+// fills the height of the recipe frame; when a section is longer than that, its
+// list (.cf-body) scrolls internally so the hero and the page stay put.
+// Non-active panels are aria-hidden.
 export function SectionCarousel({ sections }: SectionCarouselProps) {
   const [index, setIndex] = useState(0);
-  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [height, setHeight] = useState<number | undefined>(undefined);
   const touchX = useRef<number | null>(null);
 
   const count = sections.length;
 
-  // Size the viewport to the active slide so the card animates between sections
-  // of different length instead of jumping.
-  const measure = useCallback(() => {
-    const el = slideRefs.current[index];
-    if (el) setHeight(el.offsetHeight);
-  }, [index]);
-
-  useLayoutEffect(() => {
-    measure();
-  }, [measure, sections]);
-
-  useEffect(() => {
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, [measure]);
-
   const go = (i: number) => setIndex(Math.max(0, Math.min(count - 1, i)));
+
+  // Left/Right arrows switch sections from anywhere on the page — no need to
+  // focus the carousel first. Ignore it while the user is typing in a field.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, [contenteditable='true']")) return;
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setIndex((i) => Math.min(count - 1, i + 1));
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setIndex((i) => Math.max(0, i - 1));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [count]);
 
   const onTouchStart = (e: TouchEvent) => {
     touchX.current = e.touches[0].clientX;
@@ -63,52 +108,37 @@ export function SectionCarousel({ sections }: SectionCarouselProps) {
 
   return (
     <div className="carousel">
-      <div className="segbar" role="tablist" aria-label="Recipe sections">
-        {sections.map((s, i) => (
-          <button
-            key={s.key}
-            role="tab"
-            type="button"
-            aria-selected={i === index}
-            className="seg"
-            onClick={() => go(i)}
-          >
-            <b>{pad(i + 1)}</b> · {s.label}
-          </button>
-        ))}
-      </div>
-
       <div
         className="viewport"
-        style={{ height }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
+        role="group"
+        aria-label="Recipe sections — use arrow keys to switch"
       >
-        <div
-          className="track"
-          style={{
-            width: `${count * 100}%`,
-            transform: `translateX(-${(index * 100) / count}%)`,
-          }}
-        >
-          {sections.map((s, i) => (
-            <div
-              key={s.key}
-              className="slide"
-              style={{ width: `${100 / count}%` }}
-              ref={(el) => {
-                slideRefs.current[i] = el;
-              }}
-              role="tabpanel"
-              aria-hidden={i !== index}
-            >
-              <p className="slabel">
-                <span>{s.label}</span>
-                <span>{s.badge}</span>
-              </p>
-              {s.content}
-            </div>
-          ))}
+        <div className="stage">
+          {sections.map((s, i) => {
+            const active = i === index;
+            // The inactive section sits on the side it lives on relative to the
+            // active one, so the peek points toward where it'll come from.
+            const pos = active ? "is-active" : i < index ? "peek-l" : "peek-r";
+            return (
+              <div
+                key={s.key}
+                className={`cf-panel ${pos}`}
+                role="tabpanel"
+                aria-hidden={!active}
+                onClick={active ? undefined : () => go(i)}
+              >
+                <div className="cf-card">
+                  <p className="slabel">
+                    <span>{s.label}</span>
+                    <span>{s.badge}</span>
+                  </p>
+                  <CardBody>{s.content}</CardBody>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
