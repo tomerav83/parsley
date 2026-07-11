@@ -1,0 +1,35 @@
+# Local development environment. `docker compose up` (or `make start`) runs the
+# backend with uvicorn --reload and the frontend with Vite HMR, both in containers
+# with the source live-mounted. Edit files on the host, see changes immediately.
+#
+# This is for DEV. Production is Vercel (see DEPLOY.md); single-container
+# self-hosting is the top-level Dockerfile.
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./backend:/app # live source for --reload
+    environment:
+      # The browser reaches the API same-origin through the Vite proxy, so CORS
+      # isn't strictly needed here; set for parity and direct /docs access.
+      CORS_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app # live source for HMR
+      - /app/node_modules # keep the image's node_modules, don't shadow with host
+    environment:
+      # In-container the Vite proxy must reach the backend by its compose service
+      # name, not localhost (see frontend/vite.config.ts VITE_API_PROXY hook).
+      VITE_API_PROXY: http://backend:8000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend

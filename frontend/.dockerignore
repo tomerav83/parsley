@@ -1,0 +1,7 @@
+# Keep the dev build context (frontend/) lean — node_modules is reinstalled in
+# the image, dist is a build artifact.
+node_modules
+dist
+.env
+.env.*
+!.env.example

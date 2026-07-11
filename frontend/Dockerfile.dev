@@ -1,0 +1,12 @@
+# Dev image for the SPA. node_modules is baked in; the source is bind-mounted by
+# docker-compose at runtime so Vite HMR picks up edits live. This is a dev image
+# — in production the SPA is built and served by the multi-stage ../Dockerfile.
+FROM node:22-slim
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+EXPOSE 5173
+# --host exposes the dev server outside the container so the port mapping works.
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

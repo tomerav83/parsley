@@ -27,9 +27,11 @@ app = FastAPI(title="Parsley", description="Extract clean recipes from noisy rec
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Browser cross-origin access is only needed in dev, where the Vite dev server
-# runs on its own origin. In production the SPA is served by this app (same
-# origin), so CORS_ORIGINS stays unset and no cross-origin access is granted.
+# Cross-origin access is enabled by setting CORS_ORIGINS to the frontend origin(s),
+# comma-separated. Needed in the production split deploy where the SPA and API are
+# separate hosts (two Vercel projects). In dev the browser reaches the API through
+# the Vite proxy, so it's same-origin regardless — CORS_ORIGINS is set in compose
+# only for parity / direct API access.
 cors_origins = [o for o in os.environ.get("CORS_ORIGINS", "").split(",") if o]
 if cors_origins:
     app.add_middleware(
