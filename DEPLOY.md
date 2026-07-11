@@ -2,34 +2,46 @@
 
 Parsley is a React SPA (`frontend/`) talking to a FastAPI backend (`backend/`).
 
-- **Production → Vercel**, as two independent projects (frontend + backend). A
-  frontend change doesn't redeploy the backend and vice versa.
+- **Production → Vercel**, as one project with two [services](https://vercel.com/docs/services)
+  (frontend + backend) defined in the root `vercel.json`. Vercel builds each
+  service separately, so a frontend-only change doesn't rebuild the backend.
 - **Local development → Docker Compose** (`make start`), with hot reload for both
   services. See [Local development](#local-development) below.
 
-The frontend is origin-agnostic: it calls **relative** `/api/*` by default and
-only calls an absolute URL when `VITE_API_BASE` is set — so the split deploy needs
-configuration, not code changes.
+Everything is **same-origin**: the SPA calls **relative** `/api/*`, and a rewrite
+routes `/api` to the backend service. No `VITE_API_BASE`, no CORS.
 
 ---
 
-## Production — split deploy on Vercel (two projects)
+## Production — Vercel (single project, two services)
 
-Both projects live in this one repo; each has its own **Root Directory** so their
-deploys are independent.
+The root `vercel.json` declares both services and the rewrites that expose them:
 
-### 1. Backend project (`parsley-api`)
+```jsonc
+{
+  "services": {
+    "frontend": { "root": "frontend", "framework": "vite" },
+    "backend": {
+      "root": "backend",
+      "framework": "fastapi",
+      "entrypoint": "app.main:app",       // FastAPI app is at backend/app/main.py
+      "functions": { "app/main.py": { "maxDuration": 30 } }  // ~10s fetch headroom
+    }
+  },
+  "rewrites": [
+    { "source": "/api(/.*)?", "destination": { "service": "backend" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
+  ]
+}
+```
 
-- **Root Directory:** `backend`
-- Vercel auto-detects FastAPI: it finds the `app` instance in `app/main.py` (a
-  supported entrypoint) and installs `requirements.txt`. No entrypoint shim or
-  rewrites are needed — the app's own `/api/*` routes are served directly.
-- `backend/vercel.json` sets the function `maxDuration` to 30s so a slow page
-  fetch (~10s) has headroom.
-- **Environment variable:**
-  - `CORS_ORIGINS` = the frontend's URL, e.g. `https://parsley-web.vercel.app`
-    (comma-separated if more than one). This switches on the CORS middleware in
-    `app/main.py`.
+- One Vercel project, pointed at the repo root. Import it and deploy — the
+  services and routing come from `vercel.json`.
+- The backend installs `backend/requirements.txt` (see the regeneration note
+  below); the frontend builds with Vite.
+- Because both services share one origin, there is **no env var to set** for the
+  app to work — the frontend's relative `/api/*` calls are rewritten to the
+  backend service.
 
 > ⚠️ **Rate limiting is degraded on serverless.** `app/main.py` uses `slowapi`
 > with in-memory counters. On Vercel Functions those counters aren't shared
@@ -37,34 +49,16 @@ deploys are independent.
 > best-effort. Fine for a low-traffic demo; for real enforcement, move slowapi to
 > a shared store (e.g. Upstash Redis via `storage_uri`).
 
-### 2. Frontend project (`parsley-web`)
+> **Note on `entrypoint`.** `app.main:app` is a module:attribute spec pointing at
+> the `app` instance in `backend/app/main.py`. If the first deploy can't find the
+> app, that's the value to double-check.
 
-- **Root Directory:** `frontend`
-- Vercel auto-detects Vite (`npm run build` → `dist`).
-- **Environment variable:**
-  - `VITE_API_BASE` = the backend's URL, e.g. `https://parsley-api.vercel.app`
-    (no trailing slash). Baked in at build time; changing it needs a rebuild.
+### First-deploy checklist
 
-### 3. Make the deploys independent
-
-Setting each project's Root Directory already scopes most builds. To be certain a
-push touching only the other side is skipped, set each project's **Ignored Build
-Step** (Settings → Git):
-
-- `parsley-web`: `git diff --quiet HEAD^ HEAD -- frontend`
-- `parsley-api`: `git diff --quiet HEAD^ HEAD -- backend`
-
-(The build is skipped when the command exits `0`, i.e. when that directory has no
-changes.)
-
-### 4. First-deploy checklist
-
-1. Deploy `parsley-api`, note its URL.
-2. Set `VITE_API_BASE` on `parsley-web` to that URL; deploy it, note its URL.
-3. Set `CORS_ORIGINS` on `parsley-api` to the `parsley-web` URL; redeploy the API.
-4. Open the frontend URL and extract a recipe. Watch the api project's function
-   logs on the first request — cold-start import and page-fetch timing are the two
-   things worth eyeballing.
+1. Import the repo as one Vercel project (root directory = repo root).
+2. Deploy. Open the deployment URL and extract a recipe.
+3. Watch the backend service's function logs on the first request — cold-start
+   import and page-fetch timing are the two things worth eyeballing.
 
 ---
 
