@@ -28,10 +28,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Cross-origin access is enabled by setting CORS_ORIGINS to the frontend origin(s),
-# comma-separated. Needed in the production split deploy where the SPA and API are
-# separate hosts (two Vercel projects). In dev the browser reaches the API through
-# the Vite proxy, so it's same-origin regardless — CORS_ORIGINS is set in compose
-# only for parity / direct API access.
+# comma-separated. Not needed in the default deploys — on Vercel the SPA and API
+# share one origin (a rewrite routes /api to the backend service), and in dev the
+# browser reaches the API through the Vite proxy — so it stays unset unless the
+# frontend is served from a different origin than this API.
 cors_origins = [o for o in os.environ.get("CORS_ORIGINS", "").split(",") if o]
 if cors_origins:
     app.add_middleware(
