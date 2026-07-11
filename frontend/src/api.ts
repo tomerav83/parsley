@@ -1,6 +1,11 @@
-// Typed client for the Parsley extraction API. Calls are relative (/api/*) so
-// the app works on any origin it's served from — in production one container
-// serves both the SPA and the API; in dev Vite proxies /api to the backend.
+// Typed client for the Parsley extraction API.
+//
+// Paths are relative (/api/*) by default, which covers same-origin deploys (the
+// single Docker container serving SPA + API) and dev (Vite proxies /api to the
+// backend). When the frontend is hosted separately from the API — the split
+// Vercel deploy — set VITE_API_BASE to the API origin at build time and calls go
+// there directly (CORS is enabled on the backend for the frontend origin).
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 export interface Recipe {
   name: string;
@@ -80,7 +85,7 @@ async function parseError(response: Response): Promise<ExtractError> {
 async function postExtract(path: string, payload: unknown): Promise<Recipe> {
   let response: Response;
   try {
-    response = await fetch(path, {
+    response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
