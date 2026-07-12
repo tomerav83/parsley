@@ -1351,13 +1351,39 @@
     transform: none;
   }
 
-  /* The one-step-at-a-time reel gets a short panel on a phone (the hero eats a
-     lot of the viewport), so a long step overflowed the fixed card and clipped.
-     Tighten the step type, number and padding here so more of a step fits with
-     some breathing room. Desktop type is untouched. */
+  /* The one-step-at-a-time reel can't hold a long step in the short panel a
+     phone leaves under the hero, so it clipped. On mobile, unfurl the coverflow
+     into a scrollable stack of step cards — every step fully visible, the panel
+     scrolls (the same move print makes). The peek cards are hidden at this width
+     anyway, so the reel's depth is nothing to lose here. */
+  .step-reel {
+    display: block;
+    height: auto;
+  }
+  .reel-stage {
+    position: static;
+    perspective: none;
+    overflow: visible;
+    height: auto;
+  }
   .reel-card {
+    position: static !important;
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 0 12px !important;
     padding: 15px;
     gap: 6px;
+    cursor: default;
+  }
+  /* No single "active" step in a flat list — keep cards uniform so the emerald
+     highlight doesn't flicker around as swipe/tap changes the internal index. */
+  .reel-card.on {
+    border-color: var(--bd);
+    box-shadow: none;
   }
   .reel-num {
     font-size: 23px;
