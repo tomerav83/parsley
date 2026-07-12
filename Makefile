@@ -1,10 +1,4 @@
-.PHONY: dev-backend dev-frontend docker-config start stop restart status logs lint format test build
-
-dev-backend:
-	cd backend && CORS_ORIGINS=http://localhost:5173 uv run uvicorn app.main:app --reload
-
-dev-frontend:
-	cd frontend && npm run dev
+.PHONY: docker-config start stop restart rebuild status logs lint format test build
 
 # Run every `docker compose` command against a project-local Docker config with
 # credential helpers stripped, so builds work regardless of the global ~/.docker
@@ -21,7 +15,11 @@ docker-config:
 # Dockerized dev environment (backend + frontend with hot reload) via
 # docker-compose.yml. Pass S=backend|frontend to target a single service,
 # e.g. `make restart S=backend` or `make logs S=frontend`.
-# For a non-Docker fallback, use `make dev-backend` / `make dev-frontend`.
+#
+# `make restart` only bounces the existing containers — source edits are already
+# picked up by hot reload, so a plain restart is fine day to day. When a change
+# needs a fresh image (new dependency, Dockerfile.dev edit), use `make rebuild`
+# instead, which rebuilds and recreates the service(s).
 
 # Printed after a (re)start so the app is one click away — skipped when only the
 # backend was targeted (S=backend). Most terminals linkify the http:// URL.
@@ -36,6 +34,12 @@ stop: docker-config
 
 restart: docker-config
 	docker compose restart $(S)
+	@$(FE_URL)
+
+# Like restart, but rebuilds the image(s) first — for changes a plain restart
+# won't pick up (new dependencies, Dockerfile.dev edits).
+rebuild: docker-config
+	docker compose up -d --build $(S)
 	@$(FE_URL)
 
 status: docker-config

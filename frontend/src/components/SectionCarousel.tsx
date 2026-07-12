@@ -108,6 +108,23 @@ export function SectionCarousel({ sections }: SectionCarouselProps) {
 
   return (
     <div className="carousel">
+      {/* Explicit switcher. The coverflow's peeking card is the affordance on
+          wide screens, but it's flattened away on narrow ones (App.css), so this
+          segmented control is what switches sections there. Hidden on desktop. */}
+      <div className="cf-tabs" role="tablist" aria-label="Recipe sections">
+        {sections.map((s, i) => (
+          <button
+            key={s.key}
+            type="button"
+            role="tab"
+            className="cf-tab"
+            aria-selected={i === index}
+            onClick={() => go(i)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
       <div
         className="viewport"
         onTouchStart={onTouchStart}

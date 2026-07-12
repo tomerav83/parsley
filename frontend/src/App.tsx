@@ -11,6 +11,7 @@ import { RecipeSkeleton } from "./components/RecipeSkeleton";
 import { FloatingError } from "./components/FloatingError";
 import { PasteHtmlForm } from "./components/PasteHtmlForm";
 import { Leaf } from "./components/Leaf";
+import { SprigsBackground } from "./components/SprigsBackground";
 import "./App.css";
 
 function toExtractError(err: unknown): ExtractError {
@@ -22,12 +23,6 @@ function toExtractError(err: unknown): ExtractError {
 // forward move (higher index) enters from the right; back exits to the right.
 type Route = "home" | "paste" | "recipe";
 const ORDER: Record<Route, number> = { home: 0, paste: 1, recipe: 2 };
-
-const EXAMPLES = [
-  { label: "Roast chicken", url: "https://www.seriouseats.com/roast-chicken" },
-  { label: "Miso pasta", url: "https://smittenkitchen.com/miso-pasta" },
-  { label: "Chocolate tart", url: "https://www.bonappetit.com/chocolate-tart" },
-];
 
 function hostOf(url: string): string {
   try {
@@ -121,11 +116,6 @@ function App() {
     setTimeout(() => urlInputRef.current?.focus(), 260);
   }
 
-  function pickExample(exampleUrl: string) {
-    setUrl(exampleUrl);
-    runUrl(exampleUrl);
-  }
-
   function screenClass(name: Route): string {
     const delta = ORDER[name] - ORDER[route];
     const pos = delta === 0 ? "is-active" : delta < 0 ? "is-left" : "is-right";
@@ -134,6 +124,7 @@ function App() {
 
   return (
     <div className="app">
+      <SprigsBackground />
       <div className="screens">
         {/* HOME */}
         <section
@@ -161,21 +152,6 @@ function App() {
               loading={loading}
               inputRef={urlInputRef}
             />
-
-            <div className="examples">
-              <span className="examples-label">try</span>
-              {EXAMPLES.map((ex) => (
-                <button
-                  key={ex.url}
-                  type="button"
-                  className="example"
-                  onClick={() => pickExample(ex.url)}
-                  disabled={loading}
-                >
-                  {ex.label}
-                </button>
-              ))}
-            </div>
 
             <p className="trust">
               <Leaf className="trust-leaf" />
