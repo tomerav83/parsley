@@ -1325,13 +1325,8 @@
 
   /* Flatten the coverflow: a narrow viewport can't fit the active card AND a
      tidy sliver of the next one, so the receded 3-D card bleeds a legible strip
-     out the side and reads as a rendering glitch. Drop the 3-D swing, let the
-     active card fill the width, and switch sections via the .cf-tabs control
-     (which appears here) or a swipe — same treatment as reduced-motion/print. */
-  .cf-tabs {
-    display: flex;
-    margin-bottom: 14px;
-  }
+     out the side and reads as a rendering glitch. Drop the 3-D swing and let the
+     active card fill the width; sections switch by horizontal swipe. */
   .viewport {
     perspective: none;
   }
@@ -1351,39 +1346,16 @@
     transform: none;
   }
 
-  /* The one-step-at-a-time reel can't hold a long step in the short panel a
-     phone leaves under the hero, so it clipped. On mobile, unfurl the coverflow
-     into a scrollable stack of step cards — every step fully visible, the panel
-     scrolls (the same move print makes). The peek cards are hidden at this width
-     anyway, so the reel's depth is nothing to lose here. */
-  .step-reel {
-    display: block;
-    height: auto;
-  }
-  .reel-stage {
-    position: static;
-    perspective: none;
-    overflow: visible;
-    height: auto;
+  /* Reclaim height for the step reel: the tab bar duplicated the card's own
+     "INGREDIENTS / METHOD" header, so drop it on mobile and give that space to
+     the card. The in-card label stays as the section indicator, and horizontal
+     swipe switches sections. Type is tightened a touch so a longer step fits. */
+  .cf-tabs {
+    display: none;
   }
   .reel-card {
-    position: static !important;
-    transform: none !important;
-    opacity: 1 !important;
-    filter: none !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    margin: 0 0 12px !important;
     padding: 15px;
     gap: 6px;
-    cursor: default;
-  }
-  /* No single "active" step in a flat list — keep cards uniform so the emerald
-     highlight doesn't flicker around as swipe/tap changes the internal index. */
-  .reel-card.on {
-    border-color: var(--bd);
-    box-shadow: none;
   }
   .reel-num {
     font-size: 23px;
