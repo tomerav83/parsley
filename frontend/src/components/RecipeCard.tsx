@@ -1,6 +1,6 @@
 import type { Recipe } from "../api";
 import { IngredientList } from "./IngredientList";
-import { StepList } from "./StepList";
+import { StepReel } from "./StepReel";
 import { TimingRow } from "./TimingRow";
 import { SectionCarousel, type CarouselSection } from "./SectionCarousel";
 
@@ -8,8 +8,27 @@ interface RecipeCardProps {
   recipe: Recipe;
 }
 
+// Collapse "Dine & Dish", "Dine and Dish", "dine  dish" to one canonical form so
+// author and site_name that are really the same name get deduped, not printed twice.
+function canonical(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
 function byline(recipe: Recipe): string {
-  return [recipe.author, recipe.site_name].filter(Boolean).join(" — ");
+  const parts: string[] = [];
+  const seen = new Set<string>();
+  for (const value of [recipe.author, recipe.site_name]) {
+    if (!value) continue;
+    const key = canonical(value);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    parts.push(value);
+  }
+  return parts.join(" — ");
 }
 
 // The image URL comes from scraped/pasted page markup, so treat it as untrusted:
@@ -31,7 +50,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       key: "method",
       label: "Method",
       badge: `${recipe.steps.length} steps`,
-      content: <StepList steps={recipe.steps} />,
+      content: <StepReel steps={recipe.steps} />,
     },
   ];
 

@@ -170,43 +170,6 @@
   }
 }
 
-/* example chips */
-.examples {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-  margin-top: 16px;
-}
-.examples-label {
-  font-family: var(--mono);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--mut);
-}
-.example {
-  font-family: var(--mono);
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--txt);
-  background: var(--chip);
-  border: 1px solid var(--bd);
-  border-radius: 999px;
-  padding: 6px 13px;
-  transition:
-    border-color 0.15s,
-    transform 0.1s;
-}
-.example:hover:not(:disabled) {
-  border-color: var(--e);
-  transform: translateY(-1px);
-}
-.example:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
 .trust {
   display: inline-flex;
   align-items: center;
@@ -923,6 +886,37 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
+  flex-direction: column;
+}
+
+/* Segmented section switcher. Hidden on wide screens (the coverflow peek is the
+   affordance there); revealed on narrow screens where the coverflow is flattened. */
+.cf-tabs {
+  display: none;
+}
+.cf-tab {
+  flex: 1 1 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 9px 8px;
+  border: 1.5px solid var(--bd);
+  background: transparent;
+  color: var(--mut);
+  cursor: pointer;
+}
+.cf-tab:first-child {
+  border-radius: 8px 0 0 8px;
+}
+.cf-tab:last-child {
+  border-radius: 0 8px 8px 0;
+  border-left-width: 0;
+}
+.cf-tab[aria-selected="true"] {
+  background: var(--e);
+  border-color: var(--e);
+  color: #fff;
 }
 .viewport {
   /* --cf-pad reserves shadow breathing room; --cf-gutter reserves side room for
@@ -1075,15 +1069,24 @@
 }
 
 /* ingredients — mono amber quantities */
+/* One shared 3-track grid for the whole list (checkbox · quantity · name) rather
+   than a grid per row. The quantity track is `auto`, so it sizes to the *widest*
+   quantity across every row — long amounts like "1/4-1/2 teaspoon" stay on one
+   line instead of wrapping, and because the track is shared, every ingredient
+   name still lines up in the third column. Each <li> re-adopts these tracks via
+   `subgrid` so the row keeps its own box (and dotted separator). */
 .ilist {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: 20px auto 1fr;
+  column-gap: 9px;
 }
 .ilist li {
   display: grid;
-  grid-template-columns: 20px 84px 1fr;
-  gap: 9px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: baseline;
   padding: 8px 0;
   border-bottom: 1px dotted var(--bd);
@@ -1091,8 +1094,10 @@
 .ilist li:last-child {
   border-bottom: 0;
 }
-.ilist li.ilist-noqty {
-  grid-template-columns: 20px 1fr;
+/* No leading amount: leave the quantity track empty and put the name in column 3
+   so it stays aligned with the quantified rows. */
+.ilist li.ilist-noqty .ilist-name {
+  grid-column: 3;
 }
 .ilist input {
   width: 16px;
@@ -1105,6 +1110,7 @@
   font-size: 12.5px;
   color: var(--amber);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .ilist-name {
   font-size: 15px;
@@ -1119,37 +1125,103 @@
   color: var(--mut);
 }
 
-/* method — leading-zero mono numbers */
-.step-list {
-  list-style: none;
-  counter-reset: step;
-  margin: 0;
-  padding: 0;
-}
-.step-list li {
+/* method — vertical coverflow ("Depth Reel"). One step faces the reader while the
+   neighbouring steps recede up (done) and down (upcoming); StepReel positions the
+   cards by their offset from the active one. The reel fills the section body and
+   clips its own peeking cards, so nothing spills into the card's scroll area. */
+.step-reel {
+  height: 100%;
+  min-height: 0;
   display: flex;
-  gap: 13px;
-  padding: 0 0 14px;
+  flex-direction: column;
 }
-.step-list li:last-child {
-  padding-bottom: 0;
+.reel-stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  perspective: 1000px;
+  overflow: hidden;
+  outline: none;
+  touch-action: pan-y;
 }
-.step-list li::before {
-  counter-increment: step;
-  content: counter(step, decimal-leading-zero);
+/* Focus lands on the stage (the keyboard target), but outlining the whole stage
+   drew a stray emerald rectangle whose bottom edge showed in the gap below the
+   centred card. Show focus on the active card itself instead. */
+.reel-stage:focus-visible {
+  outline: none;
+}
+.reel-stage:focus-visible .reel-card.on {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--e) 32%, transparent),
+    var(--shadow-soft);
+}
+/* Each step is a card lifted off the section's tinted station grid. inset:0 +
+   margin:auto centres it; StepReel's inline transform then flings it to its
+   offset position. */
+.reel-card {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: max-content;
+  min-height: 60%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 2px solid var(--bd);
+  border-radius: 14px;
+  background: var(--bg);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transition:
+    transform var(--slide) var(--curve),
+    opacity var(--slide) var(--curve),
+    filter var(--slide) var(--curve);
+}
+.reel-card.on {
+  border-color: color-mix(in srgb, var(--e) 55%, var(--bd));
+  box-shadow: var(--shadow-soft);
+}
+.reel-card:not(.on) {
+  cursor: pointer;
+}
+.reel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.reel-num {
   font-family: var(--mono);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 30px;
+  line-height: 1;
   color: var(--e);
-  flex: 0 0 auto;
-  padding-top: 1px;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.step-list p {
+.reel-body {
+  margin: 0;
   font-size: 15px;
   line-height: 1.55;
+  color: var(--txt);
 }
-
+.reel-timer {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, var(--bd));
+  padding: 5px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
 .recipe-footer {
   flex: 0 0 auto;
   margin-top: 20px;
@@ -1233,6 +1305,10 @@
   .sk {
     animation: none;
   }
+  /* reel: quiet crossfade between steps — keep depth, drop the swing */
+  .reel-card {
+    transition: opacity 0.14s ease;
+  }
 }
 
 /* small screens */
@@ -1245,6 +1321,34 @@
   }
   .recipe-scroll {
     padding: 22px 18px 34px;
+  }
+
+  /* Flatten the coverflow: a narrow viewport can't fit the active card AND a
+     tidy sliver of the next one, so the receded 3-D card bleeds a legible strip
+     out the side and reads as a rendering glitch. Drop the 3-D swing, let the
+     active card fill the width, and switch sections via the .cf-tabs control
+     (which appears here) or a swipe — same treatment as reduced-motion/print. */
+  .cf-tabs {
+    display: flex;
+    margin-bottom: 14px;
+  }
+  .viewport {
+    perspective: none;
+  }
+  .cf-panel {
+    left: 0;
+    right: 0;
+    transition: opacity 0.18s var(--curve);
+  }
+  .cf-panel.peek-l,
+  .cf-panel.peek-r {
+    transform: none;
+    opacity: 0;
+    filter: none;
+    pointer-events: none;
+  }
+  .cf-panel.is-active {
+    transform: none;
   }
 }
 
@@ -1405,8 +1509,42 @@
     break-after: avoid; /* section heading never orphaned from its first rows */
   }
   .ilist li,
-  .step-list li {
+  .reel-card {
     break-inside: avoid; /* don't split a single ingredient/step across pages */
+  }
+
+  /* Unfurl the Method reel: the one-step-at-a-time coverflow becomes a plain
+     numbered list so every step prints, not just the one that happened to be
+     facing the reader. */
+  .step-reel {
+    display: block !important;
+    height: auto !important;
+  }
+  .reel-stage {
+    position: static !important;
+    perspective: none !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .reel-card {
+    position: static !important;
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    min-height: 0 !important;
+    margin: 0 0 14px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    flex-direction: row !important;
+    gap: 13px !important;
+  }
+  .reel-num {
+    font-size: 13px !important;
+    padding-top: 1px;
+  }
+  .reel-timer {
+    display: none !important;
   }
 
   /* Footer: expose the source URL so a printed copy says where it came from. */
