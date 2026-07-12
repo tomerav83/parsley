@@ -1350,6 +1350,26 @@
   .cf-panel.is-active {
     transform: none;
   }
+
+  /* The one-step-at-a-time reel gets a short panel on a phone (the hero eats a
+     lot of the viewport), so a long step overflowed the fixed card and clipped.
+     Tighten the step type, number and padding here so more of a step fits with
+     some breathing room. Desktop type is untouched. */
+  .reel-card {
+    padding: 15px;
+    gap: 6px;
+  }
+  .reel-num {
+    font-size: 23px;
+  }
+  .reel-body {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+  .reel-timer {
+    font-size: 13px;
+    padding: 4px 9px;
+  }
 }
 
 /* ==========================================================================
