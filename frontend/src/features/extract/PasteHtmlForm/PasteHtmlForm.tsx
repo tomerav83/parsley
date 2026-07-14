@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
-import type { ExtractError } from "@/api";
-import { errorInfo } from "@/errorInfo";
+import type { ExtractError } from "@/lib/api";
+import { errorInfo } from "@/features/extract/errorInfo";
 import styles from "./PasteHtmlForm.module.css";
-import btn from "./Button.module.css";
+import btn from "@/components/Button.module.css";
 
 interface PasteHtmlFormProps {
   url: string;

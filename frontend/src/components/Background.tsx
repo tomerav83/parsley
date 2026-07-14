@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 /* Ambient page background: faint parsley sprigs drifting slowly upward behind the
-   whole app — the Leaf mascot dissolved into atmosphere. It's decoration only:
+   whole app — the ParsleyLogo mascot dissolved into atmosphere. It's decoration only:
    a fixed, pointer-events-none canvas pinned below the app content (z-index -1,
    above the body's gradient wash). Colour tracks the emerald token so it follows
    light/dark, and it honours prefers-reduced-motion by painting a single static
@@ -97,7 +97,7 @@ function emeraldRgb(el: HTMLElement): string {
   return `${parseInt(r, 16)},${parseInt(g, 16)},${parseInt(b, 16)}`;
 }
 
-export function SprigsBackground() {
+export function Background() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

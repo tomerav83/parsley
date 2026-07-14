@@ -1,4 +1,4 @@
-import type { ErrorCode } from "./api";
+import type { ErrorCode } from "@/lib/api";
 
 // UI copy for each error code: a plain-language title (cause) and hint (fix),
 // plus which recovery affordances the error UI should offer.

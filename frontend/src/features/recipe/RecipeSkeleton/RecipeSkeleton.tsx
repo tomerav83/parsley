@@ -1,4 +1,4 @@
-import cardStyles from "./RecipeCard.module.css";
+import cardStyles from "@/features/recipe/RecipeCard/RecipeCard.module.css";
 import styles from "./RecipeSkeleton.module.css";
 
 // Shimmer placeholder shown while an extraction is in flight. Mirrors the recipe

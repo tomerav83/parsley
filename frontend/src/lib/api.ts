@@ -88,15 +88,24 @@ async function parseError(response: Response): Promise<ExtractError> {
   return new ExtractError(code, message);
 }
 
-async function postExtract(path: string, payload: unknown): Promise<Recipe> {
+async function postExtract(
+  path: string,
+  payload: unknown,
+  signal?: AbortSignal,
+): Promise<Recipe> {
   let response: Response;
   try {
     response = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal,
     });
-  } catch {
+  } catch (err) {
+    // A caller-initiated abort (the request was superseded by a newer one) is not
+    // a network failure — rethrow it untouched so the caller can swallow it
+    // instead of surfacing a spurious "couldn't reach the server" error.
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
     throw new ExtractError(
       "network",
       "Couldn't reach the server. Check your connection and try again.",
@@ -117,13 +126,17 @@ async function postExtract(path: string, payload: unknown): Promise<Recipe> {
   return parsed.data;
 }
 
-export function extractRecipe(url: string): Promise<Recipe> {
-  return postExtract("/api/extract", { url });
+export function extractRecipe(
+  url: string,
+  signal?: AbortSignal,
+): Promise<Recipe> {
+  return postExtract("/api/extract", { url }, signal);
 }
 
 export function extractRecipeFromHtml(
   html: string,
   url: string,
+  signal?: AbortSignal,
 ): Promise<Recipe> {
-  return postExtract("/api/extract-html", { html, url });
+  return postExtract("/api/extract-html", { html, url }, signal);
 }
