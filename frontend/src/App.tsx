@@ -12,7 +12,9 @@ import { FloatingError } from "./components/FloatingError";
 import { PasteHtmlForm } from "./components/PasteHtmlForm";
 import { Leaf } from "./components/Leaf";
 import { SprigsBackground } from "./components/SprigsBackground";
-import "./App.css";
+import { ThemeToggle } from "./components/ThemeToggle";
+import styles from "./App.module.css";
+import btn from "./components/Button.module.css";
 
 function toExtractError(err: unknown): ExtractError {
   if (err instanceof ExtractError) return err;
@@ -23,6 +25,15 @@ function toExtractError(err: unknown): ExtractError {
 // forward move (higher index) enters from the right; back exits to the right.
 type Route = "home" | "paste" | "recipe";
 const ORDER: Record<Route, number> = { home: 0, paste: 1, recipe: 2 };
+
+// Route → its screen-specific module class. `satisfies` checks every route is
+// covered while keeping the values' real type (CSS-module keys are
+// `string | undefined` under noUncheckedIndexedAccess).
+const SCREEN_CLASS = {
+  home: styles.screenHome,
+  paste: styles.screenPaste,
+  recipe: styles.screenRecipe,
+} satisfies Record<Route, string | undefined>;
 
 function hostOf(url: string): string {
   try {
@@ -118,29 +129,35 @@ function App() {
 
   function screenClass(name: Route): string {
     const delta = ORDER[name] - ORDER[route];
-    const pos = delta === 0 ? "is-active" : delta < 0 ? "is-left" : "is-right";
-    return `screen screen-${name} ${pos}`;
+    const pos =
+      delta === 0
+        ? styles.isActive
+        : delta < 0
+          ? styles.isLeft
+          : styles.isRight;
+    return `${styles.screen} ${SCREEN_CLASS[name]} ${pos}`;
   }
 
   return (
-    <div className="app">
+    <div className={styles.app}>
       <SprigsBackground />
-      <div className="screens">
+      <ThemeToggle />
+      <div className={styles.screens}>
         {/* HOME */}
         <section
           className={screenClass("home")}
           aria-label="Search"
           inert={route !== "home"}
         >
-          <div className="home-inner">
-            <p className="home-kicker">recipe, extracted</p>
-            <h1 className="wordmark">
-              <Leaf className="wordmark-leaf" />
+          <div className={styles.homeInner}>
+            <p className={styles.homeKicker}>recipe, extracted</p>
+            <h1 className={styles.wordmark}>
+              <Leaf className={styles.wordmarkLeaf} />
               <span>
                 Pars<b>ley</b>
               </span>
             </h1>
-            <p className="tagline">
+            <p className={styles.tagline}>
               Paste a recipe link, get <b>just the recipe</b> — no life stories,
               no pop-ups, no scrolling past ten paragraphs.
             </p>
@@ -153,8 +170,8 @@ function App() {
               inputRef={urlInputRef}
             />
 
-            <p className="trust">
-              <Leaf className="trust-leaf" />
+            <p className={styles.trust}>
+              <Leaf className={styles.trustLeaf} />
               Nothing stored. Just you and the recipe.
             </p>
           </div>
@@ -166,7 +183,7 @@ function App() {
           aria-label="Paste page source"
           inert={route !== "paste"}
         >
-          <div className="paste-inner">
+          <div className={styles.pasteInner}>
             <PasteHtmlForm
               key={pasteSession}
               url={lastUrl}
@@ -184,8 +201,8 @@ function App() {
           aria-label="Recipe"
           inert={route !== "recipe"}
         >
-          <div className="recipe-bar">
-            <button type="button" className="back" onClick={backToSearch}>
+          <div className={styles.recipeBar}>
+            <button type="button" className={btn.back} onClick={backToSearch}>
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -200,13 +217,13 @@ function App() {
               NEW SEARCH
             </button>
             {recipe && (
-              <span className="recipe-src">
-                <span className="recipe-src-dot" aria-hidden />
+              <span className={styles.recipeSrc}>
+                <span className={styles.recipeSrcDot} aria-hidden />
                 {recipe.site_name ?? hostOf(recipe.source_url)}
               </span>
             )}
           </div>
-          <div className="recipe-scroll">
+          <div className={styles.recipeScroll}>
             {loading ? (
               <RecipeSkeleton />
             ) : recipe ? (

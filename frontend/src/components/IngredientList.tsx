@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { splitQuantity } from "@/ingredients";
+import styles from "./IngredientList.module.css";
 
 interface IngredientListProps {
   ingredients: string[];
@@ -28,7 +29,9 @@ export function IngredientList({ ingredients }: IngredientListProps) {
       // Off-screen guard: inactive section is aria-hidden, off-route screen is
       // `inert` (no aria-hidden attribute) — check both (see StepReel).
       if (!el || el.closest("[inert], [aria-hidden='true']")) return;
-      const scroller = el.closest(".cf-body") as HTMLElement | null;
+      // The scroll region is a CSS-Modules class, so target the stable data hook
+      // the carousel sets rather than the (hashed) class name.
+      const scroller = el.closest("[data-scroll-region]") as HTMLElement | null;
       if (!scroller) return;
       e.preventDefault();
       scroller.scrollBy({
@@ -41,15 +44,15 @@ export function IngredientList({ ingredients }: IngredientListProps) {
   }, []);
 
   return (
-    <ul ref={ref} className="ilist">
+    <ul ref={ref} className={styles.list}>
       {ingredients.map((ingredient, index) => {
         const { qty, name } = splitQuantity(ingredient);
         const id = `ing-${index}`;
         return (
-          <li key={index} className={qty ? undefined : "ilist-noqty"}>
+          <li key={index} className={qty ? undefined : styles.noqty}>
             <input type="checkbox" id={id} />
-            {qty && <span className="ilist-qty">{qty}</span>}
-            <label htmlFor={id} className="ilist-name">
+            {qty && <span className={styles.qty}>{qty}</span>}
+            <label htmlFor={id} className={styles.name}>
               {name}
             </label>
           </li>

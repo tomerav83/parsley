@@ -1,0 +1,58 @@
+/* Ingredients checklist — mono amber quantities. One shared 3-track grid for the
+   whole list (checkbox · quantity · name); the quantity track is `auto`, so it
+   sizes to the widest amount and every name still lines up. Each <li> re-adopts
+   the tracks via `subgrid` so it keeps its own box and dotted separator. */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 20px auto 1fr;
+  column-gap: 9px;
+}
+.list li {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px dotted var(--color-border);
+}
+.list li:last-child {
+  border-bottom: 0;
+}
+/* no leading amount: leave the quantity track empty, put the name in column 3 */
+.list li.noqty .name {
+  grid-column: 3;
+}
+.list input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-brand);
+  align-self: center;
+}
+.qty {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.name {
+  font-size: 15px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.list input:checked ~ .name {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+.list input:checked ~ .qty {
+  color: var(--color-text-muted);
+}
+
+@media print {
+  .list li {
+    break-inside: avoid; /* don't split a single ingredient across pages */
+  }
+}

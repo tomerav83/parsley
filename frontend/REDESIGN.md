@@ -111,6 +111,8 @@ Framing that governs the verdicts: Parsley's two calls are **user-triggered muta
 - **E5. Dead `// eslint-disable-next-line react-hooks/exhaustive-deps` comments** (`StepReel.tsx:78,83`): wrong linter (it's oxlint), wrong rule name (`react/exhaustive-deps`), and the rule isn't even enabled — they suppress nothing and mislead. *Fix:* enable the rule, then fix deps or use a real `// oxlint-disable-next-line react/exhaustive-deps` with justification.
 - **E6. One pure-function test; the interactive UI has none.** No `@testing-library/react`. The parser is the *one thing that least needs* tests; the fetch/error flow, carousel keyboard, and error widget — where bugs hide — have zero. *Fix:* add RTL + jsdom setup; write three behavior tests: (a) `api.ts` error mapping (429→rate_limited, pydantic detail→invalid_url, network throw→network), (b) section-switch keyboard + `aria-selected`, (c) FloatingError open/paste flow. Query by role so a11y gets exercised as a side effect.
   - https://testing-library.com/docs/guiding-principles/ · https://kentcdodds.com/blog/write-tests
+- **E7 (durable visual regression — deferred to Phase 4).** The mechanical Phase 1–3 refactors promise "no visual change," but nothing enforces it. Best practice is a screenshot-diff suite — done wrong it's flaky: full-page shots capture the always-on `requestAnimationFrame` sprig canvas (nondeterministic frame-to-frame), and pixel baselines are OS/font-renderer-specific, so baselines minted on a dev box fail red on CI. *Fix (Phase 4, after the redesign stabilizes):* Vitest `toMatchScreenshot` at the **component** level (a component shot excludes the app-root canvas — no masking needed), gated on `await document.fonts.ready`, baselines generated in CI/Docker and committed, wired into the existing CI test job with diff artifacts on failure. Until then the refactors are gated by a throwaway **computed-style diff** (deterministic, canvas-immune — see the Phased-plan note). Deferred past Phase 3 on purpose: baselining a UI that's about to be rebuilt is wasted work.
+  - https://main.vitest.dev/guide/browser/visual-regression-testing · https://medium.com/perceptual-percy/freezing-animations-in-visual-regression-tests-e6db56a7b3a5
 
 ---
 
@@ -135,6 +137,8 @@ Framing that governs the verdicts: Parsley's two calls are **user-triggered muta
 
 Ordered so the safety net and type/validation land **first** — they catch regressions during the riskier refactors that follow.
 
+**Verifying "no visual change" (Phases 1–3).** The mechanical refactors are gated by a deterministic **computed-style diff**: capture `getComputedStyle` for a set of key elements (selected by role/DOM structure, which survive the class rename) before and after, then diff. It pinpoints a dropped rule *exactly* and is immune to the always-on sprig canvas — no pixel baselines to keep stable. Committed pixel-baseline visual-regression (**E7**) lands later, in Phase 4, deliberately *after* the Phase 3 redesign, so baselines aren't minted against a UI that's about to be rebuilt.
+
 ### Phase 0 — Raise the floor (low risk, high leverage, no visual change) ✅ DONE
 - [x] **E1** Added `npm run test` (+ Playwright Chromium install) to the CI frontend job.
 - [x] **E2/E3** `"strict": true` + `"noUncheckedIndexedAccess": true`; fixed all 11 unchecked `touches[0]`/`m[1]`/`split[0]` accesses the compiler flagged.
@@ -144,10 +148,10 @@ Ordered so the safety net and type/validation land **first** — they catch regr
 - [x] **A4 (partial)** Fixed the verified keydown bug: the off-screen gate now checks `[inert]` as well as `[aria-hidden]`, and `SectionCarousel` (which had no gate) got one. Arrow keys no longer hijacked on Home. *(Full de-globalizing of these listeners remains Phase 3.)*
 - [x] **Test infra** Stood up Vitest **Browser Mode (real Chromium via Playwright)** for component tests + a fast **node** project for logic tests; added RTL + a regression test pinning the A4 fix. `20 tests` green.
 
-### Phase 1 — De-monolith the CSS (mechanical, no visual change)
-- [ ] **B4** Two-tier + semantically-rename tokens in `index.css`.
-- [ ] **B1/B2/B3** Split `App.css` along its section comments into colocated `*.module.css`; swap `className` strings to `styles.*`; collapse `btn`/`ebtn` into one `Button` module.
-- [ ] **B5** Move dark theming to `data-theme` class + default media query + a toggle.
+### Phase 1 — De-monolith the CSS (mechanical, no visual change) ✅ DONE
+- [x] **B4** Two-tier tokens in `index.css`: primitive palette (`--green-*`, `--amber-*`) → semantic (`--color-brand`, `--color-text`, `--color-surface`, …). Renamed every reference, including the runtime `getComputedStyle("--e")` → `"--color-brand"` in `SprigsBackground`.
+- [x] **B1/B2/B3** Split the 1568-line `App.css` into **13 colocated `*.module.css`** (camelCase locals — the `.btn`/`.ebtn`/`.cf-`/`.efloat-` prefixes are gone). `btn`/`ebtn` collapsed into one `Button.module.css` (`.compact` variant; the 1.07/1.08 primary-hover inconsistency normalised to 1.07). Document-level print concerns (palette re-light, `@page`) live in a global `print.css`; component-specific print/motion/responsive rules moved into each module. Cross-component `.recipe-hero .timing-chip` resolved by baking the glassy look into `TimingRow`'s chip (chips only ever render in the hero). JS `.cf-body` selector → stable `[data-scroll-region]` hook. Dead CSS dropped (`.mono-label`, `.ebtn-report`, `.is-failed`). Verified **no visual change** by a computed-style diff (0 property + 0 structural changes across 8 scenes / ~275 elements, screen + print media, image + no-image, desktop + mobile).
+- [x] **B5** Dark theme moved to semantic-token flips applied by `@media (prefers-color-scheme)` **and** `:root[data-theme="…"]`; added `ThemeToggle` (sun/moon, fixed top-right, persists to `localStorage`) + a no-FOUC pre-paint script in `index.html`. The only footprint on the existing UI is `padding-right` on the recipe bar so the source clears the toggle.
 
 ### Phase 2 — Restructure components & state (no visual change)
 - [ ] **D2/D3/D4** One-folder-per-component (colocated module + test), grouped into `features/recipe`, `features/extract`, shared `components/`, `lib/` — **no barrels**.
@@ -167,6 +171,7 @@ Ordered so the safety net and type/validation land **first** — they catch regr
 - [ ] **F1** Pause the sprig canvas on `visibilitychange` / off-home.
 - [ ] **F2** `React.lazy` + Suspense for the recipe view (falls out of Phase 3's router).
 - [ ] **E6** Add the three RTL behavior tests — now enforced by Phase 0's CI wiring.
+- [ ] **E7** Stand up the durable **component-level visual-regression suite** (Vitest `toMatchScreenshot`, on the Phase-0 browser-mode infra): snapshot `RecipeCard` / `StepReel` / `IngredientList` / `FloatingError` in isolation (component shots exclude the app-root sprig canvas — no masking needed), gate on `await document.fonts.ready`, fixed viewport + fixture recipe. Generate baselines in the **CI/Docker** environment (not a dev box — pixel baselines are platform-specific) and commit them; wire the VRT project into the existing CI test job with diff artifacts on failure. Lands here, after Phase 3, so the redesign doesn't invalidate the baselines. *(Interim gate for Phases 1–3: the computed-style diff noted above.)*
 - [ ] **F3** Profile; memoize only the canvas/reel if measured.
 
 ---

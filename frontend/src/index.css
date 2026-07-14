@@ -1,8 +1,13 @@
 /* ==========================================================================
    Parsley — foundation: fonts, design tokens, base elements.
    Art direction "Mise en place": emerald + amber, Inter + Space Mono, a faint
-   dotted station grid, squared precise geometry. Tokens are theme-aware
-   (light default, dark via prefers-color-scheme). Components read tokens only.
+   dotted station grid, squared precise geometry.
+
+   Tokens are two-tier (design-token best practice): a small PRIMITIVE palette of
+   raw values, then SEMANTIC tokens named by role (--color-brand, --color-text …)
+   that components read. Only the semantic layer flips between themes; primitives
+   stay constant. Theme is light by default, dark by OS preference, and either can
+   be forced via :root[data-theme="…"] (the toggle — see ThemeToggle).
    ========================================================================== */
 
 @font-face {
@@ -28,20 +33,28 @@
 }
 
 :root {
-  /* palette — Fresh Emerald / Mise en place (light) */
-  --e: #059669; /* brand emerald */
-  --ed: #047857; /* emerald, stronger */
-  --amber: #b5620a; /* quantities & data accent */
-  --bg: #ffffff;
-  --txt: #141c17;
-  --mut: #5c6a62;
-  --bd: #e3e9e5;
-  --chip: #f1f6f3;
-  --code-bg: #f4f3ec;
-  --grid: rgba(5, 150, 105, 0.15); /* dotted station grid */
-  --danger: #cb4a3b;
-  --danger-bg: #fbf0ee;
-  --danger-bd: #eac7c0;
+  /* ---- primitives: the raw palette (theme-independent) ------------------ */
+  --green-700: #047857;
+  --green-600: #059669;
+  --green-500: #10b981;
+  --green-400: #34d399;
+  --amber-700: #b5620a;
+  --amber-500: #f5a623;
+
+  /* ---- semantic tokens: what components read (light theme) -------------- */
+  --color-brand: var(--green-600); /* emerald identity */
+  --color-brand-strong: var(--green-700); /* emerald, deeper */
+  --color-accent: var(--amber-700); /* quantities & data accent */
+  --color-bg: #ffffff;
+  --color-text: #141c17;
+  --color-text-muted: #5c6a62;
+  --color-border: #e3e9e5;
+  --color-surface: #f1f6f3; /* tinted chips / prep cards */
+  --color-code-bg: #f4f3ec;
+  --color-grid: rgba(5, 150, 105, 0.15); /* dotted station grid */
+  --color-danger: #cb4a3b;
+  --color-danger-bg: #fbf0ee;
+  --color-danger-border: #eac7c0;
   --shadow: 0 24px 60px -34px rgba(4, 120, 87, 0.45);
   --shadow-soft: 0 14px 34px -22px rgba(4, 120, 87, 0.4);
 
@@ -55,31 +68,52 @@
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.5;
-  color: var(--txt);
-  background: var(--bg);
+  color: var(--color-text);
+  background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
+/* Dark theme: only the semantic tokens flip. Applied two ways — by OS preference
+   (unless the user forced light) and by an explicit [data-theme="dark"] the
+   toggle sets. Both selectors carry the same specificity so [data-theme] always
+   wins over the OS default. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --e: #10b981;
-    --ed: #34d399;
-    --amber: #f5a623;
-    --bg: #0d1411;
-    --txt: #e9f1ec;
-    --mut: #8fa69b;
-    --bd: #233029;
-    --chip: #16231d;
-    --code-bg: #171c19;
-    --grid: rgba(16, 185, 129, 0.14);
-    --danger: #f0796a;
-    --danger-bg: #231512;
-    --danger-bd: #4a2620;
+  :root:not([data-theme="light"]) {
+    --color-brand: var(--green-500);
+    --color-brand-strong: var(--green-400);
+    --color-accent: var(--amber-500);
+    --color-bg: #0d1411;
+    --color-text: #e9f1ec;
+    --color-text-muted: #8fa69b;
+    --color-border: #233029;
+    --color-surface: #16231d;
+    --color-code-bg: #171c19;
+    --color-grid: rgba(16, 185, 129, 0.14);
+    --color-danger: #f0796a;
+    --color-danger-bg: #231512;
+    --color-danger-border: #4a2620;
     --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
     --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
   }
+}
+:root[data-theme="dark"] {
+  --color-brand: var(--green-500);
+  --color-brand-strong: var(--green-400);
+  --color-accent: var(--amber-500);
+  --color-bg: #0d1411;
+  --color-text: #e9f1ec;
+  --color-text-muted: #8fa69b;
+  --color-border: #233029;
+  --color-surface: #16231d;
+  --color-code-bg: #171c19;
+  --color-grid: rgba(16, 185, 129, 0.14);
+  --color-danger: #f0796a;
+  --color-danger-bg: #231512;
+  --color-danger-border: #4a2620;
+  --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
+  --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
 }
 
 * {
@@ -93,8 +127,8 @@ body {
      sprigs (SprigsBackground.tsx) animate over. */
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--e) 13%, var(--bg)),
-    var(--bg) 60%
+    color-mix(in srgb, var(--color-brand) 13%, var(--color-bg)),
+    var(--color-bg) 60%
   );
 }
 
@@ -122,21 +156,12 @@ body {
 h1,
 h2,
 h3 {
-  color: var(--txt);
+  color: var(--color-text);
   margin: 0;
 }
 
 p {
   margin: 0;
-}
-
-/* a small uppercase mono "station" label used across the UI */
-.mono-label {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  color: var(--mut);
 }
 
 /* respect reduced motion globally as a safety net */

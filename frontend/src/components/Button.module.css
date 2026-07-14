@@ -1,0 +1,120 @@
+/* Shared control styles. `.btn` is the standard button (paste actions); add
+   `.compact` for the smaller icon buttons in the floating-error bubble. Variants
+   `.primary` / `.ghost` are shared by both sizes. `.back` is the mono "back"
+   control used by the recipe bar and the paste screen.
+
+   (Collapses the old parallel `.btn*` / `.ebtn*` systems into one. The two had a
+   1.07 vs 1.08 primary-hover brightness — normalised here to a single 1.07.) */
+
+.btn {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 10px 15px;
+  border: 1.5px solid transparent;
+  transition:
+    filter 0.15s,
+    border-color 0.15s,
+    transform 0.1s;
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* compact size: inline-flex with an icon slot + tighter padding */
+.compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-decoration: none;
+  padding: 9px 13px;
+  transition:
+    filter 0.15s,
+    border-color 0.15s,
+    color 0.15s,
+    transform 0.08s;
+}
+.compact svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+.compact:disabled {
+  opacity: 0.7;
+}
+
+/* variants */
+.primary {
+  background: var(--color-brand);
+  color: #fff;
+  border-color: var(--color-brand);
+}
+.primary:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+.ghost {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.ghost:hover:not(:disabled) {
+  border-color: var(--color-brand);
+}
+
+/* secondary row: the lesser actions share one line under the primary */
+.row {
+  display: flex;
+  gap: 9px;
+}
+.row .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+/* inline spinner (inherits the button's text colour) */
+.spin {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* mono "back" control */
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  color: var(--color-text);
+  background: none;
+  border: 0;
+  padding: 5px 7px;
+  border-radius: 7px;
+  transition: background 0.15s;
+}
+.back:hover {
+  background: var(--color-surface);
+}
+.back svg {
+  width: 15px;
+  height: 15px;
+}

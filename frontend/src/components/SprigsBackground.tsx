@@ -90,7 +90,7 @@ function drawLeaf(ctx: CanvasRenderingContext2D, s: number) {
 
 /** Read the emerald brand token and return it as an "r,g,b" string. */
 function emeraldRgb(el: HTMLElement): string {
-  const hex = getComputedStyle(el).getPropertyValue("--e").trim();
+  const hex = getComputedStyle(el).getPropertyValue("--color-brand").trim();
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
   const [, r, g, b] = m ?? [];
   if (!r || !g || !b) return "16,185,129";

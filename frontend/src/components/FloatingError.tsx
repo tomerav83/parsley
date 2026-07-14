@@ -7,6 +7,8 @@ import {
   reportIssueUrl,
 } from "@/errorInfo";
 import { SadParsley } from "./SadParsley";
+import styles from "./FloatingError.module.css";
+import btn from "./Button.module.css";
 
 interface FloatingErrorProps {
   error: ExtractError;
@@ -19,7 +21,7 @@ interface FloatingErrorProps {
 }
 
 // How long the cartoon fly-away plays before we actually unmount (must match the
-// .efloat.is-leaving animation in App.css). Kept short under reduced motion.
+// .efloat.isLeaving animation in FloatingError.module.css). Short under reduced motion.
 const FLY_MS = 620;
 const FLY_MS_REDUCED = 120;
 
@@ -210,13 +212,13 @@ export function FloatingError({
     <button
       key="retry"
       type="button"
-      className={`ebtn ebtn-${variant}`}
+      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
       onClick={handleRetry}
       disabled={retrying}
     >
       {retrying ? (
         <>
-          <span className="espin" aria-hidden />
+          <span className={btn.spin} aria-hidden />
           Retrying…
         </>
       ) : (
@@ -231,7 +233,7 @@ export function FloatingError({
     <button
       key="paste"
       type="button"
-      className={`ebtn ebtn-${variant}`}
+      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
       onClick={onPaste}
     >
       <PasteIcon />
@@ -242,7 +244,7 @@ export function FloatingError({
     <button
       key="edit"
       type="button"
-      className={`ebtn ebtn-${variant}`}
+      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
       onClick={onEdit}
     >
       <EditIcon />
@@ -252,7 +254,7 @@ export function FloatingError({
   const reportBtn = (variant: string, label: string) => (
     <a
       key="report"
-      className={`ebtn ebtn-${variant}`}
+      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
       href={reportIssueUrl(error.code, sourceUrl)}
       target="_blank"
       rel="noopener noreferrer"
@@ -293,16 +295,16 @@ export function FloatingError({
 
   return (
     <div
-      className={`efloat${open ? " is-open" : ""}${failed ? " is-failed" : ""}${
-        leaving ? " is-leaving" : ""
+      className={`${styles.efloat}${open ? ` ${styles.isOpen}` : ""}${
+        leaving ? ` ${styles.isLeaving}` : ""
       }`}
       aria-hidden={leaving}
     >
-      <div className="efloat-bubble" role="alert">
-        <h2 className="efloat-title">{copy.title}</h2>
-        <p className="efloat-hint">{copy.hint}</p>
+      <div className={styles.bubble} role="alert">
+        <h2 className={styles.title}>{copy.title}</h2>
+        <p className={styles.hint}>{copy.hint}</p>
 
-        <div className="efloat-actions">
+        <div className={styles.actions}>
           {failed ? (
             // After a second failed retry: reporting is the only path left.
             reportBtn("primary", "Report on GitHub")
@@ -310,28 +312,28 @@ export function FloatingError({
             <>
               {primary}
               {secondary.length > 0 && (
-                <div className="ebtn-row">{secondary}</div>
+                <div className={btn.row}>{secondary}</div>
               )}
             </>
           )}
         </div>
 
-        <button type="button" className="efloat-dismiss" onClick={flyAway}>
+        <button type="button" className={styles.dismiss} onClick={flyAway}>
           Not now
         </button>
       </div>
 
       <button
         type="button"
-        className="efloat-sprite"
+        className={styles.sprite}
         aria-expanded={open}
         aria-label={
           open ? `${copy.title} — hide options` : `${copy.title} — show options`
         }
         onClick={() => setOpen((v) => !v)}
       >
-        <SadParsley className="efloat-face" />
-        <span className="efloat-tag">
+        <SadParsley className={styles.face} />
+        <span className={styles.tag}>
           {leaving ? "bye!" : failed ? "help?" : "oops!"}
         </span>
       </button>

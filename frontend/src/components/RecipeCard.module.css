@@ -1,0 +1,170 @@
+/* The recipe card: a hero header (photo-behind-glass, or a plain title strip when
+   there's no photo) above the Ingredients ⇄ Method carousel, with a source footer. */
+.card {
+  /* track the viewport but cap line length so text stays readable ultra-wide */
+  width: 100%;
+  max-width: clamp(640px, 82vw, 1180px);
+  /* fill the frame height so the carousel can claim the leftover and scroll itself */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.hero,
+.head {
+  flex: 0 0 auto; /* header keeps its natural height; only the list flexes */
+}
+
+/* --- hero: photo behind glass ------------------------------------------- */
+.hero {
+  position: relative;
+  display: flex;
+  min-height: 190px;
+  max-height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  /* on-brand dark ground shows through if the image fails to load */
+  background: linear-gradient(135deg, #1c3b2e, #0f241b);
+}
+.heroImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  /* two washes keep text ≥4.5:1 over bright photos: a vertical pool plus a left
+     column wash backing the left-aligned text */
+  background:
+    linear-gradient(
+      to top,
+      rgba(6, 10, 6, 0.92),
+      rgba(6, 10, 6, 0.66) 42%,
+      rgba(6, 10, 6, 0.22) 74%,
+      rgba(6, 10, 6, 0.42)
+    ),
+    linear-gradient(
+      to right,
+      rgba(6, 10, 6, 0.62),
+      rgba(6, 10, 6, 0.16) 46%,
+      transparent 70%
+    );
+}
+.heroBody {
+  position: relative;
+  align-self: flex-end;
+  width: 100%;
+  padding: 18px 18px 16px;
+}
+
+.stationKicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 5px;
+}
+.title {
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  font-size: 32px;
+  line-height: 1.05;
+  text-wrap: balance;
+  margin-bottom: 5px;
+}
+.source {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+/* text/label colours when they render over the image */
+.stationKicker.onHero {
+  color: #ffd9a0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+.title.onHero {
+  color: #fff;
+  /* legibility floor over any photo, independent of the scrim */
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    0 2px 16px rgba(0, 0, 0, 0.5);
+}
+.source.onHero {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+}
+
+.footer {
+  flex: 0 0 auto;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+.footer a {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--color-brand);
+  text-decoration: none;
+}
+.footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 560px) {
+  .title {
+    font-size: 26px;
+  }
+}
+
+/* print: swap the photo-behind-glass banner for a plain dark-ink header */
+@media print {
+  .card {
+    max-width: none;
+    display: block;
+  }
+  .hero {
+    min-height: 0;
+    max-height: none;
+    border-radius: 0;
+    border-bottom: 2px solid var(--color-text);
+    background: none;
+    padding: 0 0 10px;
+    break-after: avoid; /* keep the header with the ingredients that follow */
+  }
+  .heroImg,
+  .heroScrim {
+    display: none;
+  }
+  .heroBody {
+    padding: 0;
+  }
+  .stationKicker.onHero {
+    color: var(--color-accent);
+    text-shadow: none;
+  }
+  .title.onHero {
+    color: var(--color-text);
+    text-shadow: none;
+  }
+  .source.onHero {
+    color: var(--color-text-muted);
+  }
+  .footer {
+    break-inside: avoid;
+  }
+  .footer a {
+    color: var(--color-text);
+  }
+  .footer a::after {
+    content: " — " attr(href);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--color-text-muted);
+    word-break: break-all;
+  }
+}
