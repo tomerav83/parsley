@@ -73,6 +73,7 @@ function CardBody({ children }: { children: ReactNode }) {
 export function SectionCarousel({ sections }: SectionCarouselProps) {
   const [index, setIndex] = useState(0);
   const touchX = useRef<number | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const count = sections.length;
 
@@ -84,6 +85,10 @@ export function SectionCarousel({ sections }: SectionCarouselProps) {
     const onKey = (e: globalThis.KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t?.closest("input, textarea, [contenteditable='true']")) return;
+      // Bail when the carousel is off-screen (its screen is `inert`, or it sits
+      // in an aria-hidden subtree) so it doesn't eat arrow keys on Home while a
+      // recipe stays mounted behind it.
+      if (rootRef.current?.closest("[inert], [aria-hidden='true']")) return;
       if (e.key === "ArrowRight") {
         e.preventDefault();
         setIndex((i) => Math.min(count - 1, i + 1));
@@ -97,17 +102,18 @@ export function SectionCarousel({ sections }: SectionCarouselProps) {
   }, [count]);
 
   const onTouchStart = (e: TouchEvent) => {
-    touchX.current = e.touches[0].clientX;
+    touchX.current = e.touches[0]?.clientX ?? null;
   };
   const onTouchEnd = (e: TouchEvent) => {
-    if (touchX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchX.current;
+    const end = e.changedTouches[0];
+    if (touchX.current === null || !end) return;
+    const dx = end.clientX - touchX.current;
     if (Math.abs(dx) > 45) go(index + (dx < 0 ? 1 : -1));
     touchX.current = null;
   };
 
   return (
-    <div className="carousel">
+    <div className="carousel" ref={rootRef}>
       {/* Explicit switcher. The coverflow's peeking card is the affordance on
           wide screens, but it's flattened away on narrow ones (App.css), so this
           segmented control is what switches sections there. Hidden on desktop. */}

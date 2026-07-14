@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ExtractError } from "../api";
+import type { ExtractError } from "@/api";
 import {
   errorInfo,
   spriteCopy,
   SPRITE_FAILED,
   reportIssueUrl,
-} from "../errorInfo";
+} from "@/errorInfo";
 import { SadParsley } from "./SadParsley";
 
 interface FloatingErrorProps {

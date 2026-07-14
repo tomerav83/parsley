@@ -72,16 +72,14 @@ export function StepReel({ steps }: StepReelProps) {
   const wheelLock = useRef(false);
 
   const count = steps.length;
-  const clamp = (i: number) => Math.max(0, Math.min(count - 1, i));
-  const go = useCallback(
-    (i: number) => setIndex(() => clamp(i)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const clamp = useCallback(
+    (i: number) => Math.max(0, Math.min(count - 1, i)),
     [count],
   );
+  const go = useCallback((i: number) => setIndex(clamp(i)), [clamp]);
   const step = useCallback(
     (d: number) => setIndex((i) => clamp(i + d)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [count],
+    [clamp],
   );
 
   // Reset to the first step whenever the recipe changes.
@@ -106,12 +104,14 @@ export function StepReel({ steps }: StepReelProps) {
   }, [step]);
 
   const onTouchStart = (e: TouchEvent) => {
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    const t = e.touches[0];
+    if (t) touch.current = { x: t.clientX, y: t.clientY };
   };
   const onTouchEnd = (e: TouchEvent) => {
-    if (!touch.current) return;
-    const dx = e.changedTouches[0].clientX - touch.current.x;
-    const dy = e.changedTouches[0].clientY - touch.current.y;
+    const end = e.changedTouches[0];
+    if (!touch.current || !end) return;
+    const dx = end.clientX - touch.current.x;
+    const dy = end.clientY - touch.current.y;
     touch.current = null;
     // Only claim clearly-vertical swipes; stop them here so the section carousel
     // (which listens for horizontal swipes on the same viewport) stays put.
@@ -149,7 +149,11 @@ export function StepReel({ steps }: StepReelProps) {
       )
         return;
       const el = stageRef.current;
-      if (!el || el.closest("[aria-hidden='true']")) return;
+      // Bail when the reel is off-screen: an inactive section is aria-hidden,
+      // and an off-route screen is `inert` (which sets no aria-hidden attribute,
+      // so both must be checked — otherwise the reel still eats the arrow keys
+      // on the Home screen while a recipe stays mounted behind it).
+      if (!el || el.closest("[inert], [aria-hidden='true']")) return;
       e.preventDefault();
       step(e.key === "ArrowDown" ? 1 : -1);
     };

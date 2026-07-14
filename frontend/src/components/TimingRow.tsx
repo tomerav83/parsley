@@ -1,4 +1,4 @@
-import type { Recipe } from "../api";
+import type { Recipe } from "@/api";
 
 interface TimingRowProps {
   recipe: Recipe;
