@@ -124,8 +124,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  /* extra right room so the source clears the fixed ThemeToggle in the corner */
-  padding: 11px 60px 11px 16px;
+  /* extra right room so the source clears the fixed ThemeToggle in the corner
+     (toggle occupies the rightmost 54px; leave a comfortable gap beyond it).
+     Vertical padding sized so the bar is tall enough to contain the toggle
+     (top:9 + 38px tall) rather than have it hang past the bottom border. */
+  padding: 15px 72px 15px 16px;
   border-bottom: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg) 82%, transparent);
   backdrop-filter: blur(8px);

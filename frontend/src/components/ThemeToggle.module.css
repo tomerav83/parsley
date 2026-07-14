@@ -2,7 +2,7 @@
    matching the recipe bar. Hidden in print. */
 .toggle {
   position: fixed;
-  top: 14px;
+  top: 9px;
   right: 16px;
   z-index: 70;
   width: 38px;
