@@ -10,24 +10,37 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--color-border);
+  /* brand-tinted border + lift shadow so the chip reads against the pale
+     background instead of dissolving into it (plain --color-border is nearly
+     the same tone as the page). */
+  border: 1.5px solid
+    color-mix(in srgb, var(--color-brand) 42%, var(--color-border));
   border-radius: 9px;
-  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 90%, transparent);
   backdrop-filter: blur(8px);
-  color: var(--color-text-muted);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   transition:
-    color 0.15s,
     border-color 0.15s,
-    background 0.15s;
+    background 0.15s,
+    box-shadow 0.15s;
 }
 .toggle:hover {
-  color: var(--color-text);
   border-color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-bg) 97%, transparent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 .toggle svg {
   width: 18px;
   height: 18px;
+}
+/* Theme-aware icon hues (both tokens flip per theme, so they stay vivid in
+   light and dark): the moon reads emerald, the sun warm amber. */
+.moon {
+  color: var(--color-brand);
+}
+.sun {
+  color: var(--color-accent);
 }
 
 @media print {

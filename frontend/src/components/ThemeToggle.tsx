@@ -17,6 +17,7 @@ function currentTheme(): Theme {
 function SunIcon() {
   return (
     <svg
+      className={styles.sun}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -33,6 +34,7 @@ function SunIcon() {
 function MoonIcon() {
   return (
     <svg
+      className={styles.moon}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
