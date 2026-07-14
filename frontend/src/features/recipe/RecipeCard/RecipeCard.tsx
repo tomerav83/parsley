@@ -1,8 +1,11 @@
-import type { Recipe } from "@/api";
-import { IngredientList } from "./IngredientList";
-import { StepReel } from "./StepReel";
-import { TimingRow } from "./TimingRow";
-import { SectionCarousel, type CarouselSection } from "./SectionCarousel";
+import type { Recipe } from "@/lib/api";
+import { IngredientList } from "@/features/recipe/IngredientList/IngredientList";
+import { StepReel } from "@/features/recipe/StepReel/StepReel";
+import { TimingRow } from "@/features/recipe/TimingRow/TimingRow";
+import {
+  SectionCarousel,
+  type CarouselSection,
+} from "@/features/recipe/SectionCarousel/SectionCarousel";
 import styles from "./RecipeCard.module.css";
 
 interface RecipeCardProps {

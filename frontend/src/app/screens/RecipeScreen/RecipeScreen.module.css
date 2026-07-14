@@ -1,0 +1,71 @@
+/* Recipe screen: top bar + scroll frame (the card itself is RecipeCard). The
+   column shell (.screenRecipe) lives in App.module.css. */
+
+.recipeBar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* extra right room so the source clears the fixed ThemeToggle in the corner
+     (toggle occupies the rightmost 54px; leave a comfortable gap beyond it).
+     Vertical padding sized so the bar is tall enough to contain the toggle
+     (top:9 + 38px tall) rather than have it hang past the bottom border. */
+  padding: 15px 72px 15px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 82%, transparent);
+  backdrop-filter: blur(8px);
+  z-index: 2;
+}
+.recipeSrc {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.recipeSrcDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  flex: 0 0 auto;
+}
+/* Fixed frame: hero/header stay put and only the active card's list scrolls, so
+   this region lays the card out full-height and lets the card handle overflow. */
+.recipeScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  padding: 26px 24px 32px;
+}
+
+@media (max-width: 560px) {
+  .recipeScroll {
+    padding: 22px 18px 34px;
+  }
+}
+
+/* print: drop the bar, unpin the scroll frame so the card flows as a document. */
+@media print {
+  .recipeBar {
+    display: none !important;
+  }
+  .recipeScroll {
+    position: static !important;
+    overflow: visible !important;
+    display: block !important;
+    inset: auto;
+    height: auto !important;
+    min-height: 0 !important;
+    transform: none !important;
+    opacity: 1 !important;
+    padding: 0 !important;
+  }
+}

@@ -1,0 +1,8 @@
+/* Paste screen wrapper (the form itself is PasteHtmlForm). The centring shell
+   (.screenPaste) lives in App.module.css; this constrains the inner column. */
+
+.pasteInner {
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+}

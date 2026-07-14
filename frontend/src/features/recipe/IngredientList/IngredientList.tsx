@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { splitQuantity } from "@/ingredients";
+import { splitQuantity } from "@/features/recipe/ingredients";
 import styles from "./IngredientList.module.css";
 
 interface IngredientListProps {
