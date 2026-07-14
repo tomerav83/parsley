@@ -1,0 +1,137 @@
+/* Method as a vertical coverflow ("Depth Reel"): one step faces the reader while
+   the neighbours recede up (done) and down (upcoming). The reel fills the section
+   body and clips its own peeking cards. Card positions are set inline by StepReel. */
+.reel {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  perspective: 1000px;
+  overflow: hidden;
+  outline: none;
+  touch-action: pan-y;
+}
+/* Focus lands on the stage, but outlining the whole stage drew a stray rectangle
+   in the gap below the centred card. Show focus on the active card itself. */
+.stage:focus-visible {
+  outline: none;
+}
+.stage:focus-visible .card.on {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-brand) 32%, transparent),
+    var(--shadow-soft);
+}
+/* Each step is a card lifted off the section's tinted grid. inset:0 + margin:auto
+   centres it; StepReel's inline transform then flings it to its offset position. */
+.card {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: max-content;
+  min-height: 60%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  transition:
+    transform var(--slide) var(--curve),
+    opacity var(--slide) var(--curve),
+    filter var(--slide) var(--curve);
+}
+.card.on {
+  border-color: color-mix(in srgb, var(--color-brand) 55%, var(--color-border));
+  box-shadow: var(--shadow-soft);
+}
+.card:not(.on) {
+  cursor: pointer;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.num {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--color-brand);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--color-text);
+}
+.timer {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  padding: 5px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* reduced motion: quiet crossfade between steps — keep depth, drop the swing */
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: opacity 0.14s ease;
+  }
+}
+
+/* print: unfurl the reel into a plain numbered list so every step prints */
+@media print {
+  .reel {
+    display: block !important;
+    height: auto !important;
+  }
+  .stage {
+    position: static !important;
+    perspective: none !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .card {
+    position: static !important;
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    min-height: 0 !important;
+    margin: 0 0 14px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    flex-direction: row !important;
+    gap: 13px !important;
+    break-inside: avoid; /* don't split a single step across pages */
+  }
+  .num {
+    font-size: 13px !important;
+    padding-top: 1px;
+  }
+  .timer {
+    display: none !important;
+  }
+}

@@ -1,0 +1,51 @@
+/* The mascot's animations. `.head` is the transform target (the disappointed
+   head-shake); `.tear` drips separately. Both are frozen under reduced motion by
+   the global safety-net in index.css. */
+.head {
+  transform-box: fill-box;
+  transform-origin: 50% 82%;
+  animation: pl-shake 3.4s ease-in-out 0.7s infinite;
+  will-change: transform;
+}
+@keyframes pl-shake {
+  0%,
+  72%,
+  100% {
+    transform: rotate(0deg);
+  }
+  78% {
+    transform: rotate(-9deg);
+  }
+  84% {
+    transform: rotate(7deg);
+  }
+  90% {
+    transform: rotate(-4deg);
+  }
+  96% {
+    transform: rotate(0deg);
+  }
+}
+.tear {
+  opacity: 0;
+  animation: pl-drip 3.6s ease-in 1s infinite;
+  will-change: transform, opacity;
+}
+@keyframes pl-drip {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(14px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.7);
+  }
+}

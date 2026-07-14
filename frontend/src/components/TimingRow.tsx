@@ -1,4 +1,5 @@
 import type { Recipe } from "@/api";
+import styles from "./TimingRow.module.css";
 
 interface TimingRowProps {
   recipe: Recipe;
@@ -48,9 +49,9 @@ export function TimingRow({ recipe, variant = "strip" }: TimingRowProps) {
 
   if (variant === "chips") {
     return (
-      <dl className="timing-chips">
+      <dl className={styles.chips}>
         {cells.map((cell) => (
-          <div key={cell.label} className="timing-chip">
+          <div key={cell.label} className={styles.chip}>
             <dt>{cell.label}</dt>
             <dd>{cell.value}</dd>
           </div>
@@ -60,7 +61,7 @@ export function TimingRow({ recipe, variant = "strip" }: TimingRowProps) {
   }
 
   return (
-    <dl className="timing">
+    <dl className={styles.strip}>
       {cells.map((cell) => (
         <div key={cell.label}>
           <dt>{cell.label}</dt>

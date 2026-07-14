@@ -1,0 +1,198 @@
+/* The corner "sad parsley" mascot: fixed bottom-right; idle it's just the sprig +
+   an "oops!" tag, with the action bubble above it. See FloatingError.tsx. */
+.efloat {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 60;
+  transform-origin: bottom right;
+  animation: efloat-in 0.5s cubic-bezier(0.18, 1.35, 0.42, 1);
+}
+@keyframes efloat-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.55) translate(14px, 14px);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  75% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Dismiss: the sprig crouches, then leaps up-and-off with a spin. */
+.efloat.isLeaving {
+  animation: efloat-fly 0.62s cubic-bezier(0.4, 0, 0.75, 0.2) forwards;
+  transform-origin: center bottom;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+@keyframes efloat-fly {
+  0% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(3px, 12px) scale(1.09, 0.88) rotate(-3deg);
+    opacity: 1;
+  }
+  34% {
+    transform: translate(-2px, -26px) scale(0.9, 1.14) rotate(4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(58px, -470px) rotate(28deg) scale(0.42);
+    opacity: 0;
+  }
+}
+
+/* the mascot — a column: sprig above, mono tag below */
+.sprite {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+/* Static "contact" shadow on a sibling pseudo-element (never repaints through the
+   animated face — a drop-shadow filter would recompute the blur every frame). */
+.sprite::before {
+  content: "";
+  position: absolute;
+  top: 73px;
+  left: 50%;
+  width: 48px;
+  height: 12px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.26);
+  border-radius: 50%;
+  filter: blur(7px);
+  z-index: -1;
+  pointer-events: none;
+  transition: width 0.15s ease;
+}
+.sprite:hover::before {
+  width: 56px;
+}
+.face {
+  width: 84px;
+  height: 94px;
+  overflow: visible;
+  transform: translateZ(
+    0
+  ); /* isolate the SVG's per-frame repaints to its layer */
+  transition: transform 0.15s ease;
+}
+.sprite:hover .face {
+  transform: translateZ(0) translateY(-2px);
+}
+.tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  padding: 3px 11px;
+  border-radius: 999px;
+}
+
+/* the action bubble, anchored above the mascot */
+.bubble {
+  position: absolute;
+  right: 4px;
+  bottom: calc(100% + 8px);
+  width: 272px;
+  text-align: left;
+  background: color-mix(in srgb, var(--color-bg) 92%, var(--color-text));
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  padding: 17px;
+  box-shadow: var(--shadow);
+  transform-origin: bottom right;
+  transition:
+    opacity 0.2s var(--curve),
+    transform 0.2s var(--curve),
+    visibility 0.2s;
+}
+.efloat:not(.isOpen) .bubble {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.9) translateY(8px);
+  pointer-events: none;
+}
+/* little pointer down toward the sprig */
+.bubble::after {
+  content: "";
+  position: absolute;
+  right: 22px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  background: color-mix(in srgb, var(--color-bg) 92%, var(--color-text));
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  transform: rotate(45deg);
+}
+.title {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  font-size: 16px;
+  line-height: 1.2;
+  margin-bottom: 5px;
+}
+.hint {
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--color-text-muted);
+}
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 14px;
+}
+/* the quiet "none of these" escape hatch — subordinate to the real actions */
+.dismiss {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 7px 8px;
+  background: none;
+  border: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 7px;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.dismiss:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+@media (max-width: 560px) {
+  .efloat {
+    right: 14px;
+    bottom: 14px;
+  }
+}
+
+@media print {
+  .efloat {
+    display: none !important;
+  }
+}

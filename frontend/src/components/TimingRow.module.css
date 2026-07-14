@@ -1,0 +1,86 @@
+/* Two timing layouts. `.strip` is the specimen row under a plain title (no photo):
+   hairline dividers, mono uppercase labels, tabular figures. `.chips` is the pill
+   row that reads over the hero photo — it only ever renders inside the hero, so
+   the glassy over-image treatment is baked straight into `.chip` (it used to be a
+   `.recipe-hero .timing-chip` descendant override in the global sheet). */
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  margin: 20px 0 4px;
+}
+.strip div {
+  flex: 1 1 25%;
+  min-width: 70px;
+  padding: 11px 6px;
+  text-align: center;
+  border-right: 1px solid var(--color-border);
+}
+.strip div:last-child {
+  border-right: 0;
+}
+.strip dt {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.strip dd {
+  margin: 4px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 13px 0 0;
+}
+.chip {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--mono);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(2px);
+  border-radius: 20px;
+  padding: 5px 11px;
+}
+.chip dt {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+}
+.chip dd {
+  order: -1; /* value reads before its label */
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffd9a0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* print: the hero flattens to a plain header, so re-light the chips for ink */
+@media print {
+  .chip {
+    background: none;
+    border-color: var(--color-border);
+    backdrop-filter: none;
+  }
+  .chip dt {
+    color: var(--color-text-muted);
+  }
+  .chip dd {
+    color: var(--color-accent);
+  }
+}

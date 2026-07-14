@@ -1,4 +1,5 @@
 import type { FormEvent, RefObject } from "react";
+import styles from "./UrlForm.module.css";
 
 interface UrlFormProps {
   value: string;
@@ -24,12 +25,12 @@ export function UrlForm({
   }
 
   return (
-    <form className="url-form" onSubmit={handleSubmit}>
+    <form className={styles.form} onSubmit={handleSubmit}>
       <input
         ref={inputRef}
         type="url"
         inputMode="url"
-        className="url-input"
+        className={styles.input}
         placeholder="https://a-food-blog.com/best-roast-chicken"
         aria-label="Recipe URL"
         spellCheck={false}
@@ -39,8 +40,8 @@ export function UrlForm({
         disabled={loading}
         required
       />
-      <button type="submit" className="url-submit" disabled={loading}>
-        {loading && <span className="spinner" aria-hidden />}
+      <button type="submit" className={styles.submit} disabled={loading}>
+        {loading && <span className={styles.spinner} aria-hidden />}
         <span>{loading ? "EXTRACTING" : "EXTRACT"}</span>
       </button>
     </form>

@@ -1,0 +1,35 @@
+/* Global print concerns that aren't owned by any one component: re-light the
+   palette so print never inherits the dark theme, force backgrounds/colours to
+   render, and set the page margin. Component-specific print layout (flattening the
+   carousel/reel, hero → plain header, etc.) lives in each component's module.
+
+   The re-light targets the [data-theme] selectors too so it still wins when the
+   user has forced a theme via the toggle (those selectors outrank a bare :root). */
+@media print {
+  :root,
+  :root[data-theme="dark"],
+  :root[data-theme="light"] {
+    --color-brand: #059669;
+    --color-brand-strong: #047857;
+    --color-accent: #8a4a08; /* a touch darker than screen amber for ink contrast */
+    --color-bg: #ffffff;
+    --color-text: #141c17;
+    --color-text-muted: #444c47;
+    --color-border: #c9d2cc;
+    --color-surface: #ffffff;
+    --color-grid: transparent; /* drop the dotted station grid — noise on paper */
+    --shadow: none;
+    --shadow-soft: none;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    box-shadow: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  @page {
+    margin: 16mm;
+  }
+}

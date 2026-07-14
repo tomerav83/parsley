@@ -7,6 +7,7 @@ import {
   type ReactNode,
   type TouchEvent,
 } from "react";
+import styles from "./SectionCarousel.module.css";
 
 export interface CarouselSection {
   key: string;
@@ -24,7 +25,7 @@ interface SectionCarouselProps {
 // out at whichever edge has more beyond it: a bottom fade means "more below", a
 // top fade means "you've scrolled". Both vanish at the boundaries, so the fade
 // itself tells you where the list starts and ends. The fade lengths are CSS
-// custom props toggled via data-* here; App.css animates them.
+// custom props toggled via data-* here; the module animates them.
 function CardBody({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const [edges, setEdges] = useState({ top: false, bottom: false });
@@ -53,7 +54,8 @@ function CardBody({ children }: { children: ReactNode }) {
   return (
     <div
       ref={ref}
-      className="cf-body"
+      className={styles.body}
+      data-scroll-region=""
       data-fade-top={edges.top}
       data-fade-bottom={edges.bottom}
       onScroll={update}
@@ -68,7 +70,7 @@ function CardBody({ children }: { children: ReactNode }) {
 // peeks from the side — signalling there's another section without arrows or
 // dots. Switch by swipe, ← / → keys, or by tapping the peeking card. The card
 // fills the height of the recipe frame; when a section is longer than that, its
-// list (.cf-body) scrolls internally so the hero and the page stay put.
+// list (.body) scrolls internally so the hero and the page stay put.
 // Non-active panels are aria-hidden.
 export function SectionCarousel({ sections }: SectionCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -113,17 +115,18 @@ export function SectionCarousel({ sections }: SectionCarouselProps) {
   };
 
   return (
-    <div className="carousel" ref={rootRef}>
+    <div className={styles.carousel} ref={rootRef}>
       {/* Explicit switcher. The coverflow's peeking card is the affordance on
-          wide screens, but it's flattened away on narrow ones (App.css), so this
-          segmented control is what switches sections there. Hidden on desktop. */}
-      <div className="cf-tabs" role="tablist" aria-label="Recipe sections">
+          wide screens, but it's flattened away on narrow ones (the module's
+          media query), so this segmented control switches sections there.
+          Hidden on desktop. */}
+      <div className={styles.tabs} role="tablist" aria-label="Recipe sections">
         {sections.map((s, i) => (
           <button
             key={s.key}
             type="button"
             role="tab"
-            className="cf-tab"
+            className={styles.tab}
             aria-selected={i === index}
             onClick={() => go(i)}
           >
@@ -132,28 +135,32 @@ export function SectionCarousel({ sections }: SectionCarouselProps) {
         ))}
       </div>
       <div
-        className="viewport"
+        className={styles.viewport}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         role="group"
         aria-label="Recipe sections — use arrow keys to switch"
       >
-        <div className="stage">
+        <div className={styles.stage}>
           {sections.map((s, i) => {
             const active = i === index;
             // The inactive section sits on the side it lives on relative to the
             // active one, so the peek points toward where it'll come from.
-            const pos = active ? "is-active" : i < index ? "peek-l" : "peek-r";
+            const posClass = active
+              ? styles.isActive
+              : i < index
+                ? styles.peekL
+                : styles.peekR;
             return (
               <div
                 key={s.key}
-                className={`cf-panel ${pos}`}
+                className={`${styles.panel} ${posClass}`}
                 role="tabpanel"
                 aria-hidden={!active}
                 onClick={active ? undefined : () => go(i)}
               >
-                <div className="cf-card">
-                  <p className="slabel">
+                <div className={styles.card}>
+                  <p className={styles.slabel}>
                     <span>{s.label}</span>
                     <span>{s.badge}</span>
                   </p>

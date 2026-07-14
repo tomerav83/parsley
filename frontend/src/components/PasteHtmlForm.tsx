@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
 import type { ExtractError } from "@/api";
 import { errorInfo } from "@/errorInfo";
+import styles from "./PasteHtmlForm.module.css";
+import btn from "./Button.module.css";
 
 interface PasteHtmlFormProps {
   url: string;
@@ -33,9 +35,9 @@ export function PasteHtmlForm({
   const empty = touched && !html.trim();
 
   return (
-    <div className="paste-screen">
-      <div className="paste-backrow">
-        <button type="button" className="back" onClick={onCancel}>
+    <div>
+      <div className={styles.backrow}>
+        <button type="button" className={btn.back} onClick={onCancel}>
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -51,9 +53,9 @@ export function PasteHtmlForm({
         </button>
       </div>
 
-      <form className="paste-form" onSubmit={handleSubmit}>
-        <p className="paste-label">paste · page source</p>
-        <p className="paste-help">
+      <form onSubmit={handleSubmit}>
+        <p className={styles.label}>paste · page source</p>
+        <p className={styles.help}>
           On{" "}
           <a href={url} target="_blank" rel="noreferrer noopener">
             the recipe page
@@ -64,13 +66,13 @@ export function PasteHtmlForm({
         </p>
 
         {error && (
-          <p className="paste-error" role="alert">
+          <p className={styles.error} role="alert">
             {errorInfo(error.code).title} — {errorInfo(error.code).hint}
           </p>
         )}
 
         <textarea
-          className={`paste-input${empty ? " is-empty" : ""}`}
+          className={`${styles.input}${empty ? ` ${styles.isEmpty}` : ""}`}
           placeholder="<!doctype html> …paste the whole page here…"
           aria-label="Page HTML source"
           value={html}
@@ -79,13 +81,17 @@ export function PasteHtmlForm({
           rows={8}
         />
 
-        <div className="paste-actions">
-          <button type="submit" className="btn btn-primary" disabled={loading}>
+        <div className={styles.actions}>
+          <button
+            type="submit"
+            className={`${btn.btn} ${btn.primary}`}
+            disabled={loading}
+          >
             {loading ? "EXTRACTING…" : "EXTRACT FROM HTML"}
           </button>
           <button
             type="button"
-            className="btn btn-ghost"
+            className={`${btn.btn} ${btn.ghost}`}
             onClick={onCancel}
             disabled={loading}
           >

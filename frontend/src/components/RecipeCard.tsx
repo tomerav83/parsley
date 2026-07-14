@@ -3,6 +3,7 @@ import { IngredientList } from "./IngredientList";
 import { StepReel } from "./StepReel";
 import { TimingRow } from "./TimingRow";
 import { SectionCarousel, type CarouselSection } from "./SectionCarousel";
+import styles from "./RecipeCard.module.css";
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -58,31 +59,37 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   const image = safeImage(recipe.image);
 
   return (
-    <article className="recipe-card">
+    <article className={styles.card}>
       {image ? (
         // Photo-behind-glass banner: title + timing sit over the image behind a
         // gradient scrim, reclaiming the height a stacked photo would cost.
-        <header className="recipe-hero">
+        <header className={styles.hero}>
           <img
-            className="recipe-hero-img"
+            className={styles.heroImg}
             src={image}
             alt={recipe.name}
             loading="lazy"
           />
-          <div className="recipe-hero-scrim" aria-hidden />
-          <div className="recipe-hero-body">
-            <p className="station-kicker on-hero">station · recipe</p>
-            <h1 className="recipe-title on-hero">{recipe.name}</h1>
-            {line && <p className="recipe-source on-hero">{line}</p>}
+          <div className={styles.heroScrim} aria-hidden />
+          <div className={styles.heroBody}>
+            <p className={`${styles.stationKicker} ${styles.onHero}`}>
+              station · recipe
+            </p>
+            <h1 className={`${styles.title} ${styles.onHero}`}>
+              {recipe.name}
+            </h1>
+            {line && (
+              <p className={`${styles.source} ${styles.onHero}`}>{line}</p>
+            )}
             <TimingRow recipe={recipe} variant="chips" />
           </div>
         </header>
       ) : (
         // No photo: fall back to the pinned title + specimen timing strip.
-        <header className="recipe-head">
-          <p className="station-kicker">station · recipe</p>
-          <h1 className="recipe-title">{recipe.name}</h1>
-          {line && <p className="recipe-source">{line}</p>}
+        <header className={styles.head}>
+          <p className={styles.stationKicker}>station · recipe</p>
+          <h1 className={styles.title}>{recipe.name}</h1>
+          {line && <p className={styles.source}>{line}</p>}
           <TimingRow recipe={recipe} />
         </header>
       )}
@@ -90,7 +97,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
       {/* Ingredients ⇄ Method carousel */}
       <SectionCarousel sections={sections} />
 
-      <footer className="recipe-footer">
+      <footer className={styles.footer}>
         <a href={recipe.source_url} target="_blank" rel="noreferrer noopener">
           VIEW ORIGINAL ↗
         </a>

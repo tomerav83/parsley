@@ -7,6 +7,7 @@ import {
   type PointerEvent,
   type TouchEvent,
 } from "react";
+import styles from "./StepReel.module.css";
 
 interface StepReelProps {
   steps: string[];
@@ -164,10 +165,10 @@ export function StepReel({ steps }: StepReelProps) {
   const pad = (n: number) => String(n).padStart(2, "0");
 
   return (
-    <div className="step-reel">
+    <div className={styles.reel}>
       <div
         ref={stageRef}
-        className="reel-stage"
+        className={styles.stage}
         tabIndex={0}
         role="group"
         aria-roledescription="carousel"
@@ -185,7 +186,7 @@ export function StepReel({ steps }: StepReelProps) {
           return (
             <div
               key={i}
-              className={`reel-card${active ? " on" : ""}`}
+              className={`${styles.card}${active ? ` ${styles.on}` : ""}`}
               style={{
                 ...st,
                 pointerEvents: active ? "none" : st.opacity ? "auto" : "none",
@@ -196,11 +197,11 @@ export function StepReel({ steps }: StepReelProps) {
                 active ? undefined : () => go(i > index ? index + 1 : index - 1)
               }
             >
-              <div className="reel-head">
-                <span className="reel-num">{pad(i + 1)}</span>
-                {timer && <span className="reel-timer">⏱ {timer}</span>}
+              <div className={styles.head}>
+                <span className={styles.num}>{pad(i + 1)}</span>
+                {timer && <span className={styles.timer}>⏱ {timer}</span>}
               </div>
-              <p className="reel-body">{s}</p>
+              <p className={styles.body}>{s}</p>
             </div>
           );
         })}
