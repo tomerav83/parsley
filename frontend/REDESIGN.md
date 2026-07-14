@@ -1,0 +1,179 @@
+# Parsley Frontend — Critical Review & Redesign Plan
+
+*Method: five parallel research streams scraping popular OSS React projects (bulletproof-react, shadcn/ui, Cal.com, Supabase Studio, Excalidraw) and authoritative sources (W3C WAI-ARIA APG, WCAG, react.dev, TkDodo, Kent C. Dodds, MDN, State of CSS 2024), cross-checked against every file in `frontend/src`. Every finding cites a source and points at a real line.*
+
+---
+
+## Verdict
+
+The **visual design is genuinely good** — the emerald/amber "mise en place" identity, the photo-behind-glass hero with a contrast-safe scrim, the exhaustive print stylesheet, and the three-layer `prefers-reduced-motion` handling are careful, above-average work. Keep the *look*.
+
+The problems are **interaction design**, **architecture**, and **engineering hygiene**:
+
+1. The signature interaction (a 3D coverflow carousel + a one-step-at-a-time "reel" with hidden scrollbars and hijacked page scroll) is **clever at the direct expense of accessibility and usability** — it makes the recipe method literally unreadable to a screen reader and unreachable without flick-flick-flicking. This is the single biggest thing to *redesign*, not just refactor.
+2. The code is a **1568-line global CSS monolith** + a **240-line god `App.tsx`** that owns all state and hand-rolls a router. Below the bar every comparable project sets.
+3. **TypeScript `strict` is off, tests never run in CI, the API response is an unvalidated cast.** The floor is too low.
+
+Nothing here is unfixable, and the fixes are mostly mechanical. Plan is at the bottom.
+
+---
+
+## What's good (so this is fair)
+
+- **Brand & aesthetics:** consistent token-driven emerald/amber, Space Mono for quantities/labels, squared geometry — a real identity, not a template.
+- **Hero contrast engineering:** dual-gradient scrim + text-shadow floor keeps title legibility over arbitrary photos (`App.css:792-834`).
+- **Print stylesheet:** flattens the carousel/reel to a clean paged document, re-lights dark mode, exposes source URLs (`App.css:1355-1568`). Rare to see done at all.
+- **Reduced motion:** handled in three layers (global safety net, per-widget crossfade, static canvas frame). Correct and thorough.
+- **Image hardening:** `safeImage()` rejects non-http(s) schemes on scraped image URLs (`RecipeCard.tsx:36`).
+- **Instinct to avoid heavy deps** (no Redux, no CSS-in-JS) is *directionally right* — see D/B below. The failure is architecture, not technology choice.
+
+---
+
+## A. Accessibility & the interaction model — **BLOCKERS**
+
+The recurring root cause: **decorative 3D transforms built on DOM that hides real content and hijacks global input**, instead of accessible DOM (lists, real buttons, scoped handlers) with visuals layered on top as pure decoration.
+
+- **A1 (blocker). The method is invisible to assistive tech.** `StepReel.tsx:189` sets `aria-hidden={!active}` on every card, so exactly **one** step is ever in the a11y tree, with no `aria-live` to announce changes. A screen-reader user can perceive step N and only step N. → WCAG 2.1.1 / 1.3.1 / 4.1.2. *Fix:* render the method as a real `<ol>` with every step exposed; use CSS transforms as decoration only, never `aria-hidden` to build the visual.
+  - https://www.w3.org/WAI/WCAG21/Understanding/keyboard.html · https://dequeuniversity.com/rules/axe/4.11/aria-hidden-focus
+- **A2 (blocker). No affordance, non-adjacent steps unreachable.** Scrollbar hidden (`App.css:1046`), no prev/next, no counter. Reaching step 12/15 = 11 discrete flicks with zero indication the mechanism exists. Contradicts the APG Carousel pattern (requires visible Previous/Next controls). *Fix:* visible focusable Prev/Next + "Step 3 of 15", or drop the reel for a scrollable list with a real scrollbar.
+  - https://www.w3.org/WAI/ARIA/apg/patterns/carousel/ · https://webflow.com/accessibility/checklist/task/avoid-scrolljacking
+- **A3 (blocker). `aria-hidden` wraps focusable content.** Both section panels are always rendered; the inactive one is pushed aside by CSS transform and marked `aria-hidden` (`SectionCarousel.tsx:146`) but still contains real `<input type="checkbox">` (`IngredientList.tsx:48`). Keyboard users **Tab into checkboxes screen readers cannot see** — the canonical `aria-hidden-focus` failure (WCAG 4.1.2, Serious). *Fix:* hide the inactive panel with `hidden`/`inert`, not `aria-hidden` + transform.
+  - https://dequeuniversity.com/rules/axe/4.11/aria-hidden-focus · https://www.w3.org/WAI/ARIA/apg/patterns/tabs/
+- **A4 (blocker + real bug). Three global `window` keydown listeners hijack arrow keys page-wide; one hijacks the mouse wheel.** `SectionCarousel.tsx:83`, `StepReel.tsx:141`, `IngredientList.tsx:17` each attach a `window` keydown that `preventDefault()`s the arrows; `StepReel.tsx:93` adds a non-passive `wheel` `preventDefault()` (scroll-jacking). **Verified bug:** the visibility gate `el.closest("[aria-hidden='true']")` (`StepReel.tsx:152`, `IngredientList.tsx:28`) never matches, because `App.tsx` hides off-screen screens with **`inert`** (which does *not* set an `aria-hidden` attribute) and **`backToSearch()` never clears `recipe`** (`App.tsx:97`), so the recipe subtree stays mounted. Result: arrow keys and wheel are still hijacked while the user is on the **Home** screen. `SectionCarousel` has no gate at all. → violates the spirit of WCAG 2.1.4 (single-key shortcuts must be scoped to focus or remappable). *Fix:* scope key handling to the focused stage element, never `window`; never `preventDefault` page scroll.
+  - https://www.w3.org/WAI/WCAG21/Understanding/keyboard-shortcuts.html · https://developer.mozilla.org/en-US/docs/Web/API/Element/wheel_event
+- **A5 (high). The "tabs" aren't tabs.** `role="tablist"/tab/tabpanel` with no roving tabindex, no arrow-within-tablist, no `aria-controls`/`id` association, and the whole `.cf-tabs` control is `display:none` on desktop (`App.css:894`) — where sections are actually switched by a clickable **`<div onClick>`** (`SectionCarousel.tsx:147`), not a button. Half-tabs/half-coverflow, conformant as neither. *Fix:* commit to real APG Tabs *or* the APG Carousel tablist variant; make the switch a real `<button>`.
+  - https://www.w3.org/WAI/ARIA/apg/patterns/tabs/
+- **A6 (high). No focus management on screen change.** `inert` is the right tool, but focus is never moved to the incoming screen — `submitUrl→recipe` and `backToSearch→home` strand focus on the now-inert control just clicked. The recipe screen has **no `<h1>`** to move focus to. Only `editLink()` moves focus, via a fragile `setTimeout(…, 260)` (`App.tsx:116`). → WCAG 2.4.3. *Fix:* on every screen change, move focus to the new screen's heading (`tabIndex={-1}` + `.focus()`), tied to the state change, not a timer.
+  - https://www.w3.org/WAI/WCAG21/Understanding/focus-order.html · https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert
+- **A7 (high). `role="alert"` misused for an interactive widget.** `FloatingError.tsx:301` puts `role="alert"` (a read-only live region) on a bubble full of buttons that can auto-open; focus is never moved in, and Escape dismisses without restoring focus. *Fix:* use `role="alertdialog"` with focus moved to the primary action and restored on close, or strip the interactive controls out of the alert.
+  - https://www.w3.org/WAI/ARIA/apg/patterns/alertdialog/
+- **A8 (pass).** `prefers-reduced-motion` handling is correct and thorough. Caveat: it removes the *motion* but not the perception barrier in A1/A2 — not a substitute for fixing them.
+
+---
+
+## B. CSS architecture
+
+The plain-CSS instinct is fine (CSS-in-JS is in decline — styled-components entered maintenance mode in 2025; State of CSS 2024: Tailwind 75% / CSS Modules 61%). The failure is purely **architecture**.
+
+- **B1. One 1568-line global stylesheet, 100 selectors, zero scoping.** No component *owns* its styles; `RecipeCard.tsx` reaches across ~1500 lines to global `.recipe-card` any other rule can clobber. This is the exact anti-pattern CSS Modules was created to kill (Mark Dalgleish, "The End of Global CSS"). *Fix:* **CSS Modules** — colocated `RecipeCard.module.css`, zero-config in Vite, zero runtime. Split `App.css` along its **existing section comments** (lines 19/57/187/556/650/772/881/1242/1277/1355) into one module per component. Mechanical, no visual change, ~1–2 days.
+  - https://medium.com/seek-blog/the-end-of-global-css-90d2a4a06284 · https://ui.shadcn.com/docs/theming
+- **B2. Hand-rolled prefix "namespacing" is BEM-by-hand.** Two parallel button systems `.btn/.btn-*` **and** `.ebtn/.ebtn-*`, plus `.cf-*`, `.efloat-*` — faking the scoping the tool should provide. *Fix:* CSS Modules deletes the prefix scheme; collapse `btn`/`ebtn` into one `Button.module.css`.
+- **B3. Dead CSS is undetectable here.** Classes are built by interpolation — `` `screen screen-${name} ${pos}` `` (`App.tsx:122`), `` `ebtn ebtn-${variant}` `` (`FloatingError.tsx:213`) — so no tool can prove any selector unused, and nobody dares delete. CSS Modules turns "used anywhere in 100 globals?" into "referenced in this one file?".
+  - https://css-tricks.com/how-do-you-remove-unused-css-from-a-site/
+- **B4. Tokens conflate primitive and semantic tiers, cryptically named.** `--e` is both "the emerald hex" and "the brand color"; `--amber` is named by hue but used by meaning; `--mut`/`--bd`/`--chip` are unreadable. Best practice is primitive → semantic (`--emerald-600` → `--color-brand`). Keeping tokens in `:root` is *correct* (shadcn, W3C Design Tokens) — only the layering/naming is wrong. *Fix:* two tiers + semantic rename in the 150-line `index.css`. Half a day.
+  - https://www.contentful.com/blog/design-token-system/ · https://isaichenko.dev/blog/shadcn-colors-naming/
+- **B5. Theming is `prefers-color-scheme`-only — no user override.** A user wanting light UI on a dark OS is stuck. *Fix:* move dark overrides to `:root[data-theme="dark"]`, keep a `@media` block for the default, add a small toggle. Values already exist. A couple hours.
+  - https://web.dev/articles/prefers-color-scheme
+
+---
+
+## C. State & data fetching
+
+Framing that governs the verdicts: Parsley's two calls are **user-triggered mutations, not cached queries** — so most of what TanStack Query/SWR sell does not apply. Don't add React Query "for caching"; there's nothing to cache. The real defects are narrower.
+
+- **C1 (real defect). `return (await response.json()) as Recipe` — unvalidated cast** (`api.ts:97`). If the backend ever drops `source_url` or returns `steps: null`, it doesn't fail at the boundary — it crashes deep in `RecipeCard`/`StepReel`/`hostOf(recipe.source_url)`, far from the cause. The single unambiguous bug; app size is no excuse (it renders every field it just cast). *Fix:* add `zod` (or `valibot`), define `recipeSchema` once, `export type Recipe = z.infer<typeof recipeSchema>`, `return recipeSchema.parse(await response.json())`, wrap parse failure as `ExtractError("unknown", …)`. ~15 lines, highest value on the list.
+  - https://tkdodo.eu/blog/type-safe-react-query · https://blog.logrocket.com/when-use-zod-typescript-both-developers-guide/
+- **C2 (smell). Boolean soup with a deliberate impossible state.** `App.tsx` holds 8 `useState`; the `loading`/`recipe`/`error` trio can express impossible states, and Parsley *enters one on purpose*: `if (!isRetry) setError(null)` keeps `error` set while `loading` is true (`App.tsx:57`), guarded by a three-line comment. `FloatingError` compounds it with 5 `useState` + 2 refs coordinating retry. *Fix:* a `useReducer` state machine (`idle | submitting | success | error`) collapses the flags and makes "retry keeps error" an explicit transition. `xstate` is overkill at four states.
+  - https://kentcdodds.com/blog/stop-using-isloading-booleans
+- **C3 (latent bug). No cancellation / staleness guard.** `postExtract` passes no `AbortSignal`; the retry button (`App.tsx:229`) can race the original request and **the slower response wins**. *Fix:* `AbortController` in a `useExtractRecipe()` hook, abort the previous controller on each run, swallow `AbortError`. ~10 lines.
+  - https://react.dev/learn/synchronizing-with-effects
+- **C4 (verdict). A server-state library is overkill here.** No cached read state, nothing stale, nothing shared. The only fitting piece is `useMutation`'s state machine — which a 30-line custom hook gives free. Library not justified; the *pattern* is. **Don't add React Query.**
+  - https://tkdodo.eu/blog/you-might-not-need-react-query
+
+---
+
+## D. Project structure & routing
+
+- **D1. `App.tsx` is a 240-line god component** owning every piece of state and hand-rolling a router. Any keystroke re-renders the whole tree; every feature adds another `useState` here. Container/presentational is deprecated (Abramov); the modern remedy is custom hooks + state colocation (Kent C. Dodds). *Fix:* `App` composes features and owns only route; push form/error/loading into `useExtractRecipe()`/feature components. Target <100 lines.
+  - https://kentcdodds.com/blog/state-colocation-will-make-your-react-app-faster
+- **D2. Flat type-based `components/` bucket.** 12 siblings; `api.ts`/`ingredients.ts`/`errorInfo.ts` orphaned at `src` root. bulletproof-react and Cal.com organize by **feature**, not file type. *Fix:* `features/recipe/`, `features/extract/`, shared `components/`, `lib/`; move domain logic into the owning feature.
+  - https://github.com/alan2207/bulletproof-react/blob/master/docs/project-structure.md
+- **D3. Tests not colocated** (`ingredients.test.ts` at `src` root; zero component tests). *Fix:* one folder per component with colocated `.module.css` + `.test.tsx`.
+  - https://kentcdodds.com/blog/colocation
+- **D4. ⚠️ Barrel `index.ts` files are now an anti-pattern for app code** — this **contradicts the saved project convention** (which prescribes a barrel `index.ts` per component folder). TkDodo measured a real app drop from 11k+ modules / 5–10s startup to ~3.5k (−68%) after deleting internal barrels; bulletproof-react says import directly; barrels defeat tree-shaking. **Do the folder-per-component refactor WITHOUT barrels** — import files directly. (Reconsider that memory note.)
+  - https://tkdodo.eu/blog/please-stop-using-barrel-files · https://github.com/vercel/next.js/discussions/92926
+- **D5. No `@/` alias** (contradicts the saved convention, which is not actually implemented). Relative imports break on every file move — the exact friction the feature-folder refactor will hit. *Fix:* add `@/ → src/` in both `tsconfig` `paths` and `vite.config.ts` `resolve.alias` **before** moving files.
+- **D6. Hand-rolled CSS-class screen switcher instead of a router.** All three screens always mounted (no code-split), no URL/deep-link/back-button. For a *"paste a link, get a recipe"* app, **the recipe has no shareable URL and the browser Back button exits the app** — a real product gap. *Fix:* adopt React Router / TanStack Router (route-split `React.lazy` chunks, URLs, back-button for free); keep the slide transition via a transition wrapper. If kept router-less, at least extract a `useScreenRouter()` hook out of `App`.
+  - https://reactrouter.com/explanation/code-splitting
+
+---
+
+## E. Tooling, types, testing, CI
+
+- **E1 (worst hygiene issue). Tests never run in CI.** `ci.yml` runs lint + format + build only; `npm run test` is defined but never invoked (the backend job *does* run pytest). A test that never runs is decoration. *Fix:* add one `- run: npm run test` step. Highest-leverage one-liner in this review — without it, every other test is unenforced.
+  - https://martinfowler.com/articles/continuousIntegration.html
+- **E2. `strict` is OFF** (`tsconfig.app.json`). So `strictNullChecks` is off and **every `| null` in the codebase is unenforced** (`Recipe | null`, `image: string | null`, …). *Fix:* `"strict": true`. Nearly free at this size; immediately surfaces null-safety gaps.
+  - https://typescript-eslint.io/users/configs/
+- **E3. `noUncheckedIndexedAccess` is OFF and the code indexes unchecked everywhere** — `e.touches[0].clientX` (`SectionCarousel.tsx:100`, `StepReel.tsx:109`), `m[1..3]` (`SprigsBackground.tsx:96`), `.split("/")[0]` (`App.tsx:31`). A `TouchEvent` with no touches or a regex non-match is a real crash. It is **not** part of `strict` — enable separately. *Fix:* `"noUncheckedIndexedAccess": true` + guard the accesses.
+  - https://www.totaltypescript.com/tips/make-accessing-objects-safer-by-enabling-nouncheckedindexedaccess-in-tsconfig
+- **E4. oxlint config is 2 rules, no `jsx-a11y`** — in an app built entirely from hand-rolled interactive widgets. oxlint *ships* jsx-a11y; `no-static-element-interactions` would immediately flag the clickable `<div>` panels. *Fix:* add `"jsx-a11y"` + `"react/exhaustive-deps"` to the config.
+  - https://oxc.rs/docs/guide/usage/linter/rules/jsx_a11y/alt-text
+- **E5. Dead `// eslint-disable-next-line react-hooks/exhaustive-deps` comments** (`StepReel.tsx:78,83`): wrong linter (it's oxlint), wrong rule name (`react/exhaustive-deps`), and the rule isn't even enabled — they suppress nothing and mislead. *Fix:* enable the rule, then fix deps or use a real `// oxlint-disable-next-line react/exhaustive-deps` with justification.
+- **E6. One pure-function test; the interactive UI has none.** No `@testing-library/react`. The parser is the *one thing that least needs* tests; the fetch/error flow, carousel keyboard, and error widget — where bugs hide — have zero. *Fix:* add RTL + jsdom setup; write three behavior tests: (a) `api.ts` error mapping (429→rate_limited, pydantic detail→invalid_url, network throw→network), (b) section-switch keyboard + `aria-selected`, (c) FloatingError open/paste flow. Query by role so a11y gets exercised as a side effect.
+  - https://testing-library.com/docs/guiding-principles/ · https://kentcdodds.com/blog/write-tests
+
+---
+
+## F. Performance
+
+- **F1. Always-on `requestAnimationFrame` canvas.** `SprigsBackground` redraws 22 multi-path sprigs every frame, mounted at the app root; all three screens stay mounted, so it animates on Home, Paste, **and while the user reads a recipe**. Browsers only auto-pause rAF for *hidden tabs*, not occluded content. *Fix:* pause on `visibilitychange` and when `route !== 'home'` / off-screen (IntersectionObserver). The reduced-motion path is currently the only one that doesn't drain battery.
+  - https://developer.mozilla.org/en-US/docs/Web/API/Page_Visibility_API
+- **F2. No code-splitting.** `tsc -b && vite build`, zero `React.lazy`. First paint on Home pays for the entire recipe UI (carousel, reel, canvas). *Fix:* lazy-load the recipe view behind `Suspense` (falls out of D6's router move).
+  - https://react.dev/reference/react/lazy
+- **F3. Don't over-memoize.** No `React.memo` today — that's fine; the fix for the god component is state colocation (D1), not carpet-bombing `memo`. Measure before memoizing; the only real candidates are the canvas and the transform-heavy reel.
+  - https://react.dev/reference/react/memo
+
+---
+
+## The redesign thesis
+
+**Keep the look; rebuild the mechanics.** The emerald/amber identity, the hero, the mono quantities, the sprig mascot, the print sheet — all stay. What gets redesigned is the *interaction substrate*: replace the 3D coverflow-carousel + one-step reel + hidden-scroll + global-key-hijack with **accessible, standard primitives** (a real `<ol>` of steps, real tabs or both sections visible, visible scrolling, focus-scoped keys, a URL-addressable recipe). The "depth" aesthetic can survive as **pure CSS decoration on top of readable DOM** — it just can't *be* the DOM.
+
+---
+
+## Phased plan
+
+Ordered so the safety net and type/validation land **first** — they catch regressions during the riskier refactors that follow.
+
+### Phase 0 — Raise the floor (low risk, high leverage, no visual change) ✅ DONE
+- [x] **E1** Added `npm run test` (+ Playwright Chromium install) to the CI frontend job.
+- [x] **E2/E3** `"strict": true` + `"noUncheckedIndexedAccess": true`; fixed all 11 unchecked `touches[0]`/`m[1]`/`split[0]` accesses the compiler flagged.
+- [x] **E4/E5** Enabled oxlint `jsx-a11y` + `react/exhaustive-deps` (a11y issues now surface as warnings = documented Phase 3 debt); removed the dead eslint-disable comments (refactored `StepReel` clamp/go/step to be genuinely deps-clean).
+- [x] **D5** Added `@/ → src/` alias (tsconfig + vite); converted the brittle `../` imports.
+- [x] **C1** Added `zod`; the API response is validated with `recipeSchema.safeParse`; `Recipe` is now `z.infer` of the schema (single source of truth). Backend-shape mismatches now fail as a named `ExtractError`.
+- [x] **A4 (partial)** Fixed the verified keydown bug: the off-screen gate now checks `[inert]` as well as `[aria-hidden]`, and `SectionCarousel` (which had no gate) got one. Arrow keys no longer hijacked on Home. *(Full de-globalizing of these listeners remains Phase 3.)*
+- [x] **Test infra** Stood up Vitest **Browser Mode (real Chromium via Playwright)** for component tests + a fast **node** project for logic tests; added RTL + a regression test pinning the A4 fix. `20 tests` green.
+
+### Phase 1 — De-monolith the CSS (mechanical, no visual change)
+- [ ] **B4** Two-tier + semantically-rename tokens in `index.css`.
+- [ ] **B1/B2/B3** Split `App.css` along its section comments into colocated `*.module.css`; swap `className` strings to `styles.*`; collapse `btn`/`ebtn` into one `Button` module.
+- [ ] **B5** Move dark theming to `data-theme` class + default media query + a toggle.
+
+### Phase 2 — Restructure components & state (no visual change)
+- [ ] **D2/D3/D4** One-folder-per-component (colocated module + test), grouped into `features/recipe`, `features/extract`, shared `components/`, `lib/` — **no barrels**.
+- [ ] **C2/C3** Extract `useExtractRecipe()`; model async as a `useReducer` state machine; add `AbortController`.
+- [ ] **C2** Refactor `FloatingError`'s 5-state/2-ref tangle into an explicit reducer.
+- [ ] **D1** Slim `App.tsx` to composition + route.
+
+### Phase 3 — Rebuild the interaction model on accessible primitives (the redesign; highest-risk, most visible)
+- [ ] **A1/A2** Replace `StepReel` with a real numbered `<ol>` (all steps exposed, visible scroll); depth becomes optional CSS decoration. Add visible Prev/Next + "step N of M" if a focus mode is kept.
+- [ ] **A3/A5** Replace the tab/carousel hybrid with real APG Tabs (roving tabindex, arrow-within-tablist, `aria-controls`, `hidden` inactive panel, real `<button>`) *or* just show both sections; stop `aria-hidden`-ing focusable content.
+- [ ] **A4** Remove the three global `window` keydown listeners and the wheel hijack; scope keys to the focused widget; never `preventDefault` page scroll.
+- [ ] **A6** Focus management on screen change (move focus to the new screen's `<h1>`; add an `<h1>` to the recipe screen).
+- [ ] **A7** `FloatingError` → `role="alertdialog"` with focus move + restore.
+- [ ] **D6** Adopt a router → URLs/back-button/deep-links + route-based code-splitting; keep the slide via a transition wrapper.
+
+### Phase 4 — Performance & tests
+- [ ] **F1** Pause the sprig canvas on `visibilitychange` / off-home.
+- [ ] **F2** `React.lazy` + Suspense for the recipe view (falls out of Phase 3's router).
+- [ ] **E6** Add the three RTL behavior tests — now enforced by Phase 0's CI wiring.
+- [ ] **F3** Profile; memoize only the canvas/reel if measured.
+
+---
+
+## Sources (representative)
+- Architecture: bulletproof-react project-structure/standards · Cal.com `packages/features` · shadcn/ui · TkDodo "Please stop using barrel files" · Kent C. Dodds state-colocation/colocation · React Router code-splitting
+- CSS: Dalgleish "The End of Global CSS" · State of CSS 2024 · shadcn theming · W3C/Contentful design-token tiers · web.dev prefers-color-scheme
+- State/data: TkDodo type-safe-react-query / you-might-not-need-react-query · Kent C. Dodds isLoading-booleans · react.dev synchronizing-with-effects · LogRocket zod
+- A11y: W3C WAI-ARIA APG (Tabs, Carousel, Alertdialog) · WCAG 2.1.1/1.3.1/2.4.3/2.1.4/4.1.2 · MDN inert/wheel · Deque aria-hidden-focus
+- Testing/perf/tooling: Testing Library guiding-principles · Kent C. Dodds write-tests · Martin Fowler CI · typescript-eslint configs · totaltypescript noUncheckedIndexedAccess · oxc.rs jsx-a11y/exhaustive-deps · react.dev lazy/memo · MDN Page Visibility

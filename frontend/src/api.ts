@@ -2,19 +2,30 @@
 // the app is always same-origin: on Vercel a rewrite routes /api to the backend
 // service (see vercel.json); in dev Vite proxies /api to the backend.
 
-export interface Recipe {
-  name: string;
-  image: string | null;
-  author: string | null;
-  ingredients: string[];
-  steps: string[];
-  prep_time_minutes: number | null;
-  cook_time_minutes: number | null;
-  total_time_minutes: number | null;
-  yields: string | null;
-  source_url: string;
-  site_name: string | null;
-}
+import { z } from "zod";
+
+// Runtime schema for the extraction response, validated at the network boundary
+// (see postExtract). A backend shape drift then fails HERE as a named
+// ExtractError instead of crashing deep in the recipe UI where the mismatch is
+// unrecognisable. Mirrors backend/app/models.py::Recipe; the optional fields
+// accept null OR an omitted key and normalise both to null.
+export const recipeSchema = z.object({
+  name: z.string(),
+  image: z.string().nullable().default(null),
+  author: z.string().nullable().default(null),
+  ingredients: z.array(z.string()),
+  steps: z.array(z.string()),
+  prep_time_minutes: z.number().nullable().default(null),
+  cook_time_minutes: z.number().nullable().default(null),
+  total_time_minutes: z.number().nullable().default(null),
+  yields: z.string().nullable().default(null),
+  source_url: z.string(),
+  site_name: z.string().nullable().default(null),
+});
+
+// Single source of truth for the Recipe type — inferred from the schema so the
+// validator and the type can never drift apart.
+export type Recipe = z.infer<typeof recipeSchema>;
 
 // Error codes the backend can return (app/main.py). "rate_limited" and
 // "network" are surfaced by the client for cases the backend can't name.
@@ -94,7 +105,16 @@ async function postExtract(path: string, payload: unknown): Promise<Recipe> {
   if (!response.ok) {
     throw await parseError(response);
   }
-  return (await response.json()) as Recipe;
+  const parsed = recipeSchema.safeParse(await response.json());
+  if (!parsed.success) {
+    // The server answered 2xx but not with a recipe we recognise — treat it as
+    // an unexpected (reportable) failure rather than trusting a bad shape.
+    throw new ExtractError(
+      "unknown",
+      "The recipe came back in an unexpected form. Please try again.",
+    );
+  }
+  return parsed.data;
 }
 
 export function extractRecipe(url: string): Promise<Recipe> {

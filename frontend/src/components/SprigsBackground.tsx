@@ -92,8 +92,9 @@ function drawLeaf(ctx: CanvasRenderingContext2D, s: number) {
 function emeraldRgb(el: HTMLElement): string {
   const hex = getComputedStyle(el).getPropertyValue("--e").trim();
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-  if (!m) return "16,185,129";
-  return `${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)}`;
+  const [, r, g, b] = m ?? [];
+  if (!r || !g || !b) return "16,185,129";
+  return `${parseInt(r, 16)},${parseInt(g, 16)},${parseInt(b, 16)}`;
 }
 
 export function SprigsBackground() {

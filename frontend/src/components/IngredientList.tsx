@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { splitQuantity } from "../ingredients";
+import { splitQuantity } from "@/ingredients";
 
 interface IngredientListProps {
   ingredients: string[];
@@ -25,7 +25,9 @@ export function IngredientList({ ingredients }: IngredientListProps) {
       )
         return;
       const el = ref.current;
-      if (!el || el.closest("[aria-hidden='true']")) return;
+      // Off-screen guard: inactive section is aria-hidden, off-route screen is
+      // `inert` (no aria-hidden attribute) — check both (see StepReel).
+      if (!el || el.closest("[inert], [aria-hidden='true']")) return;
       const scroller = el.closest(".cf-body") as HTMLElement | null;
       if (!scroller) return;
       e.preventDefault();

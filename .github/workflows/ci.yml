@@ -34,5 +34,9 @@ jobs:
       - run: npm ci
       - name: Lint
         run: npm run lint && npm run format:check
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test
+        run: npm run test
       - name: Build
         run: npm run build

@@ -1,4 +1,4 @@
-import type { Recipe } from "../api";
+import type { Recipe } from "@/api";
 import { IngredientList } from "./IngredientList";
 import { StepReel } from "./StepReel";
 import { TimingRow } from "./TimingRow";
