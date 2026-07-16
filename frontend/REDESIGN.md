@@ -160,12 +160,13 @@ Ordered so the safety net and type/validation land **first** — they catch regr
 - [x] **D1** Slimmed `App.tsx` to composition + route (screens extracted, `App.module.css` split per-screen; `hostOf` moved into `RecipeScreen`). Verified **no visual change** by the computed-style diff (0 property + 0 structural changes across 8 scenes / ~275 elements, screen + print media, image + no-image, desktop + mobile). `35 tests` green (was 20).
 
 ### Phase 3 — Rebuild the interaction model on accessible primitives (the redesign; highest-risk, most visible)
-- [ ] **A1/A2** Replace `StepReel` with a real numbered `<ol>` (all steps exposed, visible scroll); depth becomes optional CSS decoration. Add visible Prev/Next + "step N of M" if a focus mode is kept.
-- [ ] **A3/A5** Replace the tab/carousel hybrid with real APG Tabs (roving tabindex, arrow-within-tablist, `aria-controls`, `hidden` inactive panel, real `<button>`) *or* just show both sections; stop `aria-hidden`-ing focusable content.
-- [ ] **A4** Remove the three global `window` keydown listeners and the wheel hijack; scope keys to the focused widget; never `preventDefault` page scroll.
-- [ ] **A6** Focus management on screen change (move focus to the new screen's `<h1>`; add an `<h1>` to the recipe screen).
-- [ ] **A7** `FloatingError` → `role="alertdialog"` with focus move + restore.
-- [ ] **D6** Adopt a router → URLs/back-button/deep-links + route-based code-splitting; keep the slide via a transition wrapper.
+Direction change (Tomer): the reel is **kept**, not dropped — rebuilt as an accessible one-step-at-a-time view (`MethodSteps`) inside a mobile segment-switch / desktop two-column shell (`RecipeSections`). See the converged design.
+- [x] **A1/A2** `StepReel` replaced by `MethodSteps`: a real `<ol>` with **every** step in the DOM (inactive ones `hidden`, so exposed to AT and to print), one shown at a time with visible Prev/Next; step number shown in the mobile segment badge / desktop panel label. Long steps auto-fit (shrink-to-floor) so nothing clips; the depth/reel identity survives as the framed card.
+- [x] **A3/A5** Tab/carousel hybrid gone. Mobile = two `aria-pressed` **toggle buttons** (not ARIA tabs — ←/→ belongs to step nav) switching panes that are shown/hidden with `display:none` (never `aria-hidden` over focusable content); desktop shows **both** sections as columns.
+- [x] **A4** All three global `window` keydown listeners + the wheel hijack removed (`StepReel`/`SectionCarousel`/`IngredientList` gutted or deleted). Method keys are scoped to the focused widget; page scroll is never `preventDefault`ed.
+- [x] **A6** Focus management on screen change: `App` moves focus to the incoming screen's `[data-route-heading]` on client navs (skipped on first load); Home wordmark, Paste label (now an `<h1>`), and the Recipe title all carry it. `document.title` set per screen.
+- [ ] **A7** `FloatingError` → `role="alertdialog"` with focus move + restore. *(Still pending — the one remaining Phase 3 item.)*
+- [x] **D6** React Router **data mode** adopted (`createBrowserRouter` + `RouterProvider`): real URLs, back/forward, deep-linkable `/recipe?url=…`, route-split `paste`/`recipe` chunks; the slide is a directional **view transition** (`transitions.css`, keyed on `html[data-slide]`). *(Deploy TODO: Vercel SPA history-fallback for deep links.)*
 
 ### Phase 4 — Performance & tests
 - [ ] **F1** Pause the sprig canvas on `visibilitychange` / off-home.

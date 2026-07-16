@@ -1,0 +1,180 @@
+/* Method: one step at a time. Every step is an <li> in the DOM (so the whole
+   method is exposed and prints); only the current one is shown, the rest carry
+   `hidden`. The visible card fills the panel's leftover height and its body
+   auto-fits (MethodSteps), so a long step never clips and nothing scrolls.
+   Prev/Next sit below; ←/→ work while the widget is focused. */
+.method {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  outline: none;
+}
+.stage {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex; /* only the one non-hidden slide is in flow */
+}
+.slide {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+/* setting `display` on the slide would otherwise defeat the `hidden` attribute's
+   UA display:none, so restore it for the inactive steps (higher specificity). */
+.slide[hidden] {
+  display: none;
+}
+/* the focused widget shows its focus on the card, not a stray full-width ring */
+.method:focus-visible .card {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-brand) 32%, transparent),
+    var(--shadow-soft);
+}
+.card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid
+    color-mix(in srgb, var(--color-brand) 55%, var(--color-border));
+  border-radius: 14px;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-soft);
+}
+.head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.num {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--color-brand);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--color-text);
+  /* the fit routine keeps text within this box for realistic steps; the rare
+     step too long to fit even at the readable floor scrolls here rather than
+     clipping (a real, visible scrollbar — never a hidden one). */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-brand) 40%, transparent)
+    transparent;
+}
+.body::-webkit-scrollbar {
+  width: 7px;
+}
+.body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-brand) 40%, transparent);
+  border-radius: 4px;
+}
+.timer {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  padding: 6px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.nav {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--color-border);
+  border-radius: 11px;
+  background: var(--color-bg);
+  color: var(--color-brand);
+  cursor: pointer;
+  transition:
+    background 0.18s var(--curve),
+    border-color 0.18s var(--curve);
+}
+.nav svg {
+  width: 18px;
+  height: 18px;
+}
+.nav:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-brand) 10%, var(--color-bg));
+  border-color: var(--color-brand);
+}
+.nav:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* print: reveal every step (override `hidden`) and flatten to a numbered list. */
+@media print {
+  .method {
+    display: block !important;
+  }
+  .stage {
+    display: block !important;
+  }
+  .slide {
+    display: list-item !important;
+    margin: 0 0 14px !important;
+    break-inside: avoid; /* don't split a single step across pages */
+  }
+  .slide[hidden] {
+    display: list-item !important;
+  }
+  .card {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    flex-direction: row !important;
+    gap: 13px !important;
+  }
+  .num {
+    font-size: 13px !important;
+    padding-top: 1px;
+  }
+  .body {
+    overflow: visible !important;
+    font-size: 12px !important; /* the fit routine may have set an inline size */
+  }
+  .timer {
+    display: none !important;
+  }
+  .foot {
+    display: none !important;
+  }
+}

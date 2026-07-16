@@ -1,14 +1,10 @@
-import type { Recipe } from "@/lib/api";
+import { useEffect, useRef } from "react";
+import { useSearchParams } from "react-router";
 import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
 import { RecipeSkeleton } from "@/features/recipe/RecipeSkeleton/RecipeSkeleton";
+import { appOutlet } from "@/app/appOutlet.ts";
 import styles from "./RecipeScreen.module.css";
 import btn from "@/components/Button.module.css";
-
-interface RecipeScreenProps {
-  recipe: Recipe | null;
-  loading: boolean;
-  onBack: () => void;
-}
 
 // Source label for the recipe bar: the site name if the backend gave one, else the
 // bare host of the source URL (falls back to the raw string if it won't parse).
@@ -20,13 +16,39 @@ function hostOf(url: string): string {
   }
 }
 
-// The recipe view: a fixed top bar (back to search + source) over a scroll frame
-// that holds the card (or its skeleton while a request is in flight).
-export function RecipeScreen({ recipe, loading, onBack }: RecipeScreenProps) {
+// The recipe view: a fixed top bar (back to search + source) over a frame that
+// holds the card (or its skeleton while a request is in flight). Also the
+// deep-link entry point — /recipe?url=… on a hard load extracts that URL in place.
+export function RecipeScreen() {
+  const { extract, requestRecipe, backToSearch } = appOutlet();
+  const [params] = useSearchParams();
+  const target = params.get("url") ?? "";
+  const { recipe, loading } = extract;
+
+  // Extract the URL in the query when it isn't the recipe already on screen. On
+  // the normal flow the recipe is loaded before we navigate here, so this is a
+  // no-op; it only fires for a hard load / back-forward to a /recipe?url=… we
+  // don't yet hold. The one-shot `requestedFor` guard means we ask for a given
+  // target at most once, so a backend that canonicalises the URL (redirect,
+  // trailing slash) — making source_url differ from what we asked for — can't
+  // spin us into a re-extract loop. requestRecipe is stable (useCallback).
+  const requestedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!target) return;
+    if (recipe?.source_url === target) return; // already have it
+    if (requestedFor.current === target) return; // already asked for it
+    requestedFor.current = target;
+    requestRecipe(target);
+  }, [target, recipe, requestRecipe]);
+
+  useEffect(() => {
+    document.title = recipe ? `${recipe.name} — Parsley` : "Parsley — recipe";
+  }, [recipe]);
+
   return (
-    <>
+    <div className={styles.recipeScreen}>
       <div className={styles.recipeBar}>
-        <button type="button" className={btn.back} onClick={onBack}>
+        <button type="button" className={btn.back} onClick={backToSearch}>
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -54,6 +76,6 @@ export function RecipeScreen({ recipe, loading, onBack }: RecipeScreenProps) {
           <RecipeCard recipe={recipe} />
         ) : null}
       </div>
-    </>
+    </div>
   );
 }

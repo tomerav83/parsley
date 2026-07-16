@@ -1,6 +1,6 @@
-/* App shell: the fixed frame and the three horizontally-sliding screens. Each
-   screen's own content + chrome lives in its component module under
-   app/screens/*; this file owns only the frame and the slide. */
+/* App shell: the fixed frame that holds the routed screen. Each screen owns its
+   own layout wrapper (app/screens/*); the slide between screens is a view
+   transition (app/transitions.css), not a stylesheet-driven transform. */
 
 .app {
   position: relative;
@@ -13,79 +13,16 @@
   inset: 0;
 }
 
-/* --- the sliding screens ------------------------------------------------- */
-.screen {
-  position: absolute;
-  inset: 0;
-  overflow-y: auto;
-  transition:
-    transform var(--slide) var(--curve),
-    opacity var(--slide) var(--curve);
-  will-change: transform, opacity;
-}
-.screen.isActive {
-  transform: translateX(0);
-  opacity: 1;
-}
-.screen.isLeft {
-  transform: translateX(-26%); /* recede with a little parallax */
-  opacity: 0;
-  pointer-events: none;
-}
-.screen.isRight {
-  transform: translateX(100%);
-  opacity: 1;
-  pointer-events: none;
-}
-
-/* centred screens (home, paste). Flex + margin:auto centres the inner element but
-   lets tall content overflow from the top and scroll instead of clipping. */
-.screenHome,
-.screenPaste {
-  display: flex;
-  padding: 32px 24px 56px;
-}
-
-/* recipe screen shell: the bar + scroll frame it holds live in RecipeScreen. */
-.screenRecipe {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* the inner .recipeScroll scrolls, not the screen */
-}
-
-/* --- reduced motion: swap the slide for a quiet crossfade ---------------- */
-@media (prefers-reduced-motion: reduce) {
-  .screen {
-    transition: opacity 0.12s ease;
-  }
-  .screen.isLeft,
-  .screen.isRight {
-    transform: none;
-  }
-}
-
-/* --- print: drop the app chrome, unpin the fixed frame ------------------- */
+/* print: drop the app chrome, unpin the fixed frame so the recipe flows as a
+   document (each screen hides/unpins its own content). */
 @media print {
-  .screenHome,
-  .screenPaste {
-    display: none !important;
-  }
   .app,
-  .screens,
-  .screen,
-  .screenRecipe {
+  .screens {
     position: static !important;
     overflow: visible !important;
     display: block !important;
     inset: auto;
     height: auto !important;
     min-height: 0 !important;
-    transform: none !important;
-    opacity: 1 !important;
-    padding: 0 !important;
-  }
-  /* the recipe screen may be inert/off-stage when printed from a deep link */
-  .screenRecipe {
-    pointer-events: auto !important;
   }
 }
