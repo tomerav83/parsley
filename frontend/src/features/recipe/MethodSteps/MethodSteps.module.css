@@ -1,16 +1,81 @@
-/* Method: one step at a time. Every step is an <li> in the DOM (so the whole
-   method is exposed and prints); only the current one is shown, the rest carry
-   `hidden`. The visible card fills the panel's leftover height and its body
-   auto-fits (MethodSteps), so a long step never clips and nothing scrolls.
-   Prev/Next sit below; ←/→ work while the widget is focused. */
+/* Method: one step at a time. The Prev/Next controls sit in the panel HEADER, not
+   a row beneath the card, so they never steal height from the step's reading area
+   (they used to, most noticeably on mobile). The card can also be swiped. Every
+   step is an <li> in the DOM (so the whole method is exposed and prints); only the
+   current one is shown, the rest carry `hidden`. The visible card fills the leftover
+   height and its body auto-fits (MethodSteps) so a long step never clips. */
 .method {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   outline: none;
+  touch-action: pan-y; /* let vertical scroll through; we handle horizontal swipes */
 }
+
+/* --- header row: label + step count + Prev/Next (mirrors the slabel style) --- */
+.head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid var(--color-text);
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+.label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.count {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-brand);
+  margin-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+/* 44px tap target for touch, but pulled in vertically (negative margin) so the
+   header stays slim — the visible mark is just the chevron. */
+.navBtn {
+  width: 44px;
+  height: 44px;
+  margin-block: -9px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-brand);
+  cursor: pointer;
+  transition: background 0.15s var(--curve);
+}
+.navBtn svg {
+  width: 20px;
+  height: 20px;
+}
+.navBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+}
+.navBtn:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* --- the step stage: one <li> shown at a time --------------------------- */
 .stage {
   list-style: none;
   margin: 0;
@@ -49,7 +114,7 @@
   background: var(--color-bg);
   box-shadow: var(--shadow-soft);
 }
-.head {
+.cardHead {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -104,46 +169,21 @@
   border-radius: 999px;
   white-space: nowrap;
 }
-.foot {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.nav {
-  width: 46px;
-  height: 46px;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1.5px solid var(--color-border);
-  border-radius: 11px;
-  background: var(--color-bg);
-  color: var(--color-brand);
-  cursor: pointer;
-  transition:
-    background 0.18s var(--curve),
-    border-color 0.18s var(--curve);
-}
-.nav svg {
-  width: 18px;
-  height: 18px;
-}
-.nav:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--color-brand) 10%, var(--color-bg));
-  border-color: var(--color-brand);
-}
-.nav:disabled {
-  opacity: 0.3;
-  cursor: default;
+
+/* --- mobile: the step number already shows in the segment badge ---------- */
+@media (max-width: 560px) {
+  .count {
+    display: none;
+  }
 }
 
-/* print: reveal every step (override `hidden`) and flatten to a numbered list. */
+/* --- print: reveal every step (override `hidden`) and flatten to a list --- */
 @media print {
   .method {
     display: block !important;
+  }
+  .nav {
+    display: none !important;
   }
   .stage {
     display: block !important;
@@ -172,9 +212,6 @@
     font-size: 12px !important; /* the fit routine may have set an inline size */
   }
   .timer {
-    display: none !important;
-  }
-  .foot {
     display: none !important;
   }
 }

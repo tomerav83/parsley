@@ -68,12 +68,7 @@ export function RecipeSections({ ingredients, steps }: RecipeSectionsProps) {
         </section>
 
         <section className={`${styles.prep} ${styles.methodPane}`}>
-          <p className={styles.slabel}>
-            <span>Method</span>
-            <span>
-              step {pad(current + 1)} of {pad(stepCount)}
-            </span>
-          </p>
+          {/* MethodSteps renders its own header (label + count + Prev/Next). */}
           <MethodSteps steps={steps} index={current} onIndex={setStep} />
         </section>
       </div>

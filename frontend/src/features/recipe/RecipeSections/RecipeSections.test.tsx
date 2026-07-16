@@ -35,20 +35,18 @@ describe("RecipeSections (mobile)", () => {
     expect(ing).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("labels the current step and updates it as the method advances", async () => {
+  it("labels the current step in the segment and advances it", async () => {
     render(<RecipeSections ingredients={INGREDIENTS} steps={STEPS} />);
-    // both the Method segment badge and the panel label carry the step number
+    // the Method segment badge carries the current step number on mobile
     expect(
       screen.getByRole("button", { name: /method 01 \/ 03/i }),
     ).toBeInTheDocument();
 
     // reveal the Method pane (hidden behind the segment on mobile), then advance
+    // via the header Next button
     await userEvent.click(screen.getByRole("button", { name: /^method/i }));
-    expect(screen.getByText("step 01 of 03")).toBeVisible();
-
     await userEvent.click(screen.getByRole("button", { name: /next step/i }));
 
-    expect(screen.getByText("step 02 of 03")).toBeVisible();
     expect(
       screen.getByRole("button", { name: /method 02 \/ 03/i }),
     ).toBeInTheDocument();

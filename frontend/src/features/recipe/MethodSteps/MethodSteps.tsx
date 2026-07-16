@@ -3,6 +3,7 @@ import {
   useLayoutEffect,
   useRef,
   type KeyboardEvent,
+  type TouchEvent,
 } from "react";
 import styles from "./MethodSteps.module.css";
 
@@ -64,16 +65,33 @@ function useFitText(text: string, base: number, min = 11.5) {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// The Method panel's engine: every step is a real <li> so the whole method is in
-// the DOM (and prints), but only the current one is shown — the rest carry the
-// `hidden` attribute (correctly out of the a11y tree and tab order, not merely
-// aria-hidden). Walked by the visible Prev/Next buttons or ←/→ while the widget
-// is focused; keys are scoped to this element, never window, so they don't hijack
-// the page. The step index is controlled so the mobile segment can label it.
+// Chevron icons kept inline so stroke/size stay in sync with the buttons.
+function Chevron({ dir }: { dir: "prev" | "next" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden>
+      <path
+        d={dir === "prev" ? "M14 6l-6 6 6 6" : "M10 6l6 6-6 6"}
+        strokeWidth="2.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// The Method panel: one step at a time. The Prev/Next controls live in the panel
+// HEADER (not a row under the card), so they never eat into the step card's
+// reading area — the concern was they stole height on mobile. The card itself can
+// also be swiped left/right. Every step is a real <li> so the whole method is in
+// the DOM (and prints); only the current one is shown, the rest carry the `hidden`
+// attribute (out of the a11y tree + tab order, not merely aria-hidden). Keys are
+// scoped to this element, never window, so they don't hijack the page. The step
+// index is controlled so the mobile segment can label it.
 export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   const count = steps.length;
   const clamped = Math.max(0, Math.min(count - 1, index));
   const bodyRef = useFitText(steps[clamped] ?? "", 15.5);
+  const touch = useRef<{ x: number; y: number } | null>(null);
 
   const go = useCallback(
     (delta: number) =>
@@ -91,11 +109,29 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
     }
   }
 
+  // Horizontal swipe walks the steps — the thumb-friendly path that keeps the
+  // controls out of the card. Only clearly-horizontal swipes count, so a vertical
+  // drag (e.g. scrolling a very long step) is left alone.
+  function onTouchStart(e: TouchEvent) {
+    const t = e.touches[0];
+    if (t) touch.current = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(e: TouchEvent) {
+    const end = e.changedTouches[0];
+    if (!touch.current || !end) return;
+    const dx = end.clientX - touch.current.x;
+    const dy = end.clientY - touch.current.y;
+    touch.current = null;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 45) {
+      go(dx < 0 ? 1 : -1); // swipe left → next
+    }
+  }
+
   return (
-    // A focusable, labelled carousel region walked by ←/→ — the APG Carousel
-    // keyboard pattern. The rules assume a non-interactive group shouldn't be
-    // focusable, take key handlers, or use role="group", but a carousel
-    // container legitimately does all three (the visible Prev/Next buttons stay
+    // A focusable, labelled carousel region walked by ←/→ or swipe — the APG
+    // Carousel keyboard pattern. The rules assume a non-interactive group
+    // shouldn't be focusable, take key handlers, or use role="group", but a
+    // carousel container legitimately does all three (the header Prev/Next stay
     // the primary, always-available control).
     // https://www.w3.org/WAI/ARIA/apg/patterns/carousel/
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
@@ -104,11 +140,40 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="group"
       aria-roledescription="carousel"
-      aria-label="Method steps — use the arrow keys or the previous and next buttons"
+      aria-label="Method steps — swipe, use the arrow keys, or the previous and next buttons"
       // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       onKeyDown={onKeyDown}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
+      <div className={styles.head}>
+        <span className={styles.label}>Method</span>
+        <div className={styles.nav}>
+          <span className={styles.count}>
+            step {pad(clamped + 1)} of {pad(count)}
+          </span>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={() => go(-1)}
+            disabled={clamped === 0}
+            aria-label="Previous step"
+          >
+            <Chevron dir="prev" />
+          </button>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={() => go(1)}
+            disabled={clamped === count - 1}
+            aria-label="Next step"
+          >
+            <Chevron dir="next" />
+          </button>
+        </div>
+      </div>
+
       {/* aria-live so pressing Next/Prev (focus stays on the button) announces the
           step that comes into view. */}
       <ol className={styles.stage} aria-live="polite">
@@ -122,63 +187,19 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
               hidden={!active}
               aria-current={active ? "step" : undefined}
             >
-              <div className={styles.card}>
-                <div className={styles.head}>
+              <article className={styles.card}>
+                <div className={styles.cardHead}>
                   <span className={styles.num}>{pad(i + 1)}</span>
                   {timer && <span className={styles.timer}>⏱ {timer}</span>}
                 </div>
                 <p className={styles.body} ref={active ? bodyRef : undefined}>
                   {s}
                 </p>
-              </div>
+              </article>
             </li>
           );
         })}
       </ol>
-      <div className={styles.foot}>
-        <button
-          type="button"
-          className={styles.nav}
-          onClick={() => go(-1)}
-          disabled={clamped === 0}
-          aria-label="Previous step"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            aria-hidden
-          >
-            <path
-              d="M14 6l-6 6 6 6"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className={styles.nav}
-          onClick={() => go(1)}
-          disabled={clamped === count - 1}
-          aria-label="Next step"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            aria-hidden
-          >
-            <path
-              d="M10 6l6 6-6 6"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-      </div>
     </div>
   );
 }
