@@ -30,6 +30,52 @@ const chromium = (options?: PlaywrightOptions) => ({
 export default defineConfig({
   resolve: { alias },
   test: {
+    // `coverage` is process-wide, not per-project (Vitest's `NonProjectOptions`),
+    // so it lives here rather than inside `unit`/`browser` below — and is
+    // collected only when `vitest run` is invoked with `--project unit --project
+    // browser`. `vrt`'s screenshot specs are deliberately never included: they
+    // mount components to diff pixels, not to exercise branches, and folding them
+    // in would inflate the number for free (a component can hit ~90% line
+    // coverage from being screenshotted once, with zero behavior asserted —
+    // https://rangle.io/blog/component-test-coverage).
+    //
+    // `coverage.include` is required, not optional: Vitest 4 removed `coverage.all`,
+    // and without `include` a file with zero tests is invisible to the report
+    // rather than counted as 0%. https://vitest.dev/guide/migration (§"Removed
+    // Options coverage.all and coverage.extensions")
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.ts", "src/**/*.tsx"],
+      exclude: [
+        "src/**/*.test.*",
+        "src/**/*.vrt.*",
+        "src/test/**",
+        "src/main.tsx", // bootstrap/mount — no branching logic to cover
+        "src/**/*.d.ts",
+      ],
+      // json-summary + json are read by the CI PR-comment action (Phase 5 G2):
+      // json-summary for the headline numbers, json for its per-file diff view.
+      // https://github.com/davelosert/vitest-coverage-report-action#usage
+      reporter: ["text", "html", "json-summary", "json", "lcov"],
+      reportOnFailure: true,
+      thresholds: {
+        // Ratchet, not a fixed bar: `autoUpdate` rewrites these numbers upward
+        // whenever a run exceeds them, so CI only fails on a *regression* — never
+        // on the codebase being imperfect. Chosen over a static target because a
+        // static gate above today's baseline blocks every PR until someone pays
+        // down the whole backlog first, and one set below it is a no-op.
+        // https://vitest.dev/config/coverage (thresholds.autoUpdate)
+        autoUpdate: true,
+        // Rewritten by `autoUpdate` as coverage rises — don't hand-edit these,
+        // just run `npm run test:coverage` and let it update the file. Measured
+        // 57.27/45.16/48.93/55.53 before Phase 5's G4 tests landed; these
+        // reflect that work. See REDESIGN.md Phase 5.
+        lines: 87.77,
+        branches: 74.48,
+        functions: 85.81,
+        statements: 86.56,
+      },
+    },
     projects: [
       {
         // Pure-logic tests (parser, schema, reducers) — fast, no DOM.

@@ -51,7 +51,9 @@ jobs:
     # https://argos-ci.com/docs/learn/integrations/github-actions-authentication
     permissions:
       contents: read
-      pull-requests: read
+      # write, not read: the coverage-report comment step below needs it to post
+      # to the PR. (The "Did the frontend change?" step only ever reads.)
+      pull-requests: write
     defaults:
       run:
         working-directory: frontend
@@ -100,7 +102,24 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - name: Test
-        run: npm run test
+        run: npm run test:coverage
+      # Posts the coverage table as a step-summary + sticky PR comment, read from
+      # the json-summary/json reporters (vitest.config.ts). Purely informational
+      # — the actual gate is the `thresholds` failure above, which already exits
+      # nonzero regardless of whether this step can comment. `continue-on-error`
+      # reflects that: GitHub hard-blocks write access for fork-originated PRs no
+      # matter what `permissions:` says (github.blog "Preventing Pwn-Requests"),
+      # so this step 403s in the exact fork scenario Argos above is careful to
+      # keep working — a fork contributor's otherwise-green PR must not fail on
+      # a comment infrastructure can't post, only on `if: always()` so it still
+      # reports what happened even when Test above failed (surfaced by
+      # `reportOnFailure: true` in vitest.config.ts).
+      - name: Coverage report
+        if: always()
+        continue-on-error: true
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          working-directory: frontend
       # Captures the component screenshots and uploads them to Argos, which holds
       # the baselines and does the diffing. So this step only proves capture works
       # — an *unapproved visual change* fails Argos' own PR check, not this one.
