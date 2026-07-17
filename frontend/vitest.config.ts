@@ -66,13 +66,14 @@ export default defineConfig({
         // down the whole backlog first, and one set below it is a no-op.
         // https://vitest.dev/config/coverage (thresholds.autoUpdate)
         autoUpdate: true,
-        // Baseline measured before any Phase 5 tests landed (`git log`
-        // chore/frontend-coverage). Raised as coverage improves; see REDESIGN.md
-        // Phase 5.
-        lines: 57.27,
-        branches: 45.16,
-        functions: 48.93,
-        statements: 55.53,
+        // Rewritten by `autoUpdate` as coverage rises — don't hand-edit these,
+        // just run `npm run test:coverage` and let it update the file. Measured
+        // 57.27/45.16/48.93/55.53 before Phase 5's G4 tests landed; these
+        // reflect that work. See REDESIGN.md Phase 5.
+        lines: 87.77,
+        branches: 74.48,
+        functions: 85.81,
+        statements: 86.56,
       },
     },
     projects: [
