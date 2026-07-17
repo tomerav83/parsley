@@ -75,6 +75,15 @@ export function recipeExtractor() {
 
   const dismiss = useCallback(() => dispatch({ type: "dismiss" }), []);
 
+  // Put a recipe straight into success state without a request — used to rehydrate
+  // from the sessionStorage cache on a refresh / deep-link (see lib/recipeCache).
+  // Aborts any in-flight request so a slow response can't clobber the restore.
+  const restore = useCallback((recipe: Recipe) => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    dispatch({ type: "success", recipe });
+  }, []);
+
   return {
     recipe: state.recipe,
     error: state.error,
@@ -83,5 +92,6 @@ export function recipeExtractor() {
     runUrl,
     runPaste,
     dismiss,
+    restore,
   };
 }

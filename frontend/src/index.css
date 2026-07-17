@@ -164,6 +164,21 @@ p {
   margin: 0;
 }
 
+/* Visually hide but keep in the accessibility tree — used by App's always-mounted
+   role="status" region that announces a fresh collapsed extraction error. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* respect reduced motion globally as a safety net */
 @media (prefers-reduced-motion: reduce) {
   *,

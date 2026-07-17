@@ -1,0 +1,217 @@
+/* Method: one step at a time. The Prev/Next controls sit in the panel HEADER, not
+   a row beneath the card, so they never steal height from the step's reading area
+   (they used to, most noticeably on mobile). The card can also be swiped. Every
+   step is an <li> in the DOM (so the whole method is exposed and prints); only the
+   current one is shown, the rest carry `hidden`. The visible card fills the leftover
+   height and its body auto-fits (MethodSteps) so a long step never clips. */
+.method {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+  touch-action: pan-y; /* let vertical scroll through; we handle horizontal swipes */
+}
+
+/* --- header row: label + step count + Prev/Next (mirrors the slabel style) --- */
+.head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid var(--color-text);
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+.label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.count {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-brand);
+  margin-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+/* 44px tap target for touch, but pulled in vertically (negative margin) so the
+   header stays slim — the visible mark is just the chevron. */
+.navBtn {
+  width: 44px;
+  height: 44px;
+  margin-block: -9px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--color-brand);
+  cursor: pointer;
+  transition: background 0.15s var(--curve);
+}
+.navBtn svg {
+  width: 20px;
+  height: 20px;
+}
+.navBtn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+}
+.navBtn:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* --- the step stage: one <li> shown at a time --------------------------- */
+.stage {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex; /* only the one non-hidden slide is in flow */
+}
+.slide {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+/* setting `display` on the slide would otherwise defeat the `hidden` attribute's
+   UA display:none, so restore it for the inactive steps (higher specificity). */
+.slide[hidden] {
+  display: none;
+}
+/* the focused widget shows its focus on the card, not a stray full-width ring */
+.method:focus-visible .card {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--color-brand) 32%, transparent),
+    var(--shadow-soft);
+}
+.card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 2px solid
+    color-mix(in srgb, var(--color-brand) 55%, var(--color-border));
+  border-radius: 14px;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-soft);
+}
+.cardHead {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.num {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--color-brand);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--color-text);
+  /* the fit routine keeps text within this box for realistic steps; the rare
+     step too long to fit even at the readable floor scrolls here rather than
+     clipping (a real, visible scrollbar — never a hidden one). */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-brand) 40%, transparent)
+    transparent;
+}
+.body::-webkit-scrollbar {
+  width: 7px;
+}
+.body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-brand) 40%, transparent);
+  border-radius: 4px;
+}
+.timer {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid
+    color-mix(in srgb, var(--color-accent) 30%, var(--color-border));
+  padding: 6px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* --- mobile: the step number already shows in the segment badge ---------- */
+@media (max-width: 560px) {
+  .count {
+    display: none;
+  }
+}
+
+/* --- print: reveal every step (override `hidden`) and flatten to a list --- */
+@media print {
+  .method {
+    display: block !important;
+  }
+  .nav {
+    display: none !important;
+  }
+  .stage {
+    display: block !important;
+  }
+  .slide {
+    display: list-item !important;
+    margin: 0 0 14px !important;
+    break-inside: avoid; /* don't split a single step across pages */
+  }
+  .slide[hidden] {
+    display: list-item !important;
+  }
+  .card {
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    flex-direction: row !important;
+    gap: 13px !important;
+  }
+  .num {
+    font-size: 13px !important;
+    padding-top: 1px;
+  }
+  .body {
+    overflow: visible !important;
+    font-size: 12px !important; /* the fit routine may have set an inline size */
+  }
+  .timer {
+    display: none !important;
+  }
+}

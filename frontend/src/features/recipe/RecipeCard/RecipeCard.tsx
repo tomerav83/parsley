@@ -1,11 +1,6 @@
 import type { Recipe } from "@/lib/api";
-import { IngredientList } from "@/features/recipe/IngredientList/IngredientList";
-import { StepReel } from "@/features/recipe/StepReel/StepReel";
 import { TimingRow } from "@/features/recipe/TimingRow/TimingRow";
-import {
-  SectionCarousel,
-  type CarouselSection,
-} from "@/features/recipe/SectionCarousel/SectionCarousel";
+import { RecipeSections } from "@/features/recipe/RecipeSections/RecipeSections";
 import styles from "./RecipeCard.module.css";
 
 interface RecipeCardProps {
@@ -43,21 +38,6 @@ function safeImage(image: string | null): string | null {
 }
 
 export function RecipeCard({ recipe }: RecipeCardProps) {
-  const sections: CarouselSection[] = [
-    {
-      key: "ingredients",
-      label: "Ingredients",
-      badge: `${recipe.ingredients.length} items`,
-      content: <IngredientList ingredients={recipe.ingredients} />,
-    },
-    {
-      key: "method",
-      label: "Method",
-      badge: `${recipe.steps.length} steps`,
-      content: <StepReel steps={recipe.steps} />,
-    },
-  ];
-
   const line = byline(recipe);
   const image = safeImage(recipe.image);
 
@@ -78,7 +58,11 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             <p className={`${styles.stationKicker} ${styles.onHero}`}>
               station · recipe
             </p>
-            <h1 className={`${styles.title} ${styles.onHero}`}>
+            <h1
+              className={`${styles.title} ${styles.onHero}`}
+              data-route-heading
+              tabIndex={-1}
+            >
               {recipe.name}
             </h1>
             {line && (
@@ -91,14 +75,16 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         // No photo: fall back to the pinned title + specimen timing strip.
         <header className={styles.head}>
           <p className={styles.stationKicker}>station · recipe</p>
-          <h1 className={styles.title}>{recipe.name}</h1>
+          <h1 className={styles.title} data-route-heading tabIndex={-1}>
+            {recipe.name}
+          </h1>
           {line && <p className={styles.source}>{line}</p>}
           <TimingRow recipe={recipe} />
         </header>
       )}
 
-      {/* Ingredients ⇄ Method carousel */}
-      <SectionCarousel sections={sections} />
+      {/* Ingredients + Method, one window (mobile: segment switch; desktop: columns) */}
+      <RecipeSections ingredients={recipe.ingredients} steps={recipe.steps} />
 
       <footer className={styles.footer}>
         <a href={recipe.source_url} target="_blank" rel="noreferrer noopener">

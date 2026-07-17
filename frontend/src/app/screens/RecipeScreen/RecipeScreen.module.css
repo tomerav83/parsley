@@ -1,6 +1,12 @@
-/* Recipe screen: top bar + scroll frame (the card itself is RecipeCard). The
-   column shell (.screenRecipe) lives in App.module.css. */
+/* Recipe screen: a column shell filling the app frame, holding a fixed top bar +
+   the scroll frame (the card itself is RecipeCard). */
 
+.recipeScreen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* the inner .recipeScroll region scrolls, not the screen */
+}
 .recipeBar {
   flex: 0 0 auto;
   display: flex;
@@ -52,8 +58,14 @@
   }
 }
 
-/* print: drop the bar, unpin the scroll frame so the card flows as a document. */
+/* print: drop the bar, unpin the column + scroll frame so the card flows as a
+   document. */
 @media print {
+  .recipeScreen {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
   .recipeBar {
     display: none !important;
   }

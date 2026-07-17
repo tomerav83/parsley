@@ -54,7 +54,9 @@ export function PasteHtmlForm({
       </div>
 
       <form onSubmit={handleSubmit}>
-        <p className={styles.label}>paste · page source</p>
+        <h1 className={styles.label} data-route-heading tabIndex={-1}>
+          paste · page source
+        </h1>
         <p className={styles.help}>
           On{" "}
           <a href={url} target="_blank" rel="noreferrer noopener">

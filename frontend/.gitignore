@@ -25,3 +25,6 @@ dist-ssr
 
 # local visual-regression scratch (Claude) — not committed
 .visual-check/
+
+# Vitest browser-mode failure screenshots (committed VRT baselines land in Phase 4/E7)
+__screenshots__/

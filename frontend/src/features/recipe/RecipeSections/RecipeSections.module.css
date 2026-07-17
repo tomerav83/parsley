@@ -1,0 +1,172 @@
+/* Ingredients + Method, one window. Mobile: a segment switch over a single pane.
+   Desktop (≥561px): the switch hides and both panes lay out as columns. */
+.sections {
+  margin-top: 22px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* --- the segment switch (mobile only) ----------------------------------- */
+.seg {
+  flex: 0 0 auto;
+  display: flex;
+  border: 1.5px solid var(--color-border);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+.segBtn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition:
+    background 0.2s var(--curve),
+    color 0.2s var(--curve);
+}
+.segBtn + .segBtn {
+  border-left: 1.5px solid var(--color-border);
+}
+.badge {
+  font-size: 11px;
+  color: var(--color-brand);
+  background: color-mix(in srgb, var(--color-brand) 12%, transparent);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-variant-numeric: tabular-nums;
+}
+.segBtn[aria-pressed="true"] {
+  background: var(--color-brand);
+  color: #fff;
+}
+.segBtn[aria-pressed="true"] .badge {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* --- panes -------------------------------------------------------------- */
+.panes {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* mobile default: stack; only the active pane is in flow (media query below) */
+  display: flex;
+  flex-direction: column;
+}
+.prep {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--color-border);
+  background:
+    radial-gradient(var(--color-grid) 1px, transparent 1.4px) 0 0 / 18px 18px,
+    var(--color-surface);
+  box-shadow: var(--shadow-soft);
+  padding: 16px;
+}
+.panes > .prep {
+  flex: 1 1 auto; /* the visible pane fills the mobile column */
+}
+.slabel {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid var(--color-text);
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+}
+.slabel span:last-child {
+  color: var(--color-brand);
+}
+
+/* Ingredients scroll only if a list genuinely can't fit the window — with a real,
+   visible scrollbar (never the old hidden-scrollbar-with-fade that swallowed
+   items). The common case fits and shows no scrollbar. */
+.ingScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-brand) 40%, transparent)
+    transparent;
+}
+.ingScroll::-webkit-scrollbar {
+  width: 8px;
+}
+.ingScroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-brand) 40%, transparent);
+  border-radius: 4px;
+}
+
+/* --- mobile: show only the active pane ---------------------------------- */
+@media (max-width: 560px) {
+  .panes[data-active="ingredients"] .methodPane {
+    display: none;
+  }
+  .panes[data-active="method"] .ingPane {
+    display: none;
+  }
+}
+
+/* --- desktop: hide the switch, lay both panes out as columns ------------- */
+@media (min-width: 561px) {
+  .seg {
+    display: none;
+  }
+  .panes {
+    display: grid;
+    grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
+/* --- print: stack both sections as a flat document ---------------------- */
+@media print {
+  .sections {
+    display: block !important;
+    margin-top: 18px;
+  }
+  .seg {
+    display: none !important;
+  }
+  .panes {
+    display: block !important;
+  }
+  .prep {
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-top: 22px;
+    break-inside: auto;
+  }
+  .ingPane {
+    margin-top: 0;
+  }
+  .ingScroll {
+    overflow: visible !important;
+  }
+  .slabel {
+    break-after: avoid;
+  }
+}

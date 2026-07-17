@@ -1,6 +1,16 @@
-/* Home screen content: kicker, wordmark, tagline, trust line. The centring shell
-   (.screenHome) lives in App.module.css; this styles the inner column. */
+/* Home screen: a centring shell that fills the app frame, plus the inner column
+   (kicker, wordmark, tagline, trust line). Flex + margin:auto centres the column
+   but lets tall content overflow from the top and scroll instead of clipping. */
 
+.homeScreen {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  padding: 32px 24px 56px;
+}
+.wordmark:focus {
+  outline: none; /* programmatic route-change focus shouldn't draw a ring */
+}
 .homeInner {
   width: 100%;
   max-width: 540px;
@@ -63,5 +73,11 @@
 @media (max-width: 560px) {
   .wordmark {
     font-size: 38px;
+  }
+}
+
+@media print {
+  .homeScreen {
+    display: none !important;
   }
 }

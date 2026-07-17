@@ -1,0 +1,62 @@
+/* Directional slide between routed screens (REDESIGN D6). React Router wraps each
+   navigate({ viewTransition: true }) in document.startViewTransition; App stamps
+   html[data-slide="forward"|"back"] before the DOM update, so the direction is
+   known when the transition's animations start.
+
+   Only the screens container carries a view-transition-name, so it's lifted out of
+   the root snapshot and slides on its own while the app chrome (background, theme
+   toggle) stays put. Browsers without view-transition support swap instantly — by
+   design (progressive enhancement). */
+
+[data-app-screens] {
+  view-transition-name: appScreens;
+}
+
+@keyframes screenInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes screenOutToLeft {
+  to {
+    transform: translateX(-26%);
+    opacity: 0;
+  }
+}
+@keyframes screenInFromLeft {
+  from {
+    transform: translateX(-26%);
+    opacity: 0;
+  }
+}
+@keyframes screenOutToRight {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* forward = deeper in the filmstrip: outgoing recedes left, incoming enters right */
+html[data-slide="forward"]::view-transition-old(appScreens) {
+  animation: screenOutToLeft var(--slide) var(--curve) both;
+}
+html[data-slide="forward"]::view-transition-new(appScreens) {
+  animation: screenInFromRight var(--slide) var(--curve) both;
+}
+/* back = returning: incoming re-enters from the left, outgoing exits right */
+html[data-slide="back"]::view-transition-old(appScreens) {
+  animation: screenOutToRight var(--slide) var(--curve) both;
+}
+html[data-slide="back"]::view-transition-new(appScreens) {
+  animation: screenInFromLeft var(--slide) var(--curve) both;
+}
+
+/* View transitions don't honour reduced-motion automatically, and index.css's
+   global `*` safety net can't match these pseudo-elements — silence them here so
+   the swap is instant. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
