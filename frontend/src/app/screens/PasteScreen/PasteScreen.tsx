@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { PasteHtmlForm } from "@/features/extract/PasteHtmlForm/PasteHtmlForm";
-import { appOutlet } from "@/app/appOutlet.ts";
+import { appOutlet } from "@/app/router/appOutlet.ts";
 import styles from "./PasteScreen.module.css";
 
 // The paste-HTML fallback screen — a thin centring wrapper around PasteHtmlForm.

@@ -12,7 +12,7 @@ import { spriteCopy } from "@/features/extract/errorInfo";
 import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
 import { Background } from "@/components/Background.tsx";
 import { ThemeToggle } from "@/components/ThemeToggle/ThemeToggle";
-import type { AppOutletContext } from "./appOutlet.ts";
+import type { AppOutletContext } from "./router/appOutlet.ts";
 import styles from "./App.module.css";
 import "./transitions.css";
 

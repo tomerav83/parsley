@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
 import { RecipeSkeleton } from "@/features/recipe/RecipeSkeleton/RecipeSkeleton";
-import { appOutlet } from "@/app/appOutlet.ts";
+import { appOutlet } from "@/app/router/appOutlet.ts";
 import { readCachedRecipe } from "@/lib/recipeCache.ts";
 import styles from "./RecipeScreen.module.css";
 import btn from "@/components/Button.module.css";
