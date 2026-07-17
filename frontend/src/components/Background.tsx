@@ -97,8 +97,20 @@ function emeraldRgb(el: HTMLElement): string {
   return `${parseInt(r, 16)},${parseInt(g, 16)},${parseInt(b, 16)}`;
 }
 
-export function Background() {
+type BackgroundProps = {
+  /** Whether the background is actually on screen for the user. It's mounted at
+      the app root and never unmounts, but off-home the routed screen slides over
+      it, so there's no point animating (F1). Combined with tab visibility below. */
+  active?: boolean;
+};
+
+export function Background({ active = true }: BackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // The animation machinery is built once and lives for the component's lifetime;
+  // the `active` prop only flips a flag and re-syncs, so pausing off-home and
+  // resuming on return keeps the sprig positions instead of reseeding them.
+  const activeRef = useRef(active);
+  const syncRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -157,19 +169,48 @@ export function Background() {
 
     function loop(t: number) {
       frame(t);
-      raf = requestAnimationFrame(loop);
+      // Self-terminating: reschedule only while it should still run, so the loop
+      // stops itself at the next frame boundary even if the external cancel raced.
+      raf = shouldRun() ? requestAnimationFrame(loop) : 0;
     }
+
+    // The loop should run only when there's a point: the background is on screen
+    // (active), the tab is visible, and the user hasn't asked to reduce motion.
+    // Browsers auto-pause rAF for hidden *tabs* but not for occluded content, so
+    // the active/visible gate is what actually stops the drain while a recipe is
+    // read (F1). (No IntersectionObserver: the canvas is position:fixed inset:0,
+    // so it always intersects the viewport — `active` is the real signal.)
+    function shouldRun() {
+      return activeRef.current && !document.hidden && !reduce.matches;
+    }
+
+    // Start or stop the loop to match shouldRun(). `raf === 0` is the not-scheduled
+    // sentinel (requestAnimationFrame never returns 0, cancelAnimationFrame(0) is a
+    // no-op), so repeated syncs are idempotent. When paused we leave the last frame
+    // painted — it's behind content or in a hidden tab, so a blank flash is worse.
+    function sync() {
+      if (shouldRun()) {
+        if (!raf) raf = requestAnimationFrame(loop);
+      } else {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    }
+    syncRef.current = sync;
 
     function start() {
       cancelAnimationFrame(raf);
+      raf = 0;
       resize();
+      // Reduced motion never animates: paint one static frame and stay put.
       if (reduce.matches) paintStatic();
-      else raf = requestAnimationFrame(loop);
+      else sync();
     }
 
     function onResize() {
       resize();
       if (reduce.matches) paintStatic();
+      // A running loop repaints on its own next frame; a paused one is off screen.
     }
 
     // The emerald token flips with the OS colour scheme; re-read it on change.
@@ -181,16 +222,27 @@ export function Background() {
 
     start();
     window.addEventListener("resize", onResize);
+    document.addEventListener("visibilitychange", sync);
     scheme.addEventListener("change", onScheme);
     reduce.addEventListener("change", start);
 
     return () => {
       cancelAnimationFrame(raf);
+      raf = 0;
+      syncRef.current = () => {};
       window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", sync);
       scheme.removeEventListener("change", onScheme);
       reduce.removeEventListener("change", start);
     };
   }, []);
+
+  // React to the `active` prop without tearing down the effect (which would
+  // reseed the sprigs): update the flag the loop reads, then re-sync.
+  useEffect(() => {
+    activeRef.current = active;
+    syncRef.current();
+  }, [active]);
 
   return <canvas ref={canvasRef} className="sprig-bg" aria-hidden />;
 }

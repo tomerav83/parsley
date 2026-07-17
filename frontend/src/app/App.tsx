@@ -161,7 +161,7 @@ function App() {
 
   return (
     <div className={styles.app}>
-      <Background />
+      <Background active={onHome} />
       <ThemeToggle />
       <main className={styles.screens} data-app-screens="">
         <Outlet context={context} />
