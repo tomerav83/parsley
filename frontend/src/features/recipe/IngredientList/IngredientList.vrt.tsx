@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { argosScreenshot } from "@argos-ci/vitest";
+import { describe, it } from "vitest";
 
 import { RECIPE } from "@/test/fixtures";
 import { renderStill } from "@/test/still";
@@ -11,10 +12,10 @@ import { IngredientList } from "./IngredientList";
 // slides over into the empty column.
 describe("IngredientList", () => {
   it("quantity column, with a quantity-less line", async () => {
-    const el = await renderStill(
+    const target = await renderStill(
       <IngredientList ingredients={RECIPE.ingredients} />,
       { width: 420, height: 400 },
     );
-    await expect(el).toMatchScreenshot("checklist");
+    await argosScreenshot("IngredientList/checklist", { element: target });
   });
 });

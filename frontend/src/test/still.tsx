@@ -10,10 +10,16 @@ interface StillOptions {
   theme?: "light" | "dark";
 }
 
-// Render a component and wait until it has stopped moving, then hand back a
-// locator to screenshot. Vitest re-captures until two consecutive shots match, so
-// this doesn't have to be perfect — but every settle it does here is one the
-// matcher doesn't have to burn its 5s stability timeout discovering.
+// Argos takes a string selector, not an element — a Locator can't be serialized
+// across the browser/node boundary. So renderStill mounts into a marked wrapper
+// and hands back a selector for the component root *inside* it: the wrapper is a
+// plain block box (like RTL's own container, so it perturbs no layout), and the
+// child is the element whose box we actually want cropped to.
+export const COMPONENT = "[data-vrt-root] > *";
+
+// Render a component and wait until it has stopped moving, then hand back the
+// selector to shoot. Argos stabilizes before capturing too, but every settle done
+// here is one it doesn't have to discover.
 export async function renderStill(
   ui: ReactElement,
   { width, height, theme = "light" }: StillOptions,
@@ -21,10 +27,10 @@ export async function renderStill(
   await page.viewport(width, height);
   document.documentElement.dataset.theme = theme;
 
-  const { container } = render(ui);
+  const { container } = render(<div data-vrt-root>{ui}</div>);
   await settle(container);
 
-  return page.elementLocator(container.firstElementChild!);
+  return COMPONENT;
 }
 
 // Wait for everything that can still move after a render (or after an interaction

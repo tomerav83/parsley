@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { argosScreenshot } from "@argos-ci/vitest";
+import { describe, it } from "vitest";
 
 import { RECIPE } from "@/test/fixtures";
 import { renderStill } from "@/test/still";
@@ -40,11 +41,11 @@ describe("MethodSteps", () => {
   const VIEWPORT = { width: 640, height: 420 };
 
   it("first step — Prev disabled", async () => {
-    const el = await renderStill(
+    const target = await renderStill(
       <Pane steps={RECIPE.steps} index={0} />,
       VIEWPORT,
     );
-    await expect(el).toMatchScreenshot("first-step");
+    await argosScreenshot("MethodSteps/first-step", { element: target });
   });
 
   // The fit is font-metric dependent, so it is precisely what a behaviour test
@@ -52,21 +53,21 @@ describe("MethodSteps", () => {
   // as clipped or resized text and nothing else catches it. Read against
   // first-step, where the same card renders at the unshrunk base size.
   it("overflowing step — shrunk to fit, with a timer chip", async () => {
-    const el = await renderStill(
+    const target = await renderStill(
       <Pane
         steps={[RECIPE.steps[0]!, OVERFLOWING_STEP, RECIPE.steps[2]!]}
         index={1}
       />,
       VIEWPORT,
     );
-    await expect(el).toMatchScreenshot("long-step-fitted");
+    await argosScreenshot("MethodSteps/long-step-fitted", { element: target });
   });
 
   it("last step — Next disabled", async () => {
-    const el = await renderStill(
+    const target = await renderStill(
       <Pane steps={RECIPE.steps} index={RECIPE.steps.length - 1} />,
       VIEWPORT,
     );
-    await expect(el).toMatchScreenshot("last-step");
+    await argosScreenshot("MethodSteps/last-step", { element: target });
   });
 });
