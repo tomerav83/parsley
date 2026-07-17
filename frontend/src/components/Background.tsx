@@ -97,20 +97,8 @@ function emeraldRgb(el: HTMLElement): string {
   return `${parseInt(r, 16)},${parseInt(g, 16)},${parseInt(b, 16)}`;
 }
 
-type BackgroundProps = {
-  /** Whether the background is actually on screen for the user. It's mounted at
-      the app root and never unmounts, but off-home the routed screen slides over
-      it, so there's no point animating (F1). Combined with tab visibility below. */
-  active?: boolean;
-};
-
-export function Background({ active = true }: BackgroundProps) {
+export function Background() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // The animation machinery is built once and lives for the component's lifetime;
-  // the `active` prop only flips a flag and re-syncs, so pausing off-home and
-  // resuming on return keeps the sprig positions instead of reseeding them.
-  const activeRef = useRef(active);
-  const syncRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -174,14 +162,12 @@ export function Background({ active = true }: BackgroundProps) {
       raf = shouldRun() ? requestAnimationFrame(loop) : 0;
     }
 
-    // The loop should run only when there's a point: the background is on screen
-    // (active), the tab is visible, and the user hasn't asked to reduce motion.
-    // Browsers auto-pause rAF for hidden *tabs* but not for occluded content, so
-    // the active/visible gate is what actually stops the drain while a recipe is
-    // read (F1). (No IntersectionObserver: the canvas is position:fixed inset:0,
-    // so it always intersects the viewport — `active` is the real signal.)
+    // The loop should run whenever the sprigs can actually be seen: the tab is
+    // visible and the user hasn't asked to reduce motion. The canvas is
+    // position:fixed inset:0 and the routed screens don't paint over all of it,
+    // so it's visible on every route — the background drifts app-wide, by design.
     function shouldRun() {
-      return activeRef.current && !document.hidden && !reduce.matches;
+      return !document.hidden && !reduce.matches;
     }
 
     // Start or stop the loop to match shouldRun(). `raf === 0` is the not-scheduled
@@ -196,7 +182,6 @@ export function Background({ active = true }: BackgroundProps) {
         raf = 0;
       }
     }
-    syncRef.current = sync;
 
     function start() {
       cancelAnimationFrame(raf);
@@ -229,20 +214,12 @@ export function Background({ active = true }: BackgroundProps) {
     return () => {
       cancelAnimationFrame(raf);
       raf = 0;
-      syncRef.current = () => {};
       window.removeEventListener("resize", onResize);
       document.removeEventListener("visibilitychange", sync);
       scheme.removeEventListener("change", onScheme);
       reduce.removeEventListener("change", start);
     };
   }, []);
-
-  // React to the `active` prop without tearing down the effect (which would
-  // reseed the sprigs): update the flag the loop reads, then re-sync.
-  useEffect(() => {
-    activeRef.current = active;
-    syncRef.current();
-  }, [active]);
 
   return <canvas ref={canvasRef} className="sprig-bg" aria-hidden />;
 }

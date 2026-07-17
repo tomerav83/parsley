@@ -9,33 +9,27 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// F1: the sprig canvas is mounted at the app root and never unmounts, so before
-// this fix it drove requestAnimationFrame on every screen — including while a
-// recipe is read. It should animate only when it's actually on screen (active).
-describe("Background (F1 — pause off-home)", () => {
-  it("drives an animation loop while active", async () => {
+// The sprig canvas is fixed to the viewport behind every screen and the routed
+// screens don't cover all of it, so the drift is meant to be visible app-wide.
+// An earlier pass gated it to Home for battery; that just froze it everywhere
+// else, in view. The only pauses left are ones the user can't see through.
+describe("Background", () => {
+  it("drives an animation loop while the tab is visible", async () => {
     const raf = vi.spyOn(window, "requestAnimationFrame");
-    render(<Background active />);
+    render(<Background />);
     await wait(80);
     // Many frames scheduled over ~80ms — the loop is running.
     expect(raf.mock.calls.length).toBeGreaterThan(1);
   });
 
-  it("never starts the loop when mounted inactive", async () => {
+  it("stops scheduling frames once the tab is hidden", async () => {
     const raf = vi.spyOn(window, "requestAnimationFrame");
-    render(<Background active={false} />);
-    await wait(80);
-    // No frames of its own — nothing to draw off-home.
-    expect(raf).not.toHaveBeenCalled();
-  });
-
-  it("stops scheduling frames once it goes inactive", async () => {
-    const raf = vi.spyOn(window, "requestAnimationFrame");
-    const { rerender } = render(<Background active />);
+    render(<Background />);
     await wait(80);
     expect(raf.mock.calls.length).toBeGreaterThan(1);
 
-    rerender(<Background active={false} />);
+    vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+    document.dispatchEvent(new Event("visibilitychange"));
     await wait(40); // let the in-flight frame settle out
     const paused = raf.mock.calls.length;
     await wait(120);
@@ -43,13 +37,15 @@ describe("Background (F1 — pause off-home)", () => {
     expect(raf.mock.calls.length).toBe(paused);
   });
 
-  it("resumes the loop when it becomes active again", async () => {
+  it("resumes the loop when the tab becomes visible again", async () => {
     const raf = vi.spyOn(window, "requestAnimationFrame");
-    const { rerender } = render(<Background active={false} />);
+    const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+    render(<Background />);
     await wait(40);
     expect(raf).not.toHaveBeenCalled();
 
-    rerender(<Background active />);
+    hidden.mockReturnValue(false);
+    document.dispatchEvent(new Event("visibilitychange"));
     await wait(80);
     expect(raf.mock.calls.length).toBeGreaterThan(1);
   });
