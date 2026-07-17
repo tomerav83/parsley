@@ -20,7 +20,18 @@ The root `vercel.json` declares both services and the rewrites that expose them:
 ```jsonc
 {
   "services": {
-    "frontend": { "root": "frontend", "framework": "vite" },
+    "frontend": {
+      "root": "frontend",
+      "framework": "vite",
+      // SPA history fallback: serve index.html for client-side routes (/paste,
+      // /recipe?url=…) so a hard load / refresh isn't a 404. Routing *into* a
+      // service is final — an unmatched path does NOT fall back to the top-level
+      // rewrites, so the fallback has to live inside the service. Static files
+      // (assets, index.html) are served before rewrites, so only fileless paths
+      // hit this. /api never reaches here (routed to backend first). See
+      // https://vercel.com/docs/services/routing.
+      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+    },
     "backend": {
       "root": "backend",
       "framework": "fastapi",
@@ -34,6 +45,12 @@ The root `vercel.json` declares both services and the rewrites that expose them:
   ]
 }
 ```
+
+> **SPA deep links.** The frontend service's own `rewrites` entry is what makes
+> `/paste` and `/recipe?url=…` survive a refresh or a shared link. Without it the
+> React Router routes 404 on hard load — Vite dev/preview fall back to
+> `index.html` automatically, but the Vercel service does not. Verify on a preview
+> deployment by loading a `/recipe?url=…` link directly.
 
 - One Vercel project, pointed at the repo root. Import it and deploy — the
   services and routing come from `vercel.json`.
