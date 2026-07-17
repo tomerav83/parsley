@@ -87,3 +87,51 @@ describe("FloatingError (A7 — alertdialog)", () => {
     await vi.waitFor(() => expect(onDismiss).toHaveBeenCalled());
   });
 });
+
+// The paste-HTML fallback is the recovery path for the two codes that mean "we
+// couldn't read the page" (isFetchProblem). Which slot it lands in is decided by
+// intent — retry > paste > edit — so the two codes exercise both slots.
+describe("FloatingError (E6 — paste fallback flow)", () => {
+  it("makes paste the primary action when the site blocked our reader", async () => {
+    const { onPaste } = renderWidget({
+      error: new ExtractError("site_blocked", "shut the door"),
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /show options/i }),
+    );
+
+    // site_blocked can't be retried (the site will just block us again), so paste
+    // is primary — and opening the dialog puts focus straight on it
+    const paste = screen.getByRole("button", { name: /paste the page/i });
+    expect(paste).toHaveFocus();
+
+    await userEvent.click(paste);
+    expect(onPaste).toHaveBeenCalledOnce();
+  });
+
+  it("keeps paste available as a secondary action when the fetch failed", async () => {
+    const { onPaste } = renderWidget({
+      error: new ExtractError("fetch_failed", "no answer"),
+    });
+    await userEvent.click(
+      screen.getByRole("button", { name: /show options/i }),
+    );
+
+    // fetch_failed can retry AND paste: retry takes primary, paste drops to the row
+    expect(screen.getByRole("button", { name: /try again/i })).toHaveFocus();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /^paste page$/i }),
+    );
+    expect(onPaste).toHaveBeenCalledOnce();
+  });
+
+  it("does not offer paste for an error the fallback can't fix", async () => {
+    // rate_limited is about us, not the page — pasting its HTML would change nothing
+    renderWidget();
+    await userEvent.click(
+      screen.getByRole("button", { name: /show options/i }),
+    );
+    expect(screen.queryByRole("button", { name: /paste/i })).toBeNull();
+  });
+});

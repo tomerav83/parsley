@@ -26,5 +26,12 @@ dist-ssr
 # local visual-regression scratch (Claude) — not committed
 .visual-check/
 
-# Vitest browser-mode failure screenshots (committed VRT baselines land in Phase 4/E7)
+# Vitest browser-mode failure screenshots — throwaway.
 __screenshots__/
+
+# Vitest attachments (failure artifacts) — throwaway.
+.vitest-attachments/
+
+# VRT captures. No reference images live in this repo: Argos holds the baselines
+# and does the diffing, so these are just the run's output on its way to upload.
+snapshots/

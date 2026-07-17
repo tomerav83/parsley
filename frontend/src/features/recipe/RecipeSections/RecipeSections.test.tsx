@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { page } from "@vitest/browser/context";
+import { page } from "vitest/browser";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { RecipeSections } from "./RecipeSections";
@@ -33,6 +33,47 @@ describe("RecipeSections (mobile)", () => {
     await userEvent.click(method);
     expect(method).toHaveAttribute("aria-pressed", "true");
     expect(ing).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("switches the active section from the keyboard alone", async () => {
+    render(<RecipeSections ingredients={INGREDIENTS} steps={STEPS} />);
+    const ing = screen.getByRole("button", { name: /^ingredients/i });
+    const method = screen.getByRole("button", { name: /^method/i });
+
+    // real <button>s, so the switch is native Enter/Space activation — no roving
+    // tabindex or arrow keys (←/→ belong to the step nav inside the Method pane)
+    method.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(method).toHaveAttribute("aria-pressed", "true");
+
+    ing.focus();
+    await userEvent.keyboard(" ");
+    expect(ing).toHaveAttribute("aria-pressed", "true");
+    expect(method).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("keeps the inactive pane's controls out of the a11y tree and unfocusable (A3)", async () => {
+    render(<RecipeSections ingredients={INGREDIENTS} steps={STEPS} />);
+
+    // The blocker this replaced: the off-pane content stayed focusable while
+    // aria-hidden, so keyboard users tabbed into controls screen readers couldn't
+    // see. `display:none` has to remove it from BOTH — assert both directions.
+    expect(screen.queryByRole("button", { name: /next step/i })).toBeNull();
+    const next = screen.getByRole("button", {
+      name: /next step/i,
+      hidden: true,
+    });
+    next.focus();
+    expect(next).not.toHaveFocus();
+
+    await userEvent.click(screen.getByRole("button", { name: /^method/i }));
+
+    // …and it reverses: the method controls return, the checkboxes go away.
+    expect(screen.getByRole("button", { name: /next step/i })).toBeVisible();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    const box = screen.getAllByRole("checkbox", { hidden: true })[0]!;
+    box.focus();
+    expect(box).not.toHaveFocus();
   });
 
   it("labels the current step in the segment and advances it", async () => {

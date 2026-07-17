@@ -157,19 +157,45 @@ export function Background() {
 
     function loop(t: number) {
       frame(t);
-      raf = requestAnimationFrame(loop);
+      // Self-terminating: reschedule only while it should still run, so the loop
+      // stops itself at the next frame boundary even if the external cancel raced.
+      raf = shouldRun() ? requestAnimationFrame(loop) : 0;
+    }
+
+    // The loop should run whenever the sprigs can actually be seen: the tab is
+    // visible and the user hasn't asked to reduce motion. The canvas is
+    // position:fixed inset:0 and the routed screens don't paint over all of it,
+    // so it's visible on every route — the background drifts app-wide, by design.
+    function shouldRun() {
+      return !document.hidden && !reduce.matches;
+    }
+
+    // Start or stop the loop to match shouldRun(). `raf === 0` is the not-scheduled
+    // sentinel (requestAnimationFrame never returns 0, cancelAnimationFrame(0) is a
+    // no-op), so repeated syncs are idempotent. When paused we leave the last frame
+    // painted — it's behind content or in a hidden tab, so a blank flash is worse.
+    function sync() {
+      if (shouldRun()) {
+        if (!raf) raf = requestAnimationFrame(loop);
+      } else {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
     }
 
     function start() {
       cancelAnimationFrame(raf);
+      raf = 0;
       resize();
+      // Reduced motion never animates: paint one static frame and stay put.
       if (reduce.matches) paintStatic();
-      else raf = requestAnimationFrame(loop);
+      else sync();
     }
 
     function onResize() {
       resize();
       if (reduce.matches) paintStatic();
+      // A running loop repaints on its own next frame; a paused one is off screen.
     }
 
     // The emerald token flips with the OS colour scheme; re-read it on change.
@@ -181,12 +207,15 @@ export function Background() {
 
     start();
     window.addEventListener("resize", onResize);
+    document.addEventListener("visibilitychange", sync);
     scheme.addEventListener("change", onScheme);
     reduce.addEventListener("change", start);
 
     return () => {
       cancelAnimationFrame(raf);
+      raf = 0;
       window.removeEventListener("resize", onResize);
+      document.removeEventListener("visibilitychange", sync);
       scheme.removeEventListener("change", onScheme);
       reduce.removeEventListener("change", start);
     };

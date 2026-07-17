@@ -7,6 +7,39 @@
   "rules": {
     "react/rules-of-hooks": "error",
     "react/only-export-components": ["warn", { "allowConstantExport": true }],
-    "react/exhaustive-deps": "warn"
-  }
+    "react/exhaustive-deps": "warn",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@/features/recipe/**", "**/screens/RecipeScreen/**"],
+            "message": "Keep the recipe view code-split (REDESIGN F2): import it only via the dynamic import() in app/router/router.tsx."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/features/recipe/**", "src/app/screens/RecipeScreen/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["src/app/router/router.tsx"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      // Fast Refresh never applies to a test file, and a harness component (see
+      // MethodSteps.vrt.tsx) belongs beside the spec that needs it.
+      "files": ["src/**/*.test.tsx", "src/**/*.vrt.tsx"],
+      "rules": {
+        "react/only-export-components": "off"
+      }
+    }
+  ]
 }

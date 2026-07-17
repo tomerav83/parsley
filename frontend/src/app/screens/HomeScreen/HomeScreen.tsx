@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { ParsleyLogo } from "@/components/ParsleyLogo.tsx";
 import { UrlForm } from "@/features/extract/UrlForm/UrlForm";
-import { appOutlet } from "@/app/appOutlet.ts";
+import { appOutlet } from "@/app/router/appOutlet.ts";
 import styles from "./HomeScreen.module.css";
 
 // The landing screen: the wordmark, the promise, and the single URL input that
