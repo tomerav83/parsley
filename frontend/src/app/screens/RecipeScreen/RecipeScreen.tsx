@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
 import { RecipeSkeleton } from "@/features/recipe/RecipeSkeleton/RecipeSkeleton";
 import { appOutlet } from "@/app/appOutlet.ts";
+import { readCachedRecipe } from "@/lib/recipeCache.ts";
 import styles from "./RecipeScreen.module.css";
 import btn from "@/components/Button.module.css";
 
@@ -23,23 +24,29 @@ export function RecipeScreen() {
   const { extract, requestRecipe, backToSearch } = appOutlet();
   const [params] = useSearchParams();
   const target = params.get("url") ?? "";
-  const { recipe, loading } = extract;
+  const { recipe, loading, restore } = extract;
 
-  // Extract the URL in the query when it isn't the recipe already on screen. On
-  // the normal flow the recipe is loaded before we navigate here, so this is a
-  // no-op; it only fires for a hard load / back-forward to a /recipe?url=… we
-  // don't yet hold. The one-shot `requestedFor` guard means we ask for a given
-  // target at most once, so a backend that canonicalises the URL (redirect,
-  // trailing slash) — making source_url differ from what we asked for — can't
-  // spin us into a re-extract loop. requestRecipe is stable (useCallback).
+  // Load the recipe for the URL in the query when it isn't the one already on
+  // screen. On the normal flow the recipe is loaded before we navigate here, so
+  // this is a no-op; it only fires for a hard load / back-forward to a
+  // /recipe?url=… we don't yet hold. Prefer the sessionStorage cache — an instant,
+  // API-free restore that also revives a paste-sourced recipe (whose URL can't be
+  // re-fetched); only truly-uncached targets hit the network. Runs in a layout
+  // effect so a cache restore paints the card in the first frame, with no blank
+  // flash. The one-shot `requestedFor` guard means we act on a given target at
+  // most once, so a backend that canonicalises the URL (redirect, trailing slash)
+  // — making source_url differ from what we asked for — can't spin us into a loop.
+  // requestRecipe and restore are stable (useCallback).
   const requestedFor = useRef<string | null>(null);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!target) return;
     if (recipe?.source_url === target) return; // already have it
-    if (requestedFor.current === target) return; // already asked for it
+    if (requestedFor.current === target) return; // already acted on it
     requestedFor.current = target;
-    requestRecipe(target);
-  }, [target, recipe, requestRecipe]);
+    const cached = readCachedRecipe(target);
+    if (cached) restore(cached);
+    else requestRecipe(target);
+  }, [target, recipe, requestRecipe, restore]);
 
   useEffect(() => {
     document.title = recipe ? `${recipe.name} — Parsley` : "Parsley — recipe";

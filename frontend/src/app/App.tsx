@@ -1,6 +1,13 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { recipeExtractor } from "@/features/extract/recipeExtractor.ts";
+import { cacheRecipe } from "@/lib/recipeCache.ts";
 import { spriteCopy } from "@/features/extract/errorInfo";
 import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
 import { Background } from "@/components/Background.tsx";
@@ -52,6 +59,16 @@ function App() {
       document.querySelector<HTMLElement>("[data-route-heading]")?.focus();
     }
   }, [location.pathname, location.key]);
+
+  // Cache each extracted recipe by its request URL (the one it's addressed by in
+  // /recipe?url=…) so a refresh or back/forward restores it from sessionStorage
+  // instead of re-hitting the API — and so a paste-sourced recipe, whose URL can't
+  // be re-fetched, survives a reload at all (RecipeScreen reads it back). lastUrl
+  // is the request URL for every path (submit/retry/paste/deep-link); a fresh load
+  // hasn't set it yet, so the empty-key guard in cacheRecipe skips the no-op write.
+  useEffect(() => {
+    if (extract.recipe) cacheRecipe(lastUrl, extract.recipe);
+  }, [extract.recipe, lastUrl]);
 
   // The extractor's functions are stable across renders (useCallback inside the
   // hook), so they — not the per-render `extract` object — are the deps below.
