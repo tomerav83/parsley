@@ -32,6 +32,14 @@
       "rules": {
         "no-restricted-imports": "off"
       }
+    },
+    {
+      // Fast Refresh never applies to a test file, and a harness component (see
+      // MethodSteps.vrt.tsx) belongs beside the spec that needs it.
+      "files": ["src/**/*.test.tsx", "src/**/*.vrt.tsx"],
+      "rules": {
+        "react/only-export-components": "off"
+      }
     }
   ]
 }

@@ -26,5 +26,13 @@ dist-ssr
 # local visual-regression scratch (Claude) — not committed
 .visual-check/
 
-# Vitest browser-mode failure screenshots (committed VRT baselines land in Phase 4/E7)
-__screenshots__/
+# Vitest writes two different kinds of PNG into __screenshots__/, split by the test
+# file that produced them. Behaviour tests (*.test.tsx) drop throwaway shots there
+# when they fail — ignore those. The VRT baselines (*.vrt.tsx) are the committed
+# reference images the suite asserts against, so they must NOT be ignored.
+# The leading **/ is load-bearing: a pattern with an internal slash is anchored to
+# this file's directory, so without it this would only match frontend/__screenshots__.
+**/__screenshots__/*.test.tsx/
+
+# VRT actual/diff images from a failed comparison — uploaded as a CI artifact.
+.vitest-attachments/

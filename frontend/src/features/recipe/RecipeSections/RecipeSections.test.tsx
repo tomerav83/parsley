@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { page } from "@vitest/browser/context";
+import { page } from "vitest/browser";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { RecipeSections } from "./RecipeSections";

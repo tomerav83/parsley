@@ -38,5 +38,21 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Test
         run: npm run test
+      # Pixel baselines, so this is the one step whose result depends on the
+      # machine as well as the code. It is deliberately NOT part of `npm test`:
+      # baselines are minted by CI (see update-screenshots.yml) and only match on
+      # a CI runner, so folding it into the default suite would hand every
+      # developer a permanently red local run — the fastest way to get a VRT
+      # suite deleted. Vitest refuses to create missing baselines when CI is set,
+      # so an unbaselined component fails here rather than silently self-approving.
+      - name: Visual regression
+        run: npm run test:vrt
+      - name: Upload visual diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vrt-diffs
+          path: frontend/.vitest-attachments/
+          if-no-files-found: ignore
       - name: Build
         run: npm run build
