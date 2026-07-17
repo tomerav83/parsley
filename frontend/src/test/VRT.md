@@ -33,14 +33,43 @@ when the UI changed. **The visual verdict is the Argos check, not the CI step.**
 
 ## Setup (one-time)
 
-CI authenticates with **GitHub OIDC** — there is no `ARGOS_TOKEN` secret to
-manage. It needs `id-token: write` on the job (set in `ci.yml`) plus, on the Argos
-side: Project Settings → Authentication → enable **GitHub OIDC**. Fork PRs, where
-GitHub blocks both OIDC and secrets, fall back to tokenless automatically, so
-outside contributors get visual checks without being handed credentials.
+The only requirement is an Argos project linked to this repo. **There is no
+`ARGOS_TOKEN` secret**, and none is needed: CI uploads _tokenlessly_, and Argos
+verifies the build by looking the workflow run up on GitHub's API from the commit,
+branch and run id we report. That works because the repo is public, and it works
+on fork PRs too — where GitHub blocks secrets and OIDC outright — so outside
+contributors get visual checks without being handed credentials.
 
-Until the Argos project exists and is linked to this repo, the upload fails and
-the CI step is red.
+Until the project exists and is linked, uploads fail with `No Argos project is
+linked to this GitHub repository` and the CI step is red.
+
+**Don't add `id-token: write` to the job** unless you have first enabled OIDC at
+Argos → Project Settings → Authentication. The SDK picks `ARGOS_TOKEN` > OIDC >
+tokenless and considers OIDC "available" merely because the permission is granted,
+so granting it against a project with OIDC off fails every run with `GitHub Actions
+OIDC authentication is not enabled for this project` instead of falling back.
+
+## Screenshot budget
+
+The free tier is 5,000 screenshots/month and we upload 11 per build, so the ceiling
+is ~450 builds/month against a recent rate of ~36 CI runs/month — roughly 8% used.
+Argos bills **every screenshot it stores**, not just changed ones ("Usage is billed
+only on successful builds"); identical images are deduped for _transfer_ only, so a
+re-run is faster but never free. Two guards keep the spend proportionate:
+
+- **Backend-only PRs upload nothing.** A step checks whether the PR touches
+  `frontend/` and sets `ARGOS_SKIPPED`, which uploads no screenshots and marks the
+  commit green. The specs still run, so a broken spec is still caught — only the
+  upload is skipped. Never skipped on `master`: that's the build PR baselines
+  resolve from.
+- **Superseded PR runs are cancelled** (`concurrency`, workflow level). Cancelling
+  is a race rather than a refund — shots already uploaded still count — but it caps
+  the waste from a rapid series of pushes. `master` is never cancelled.
+
+Both are deliberately expressed at the **step/job** level rather than as a
+workflow-level `paths:` filter: GitHub reports a `paths`-skipped workflow as
+_Pending forever_, which would silently block PRs the day branch protection is
+turned on (there is none today). A step skipped by `if:` reports Success.
 
 ## How this avoids being flaky
 

@@ -5,6 +5,19 @@ on:
     branches: [master]
   pull_request:
 
+# Supersede a PR's older runs when you push again: the visual step uploads to
+# Argos, whose free tier is a monthly screenshot budget, and a run you've already
+# obsoleted shouldn't spend any of it. Cancelling is a race, not a refund — shots
+# already uploaded still count — but it caps the waste from a rapid push-push-push.
+#
+# `github.ref` is the PR merge ref on pull_request and refs/heads/master on push,
+# so master is never in a PR's group and can't be collaterally cancelled. The
+# conditional only governs master-vs-master: every commit on the baseline branch
+# runs to completion, because that's the build Argos resolves baselines from.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -21,19 +34,61 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
-    # Argos authenticates by OIDC rather than a stored token, which needs
-    # `id-token: write` on THIS job (inherited grants don't count). Fork PRs, where
-    # GitHub blocks OIDC, fall back to tokenless automatically — so contributors
-    # get visual checks without anyone provisioning them a secret.
+    # Argos authenticates tokenlessly: it verifies the upload by looking the run up
+    # on GitHub's API from the commit/branch/run-id we report. That works on a
+    # public repo with no secret, and behaves identically on fork PRs — where
+    # GitHub blocks secrets and OIDC anyway, so contributors get visual checks
+    # without anyone provisioning them credentials.
+    #
+    # Deliberately NO `id-token: write`. The SDK picks ARGOS_TOKEN > OIDC >
+    # tokenless, and treats OIDC as "available" purely because that permission is
+    # granted — so granting it while the Argos project has OIDC switched off makes
+    # every run fail with "GitHub Actions OIDC authentication is not enabled for
+    # this project" rather than falling through to tokenless. Not granting it is
+    # also least-privilege: nothing in this job can mint an identity token.
+    # To move to OIDC later: enable it at Argos → Project Settings →
+    # Authentication, then add `id-token: write` back here, in that order.
+    # https://argos-ci.com/docs/learn/integrations/github-actions-authentication
     permissions:
       contents: read
-      id-token: write
       pull-requests: read
     defaults:
       run:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+      # Gates the Argos upload below. STEP-level on purpose, not a workflow-level
+      # `paths:` — GitHub reports a workflow skipped by `paths` as *Pending
+      # forever*, silently blocking any PR once these become required checks
+      # ("You should not use path or branch filtering to skip workflow runs if the
+      # workflow is required to pass before merging"). A step skipped by an `if:`
+      # reports Success, so this stays correct if branch protection is ever added.
+      # https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks
+      #
+      # Done with `gh` rather than pulling in a paths-filter action: it's one API
+      # call and a grep, which isn't worth a third-party dependency in the job that
+      # talks to Argos. PR-only, since master uploads unconditionally (see the
+      # step's condition).
+      - name: Did the frontend change?
+        id: changed
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Fail toward running: if the API call can't tell us what changed, a
+          # silently-skipped visual check costs more than 11 spent screenshots.
+          if ! files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename'); then
+            echo "could not list changed files — assuming the frontend changed"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -q '^frontend/' <<<"$files"; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22.23.1
@@ -51,7 +106,24 @@ jobs:
       # — an *unapproved visual change* fails Argos' own PR check, not this one.
       # Kept out of `npm test` because capturing is pointless with nowhere to
       # upload to. See frontend/src/test/VRT.md.
+      #
+      # Argos bills every screenshot it stores, and dedupes identical images only
+      # for transfer, not for quota — so an unchanged shot is cheaper to upload but
+      # still costs one. A backend-only PR shouldn't spend 11 of them proving the
+      # frontend it never touched still looks the same.
+      #
+      # ARGOS_SKIPPED (not an `if:` on the step) is how that's expressed: the specs
+      # still run, so a broken spec surfaces on any PR, but nothing uploads and
+      # Argos marks the commit green — where skipping the step outright would
+      # simply leave no Argos check at all. Never skipped on master: that's the
+      # build PR baselines resolve from, and letting it lapse orphans them.
       - name: Visual regression
+        env:
+          # `== 'false'`, not `!= 'true'`: skip only when we affirmatively know the
+          # frontend is untouched. Anything else — an empty output, a gate that
+          # didn't run — falls through to uploading. Spending 11 screenshots beats
+          # silently not checking.
+          ARGOS_SKIPPED: ${{ github.ref != 'refs/heads/master' && steps.changed.outputs.frontend == 'false' }}
         run: npm run test:vrt
       - name: Build
         run: npm run build
