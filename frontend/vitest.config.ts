@@ -53,7 +53,10 @@ export default defineConfig({
         "src/main.tsx", // bootstrap/mount — no branching logic to cover
         "src/**/*.d.ts",
       ],
-      reporter: ["text", "html", "json-summary", "lcov"],
+      // json-summary + json are read by the CI PR-comment action (Phase 5 G2):
+      // json-summary for the headline numbers, json for its per-file diff view.
+      // https://github.com/davelosert/vitest-coverage-report-action#usage
+      reporter: ["text", "html", "json-summary", "json", "lcov"],
       reportOnFailure: true,
       thresholds: {
         // Ratchet, not a fixed bar: `autoUpdate` rewrites these numbers upward
