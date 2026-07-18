@@ -17,10 +17,6 @@ import { HomeScreen } from "@/app/screens/HomeScreen/HomeScreen";
 // of the recipe view (@/features/recipe/** and the RecipeScreen) from eager code,
 // so it can be reached only through the dynamic import() below. This file is
 // exempted there — it's the one designated loader.
-function NotFound() {
-  return <Navigate to="/" replace />;
-}
-
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -45,7 +41,7 @@ export const router = createBrowserRouter([
               .RecipeScreen,
         },
       },
-      { path: "*", Component: NotFound },
+      { path: "*", element: <Navigate to="/" replace /> },
     ],
   },
 ]);

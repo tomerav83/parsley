@@ -1,8 +1,3 @@
-// `appOutlet` is a custom hook (it wraps useOutletContext and is always called
-// unconditionally at a screen's top level), but it's named to match its module
-// rather than the use* convention — so the Rules-of-Hooks lint, which keys off
-// the `use` prefix, is disabled for this file.
-/* oxlint-disable react-hooks/rules-of-hooks */
 import type { RefObject } from "react";
 import { useOutletContext } from "react-router";
 import type { recipeExtractor } from "@/features/extract/recipeExtractor.ts";
@@ -27,6 +22,6 @@ export interface AppOutletContext {
   backToSearch: () => void;
 }
 
-export function appOutlet(): AppOutletContext {
+export function useAppOutlet(): AppOutletContext {
   return useOutletContext<AppOutletContext>();
 }

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
 import { RecipeSkeleton } from "@/features/recipe/RecipeSkeleton/RecipeSkeleton";
-import { appOutlet } from "@/app/router/appOutlet.ts";
+import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import { readCachedRecipe } from "@/lib/recipeCache.ts";
 import styles from "./RecipeScreen.module.css";
 import btn from "@/components/Button.module.css";
@@ -21,7 +21,7 @@ function hostOf(url: string): string {
 // holds the card (or its skeleton while a request is in flight). Also the
 // deep-link entry point — /recipe?url=… on a hard load extracts that URL in place.
 export function RecipeScreen() {
-  const { extract, requestRecipe, backToSearch } = appOutlet();
+  const { extract, requestRecipe, backToSearch } = useAppOutlet();
   const [params] = useSearchParams();
   const target = params.get("url") ?? "";
   const { recipe, loading, restore } = extract;

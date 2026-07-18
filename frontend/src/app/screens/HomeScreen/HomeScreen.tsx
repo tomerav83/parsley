@@ -1,14 +1,14 @@
 import { useEffect } from "react";
 import { ParsleyLogo } from "@/components/ParsleyLogo.tsx";
 import { UrlForm } from "@/features/extract/UrlForm/UrlForm";
-import { appOutlet } from "@/app/router/appOutlet.ts";
+import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import styles from "./HomeScreen.module.css";
 
 // The landing screen: the wordmark, the promise, and the single URL input that
 // drives the whole app. State lives in App and is read from the outlet context;
 // this is presentation only.
 export function HomeScreen() {
-  const { url, setUrl, submitUrl, extract, urlFieldRef } = appOutlet();
+  const { url, setUrl, submitUrl, extract, urlFieldRef } = useAppOutlet();
 
   useEffect(() => {
     document.title = "Parsley — paste a link, get just the recipe";
