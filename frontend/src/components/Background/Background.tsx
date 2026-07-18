@@ -88,13 +88,13 @@ function drawLeaf(ctx: CanvasRenderingContext2D, s: number) {
   ctx.fill();
 }
 
-/** Read the emerald brand token and return it as an "r,g,b" string. */
-function emeraldRgb(el: HTMLElement): string {
-  const hex = getComputedStyle(el).getPropertyValue("--color-brand").trim();
-  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
-  const [, r, g, b] = m ?? [];
-  if (!r || !g || !b) return "16,185,129";
-  return `${parseInt(r, 16)},${parseInt(g, 16)},${parseInt(b, 16)}`;
+/** The emerald brand token, in whatever CSS color format it's set as —
+    the canvas parses it natively via fillStyle. */
+function emerald(): string {
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue("--color-brand")
+    .trim();
+  return raw || "#10b981";
 }
 
 export function Background() {
@@ -110,7 +110,7 @@ export function Background() {
     const sprigs = seed(22);
     let width = 0;
     let height = 0;
-    let color = emeraldRgb(document.documentElement);
+    let color = emerald();
     let raf = 0;
 
     function resize() {
@@ -136,20 +136,8 @@ export function Background() {
         ctx!.save();
         ctx!.translate(px, py);
         ctx!.rotate(p.rot);
-        ctx!.fillStyle = `rgba(${color},${p.a})`;
-        drawLeaf(ctx!, p.s);
-        ctx!.restore();
-      }
-    }
-
-    // A single static frame (no motion) for reduced-motion users.
-    function paintStatic() {
-      ctx!.clearRect(0, 0, width, height);
-      for (const p of sprigs) {
-        ctx!.save();
-        ctx!.translate(p.x * width, p.y * height);
-        ctx!.rotate(p.rot);
-        ctx!.fillStyle = `rgba(${color},${p.a})`;
+        ctx!.fillStyle = color;
+        ctx!.globalAlpha = p.a;
         drawLeaf(ctx!, p.s);
         ctx!.restore();
       }
@@ -157,9 +145,7 @@ export function Background() {
 
     function loop(t: number) {
       frame(t);
-      // Self-terminating: reschedule only while it should still run, so the loop
-      // stops itself at the next frame boundary even if the external cancel raced.
-      raf = shouldRun() ? requestAnimationFrame(loop) : 0;
+      raf = requestAnimationFrame(loop);
     }
 
     // The loop should run whenever the sprigs can actually be seen: the tab is
@@ -187,22 +173,22 @@ export function Background() {
       cancelAnimationFrame(raf);
       raf = 0;
       resize();
-      // Reduced motion never animates: paint one static frame and stay put.
-      if (reduce.matches) paintStatic();
+      // Reduced motion never animates: paint one frame and stay put.
+      if (reduce.matches) frame(0);
       else sync();
     }
 
     function onResize() {
       resize();
-      if (reduce.matches) paintStatic();
+      if (reduce.matches) frame(0);
       // A running loop repaints on its own next frame; a paused one is off screen.
     }
 
     // The emerald token flips with the OS colour scheme; re-read it on change.
     const scheme = matchMedia("(prefers-color-scheme: dark)");
     function onScheme() {
-      color = emeraldRgb(document.documentElement);
-      if (reduce.matches) paintStatic();
+      color = emerald();
+      if (reduce.matches) frame(0);
     }
 
     start();

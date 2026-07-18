@@ -10,7 +10,7 @@ import { recipeExtractor } from "@/features/extract/recipeExtractor.ts";
 import { cacheRecipe } from "@/lib/recipeCache.ts";
 import { spriteCopy } from "@/features/extract/errorInfo";
 import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
-import { Background } from "@/components/Background.tsx";
+import { Background } from "@/components/Background/Background.tsx";
 import { ThemeToggle } from "@/components/ThemeToggle/ThemeToggle";
 import type { AppOutletContext } from "./router/useAppOutlet.ts";
 import styles from "./App.module.css";

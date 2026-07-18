@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Background } from "./Background";
+import { Background } from "./Background.tsx";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
