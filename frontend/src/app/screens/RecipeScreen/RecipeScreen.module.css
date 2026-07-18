@@ -70,14 +70,9 @@
     display: none !important;
   }
   .recipeScroll {
-    position: static !important;
     overflow: visible !important;
     display: block !important;
-    inset: auto;
     height: auto !important;
-    min-height: 0 !important;
-    transform: none !important;
-    opacity: 1 !important;
     padding: 0 !important;
   }
 }
