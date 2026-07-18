@@ -70,11 +70,9 @@ function App() {
     if (extract.recipe) cacheRecipe(lastUrl, extract.recipe);
   }, [extract.recipe, lastUrl]);
 
-  // The extractor's functions are stable across renders (useCallback inside the
-  // hook), so they — not the per-render `extract` object — are the deps below.
   const { runUrl, runPaste, dismiss } = extract;
 
-  const submitUrl = useCallback(async () => {
+  async function submitUrl() {
     const trimmed = url.trim();
     if (!trimmed) return;
     setLastUrl(trimmed);
@@ -83,25 +81,23 @@ function App() {
     if ((await runUrl(trimmed)) === "success") {
       navigate(recipePath(trimmed), { viewTransition: true });
     }
-  }, [url, runUrl, navigate]);
+  }
 
-  const submitPaste = useCallback(
-    async (html: string) => {
-      const result = await runPaste(html, lastUrl);
-      if (result === "success") {
-        navigate(recipePath(lastUrl), { viewTransition: true });
-      } else if (result === "error") {
-        // A failed paste is the end of the recovery road — return home, where it
-        // surfaces as the corner widget in its report-only terminal state.
-        navigate("/", { viewTransition: true });
-      }
-    },
-    [runPaste, lastUrl, navigate],
-  );
+  async function submitPaste(html: string) {
+    const result = await runPaste(html, lastUrl);
+    if (result === "success") {
+      navigate(recipePath(lastUrl), { viewTransition: true });
+    } else if (result === "error") {
+      // A failed paste is the end of the recovery road — return home, where it
+      // surfaces as the corner widget in its report-only terminal state.
+      navigate("/", { viewTransition: true });
+    }
+  }
 
   // Deep-link entry: /recipe?url=… on a fresh load (or with a different URL than
   // the one on screen) extracts that URL in place. Failures fall back to home,
-  // where the corner widget offers the recovery options.
+  // where the corner widget offers the recovery options. Kept in useCallback:
+  // RecipeScreen's effect depends on it staying stable (runUrl is stable too).
   const requestRecipe = useCallback(
     async (target: string) => {
       setUrl(target); // mirror into the field so "Edit link" starts from it
@@ -121,11 +117,11 @@ function App() {
     }
   }
 
-  const backToSearch = useCallback(() => {
+  function backToSearch() {
     dismiss();
     setUrl(""); // "new search" starts from a clean field
     navigate("/", { viewTransition: true });
-  }, [dismiss, navigate]);
+  }
 
   function openPaste() {
     dismiss();
@@ -136,11 +132,6 @@ function App() {
   // both land the user back at the URL field — the logical next step once the
   // widget is gone (APG: restore focus to an element that continues the workflow).
   function dismissError() {
-    dismiss();
-    urlFieldRef.current?.focus();
-  }
-
-  function editLink() {
     dismiss();
     urlFieldRef.current?.focus();
   }
@@ -186,7 +177,7 @@ function App() {
           sourceUrl={lastUrl}
           terminal={extract.pasteFailed}
           onPaste={openPaste}
-          onEdit={editLink}
+          onEdit={dismissError}
           onRetry={retry}
           onDismiss={dismissError}
         />

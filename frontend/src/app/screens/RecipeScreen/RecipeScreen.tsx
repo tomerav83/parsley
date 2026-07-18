@@ -10,11 +10,7 @@ import btn from "@/components/Button.module.css";
 // Source label for the recipe bar: the site name if the backend gave one, else the
 // bare host of the source URL (falls back to the raw string if it won't parse).
 function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
+  return URL.parse(url)?.hostname.replace(/^www\./, "") ?? url;
 }
 
 // The recipe view: a fixed top bar (back to search + source) over a frame that
