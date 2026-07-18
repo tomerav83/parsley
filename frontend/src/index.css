@@ -32,6 +32,28 @@
   src: url("./assets/fonts/SpaceMono-Bold.woff2") format("woff2");
 }
 
+/* Metric-matched local fallbacks: sized so the swap to the real font moves
+   nothing (CLS ≈ 0 on cold loads). Overrides computed from @capsizecss/metrics
+   (the fontaine/next-font dataset). */
+@font-face {
+  font-family: "Inter Fallback";
+  /* Liberation Sans/Mono are the Linux metric-clones of Arial/Courier New,
+     so one set of overrides fits both. */
+  src: local("Arial"), local("Liberation Sans");
+  size-adjust: 107.12%;
+  ascent-override: 90.44%;
+  descent-override: 22.52%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Space Mono Fallback";
+  src: local("Courier New"), local("Liberation Mono");
+  size-adjust: 101.98%;
+  ascent-override: 109.82%;
+  descent-override: 35.4%;
+  line-gap-override: 0%;
+}
+
 :root {
   /* ---- primitives: the raw palette (theme-independent) ------------------ */
   --green-700: #047857;
@@ -58,8 +80,9 @@
   --shadow: 0 24px 60px -34px rgba(4, 120, 87, 0.45);
   --shadow-soft: 0 14px 34px -22px rgba(4, 120, 87, 0.4);
 
-  --sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
-  --mono: "Space Mono", ui-monospace, Consolas, monospace;
+  --sans: "Inter", "Inter Fallback", system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono:
+    "Space Mono", "Space Mono Fallback", ui-monospace, Consolas, monospace;
 
   --curve: cubic-bezier(0.22, 0.61, 0.36, 1);
   --slide: 0.42s;
