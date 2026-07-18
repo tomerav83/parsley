@@ -148,34 +148,15 @@ export function Background() {
       raf = requestAnimationFrame(loop);
     }
 
-    // The loop should run whenever the sprigs can actually be seen: the tab is
-    // visible and the user hasn't asked to reduce motion. The canvas is
-    // position:fixed inset:0 and the routed screens don't paint over all of it,
-    // so it's visible on every route — the background drifts app-wide, by design.
-    function shouldRun() {
-      return !document.hidden && !reduce.matches;
-    }
-
-    // Start or stop the loop to match shouldRun(). `raf === 0` is the not-scheduled
-    // sentinel (requestAnimationFrame never returns 0, cancelAnimationFrame(0) is a
-    // no-op), so repeated syncs are idempotent. When paused we leave the last frame
-    // painted — it's behind content or in a hidden tab, so a blank flash is worse.
-    function sync() {
-      if (shouldRun()) {
-        if (!raf) raf = requestAnimationFrame(loop);
-      } else {
-        cancelAnimationFrame(raf);
-        raf = 0;
-      }
-    }
-
+    // The browser suspends requestAnimationFrame in hidden tabs, so the loop
+    // needs no visibility handling — only reduced motion pauses it for real.
     function start() {
       cancelAnimationFrame(raf);
       raf = 0;
       resize();
       // Reduced motion never animates: paint one frame and stay put.
       if (reduce.matches) frame(0);
-      else sync();
+      else raf = requestAnimationFrame(loop);
     }
 
     function onResize() {
@@ -184,24 +165,28 @@ export function Background() {
       // A running loop repaints on its own next frame; a paused one is off screen.
     }
 
-    // The emerald token flips with the OS colour scheme; re-read it on change.
+    // The emerald token flips with the OS colour scheme or an explicit
+    // ThemeToggle choice (data-theme on <html>); re-read it on either.
     const scheme = matchMedia("(prefers-color-scheme: dark)");
     function onScheme() {
       color = emerald();
       if (reduce.matches) frame(0);
     }
+    const themeAttr = new MutationObserver(onScheme);
+    themeAttr.observe(document.documentElement, {
+      attributeFilter: ["data-theme"],
+    });
 
     start();
     window.addEventListener("resize", onResize);
-    document.addEventListener("visibilitychange", sync);
     scheme.addEventListener("change", onScheme);
     reduce.addEventListener("change", start);
 
     return () => {
       cancelAnimationFrame(raf);
       raf = 0;
+      themeAttr.disconnect();
       window.removeEventListener("resize", onResize);
-      document.removeEventListener("visibilitychange", sync);
       scheme.removeEventListener("change", onScheme);
       reduce.removeEventListener("change", start);
     };

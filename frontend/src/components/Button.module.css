@@ -17,6 +17,7 @@
   transition:
     filter 0.15s,
     border-color 0.15s,
+    color 0.15s,
     transform 0.1s;
 }
 .btn:active {
@@ -35,19 +36,11 @@
   gap: 6px;
   text-decoration: none;
   padding: 9px 13px;
-  transition:
-    filter 0.15s,
-    border-color 0.15s,
-    color 0.15s,
-    transform 0.08s;
 }
 .compact svg {
   width: 15px;
   height: 15px;
   flex: 0 0 auto;
-}
-.compact:disabled {
-  opacity: 0.7;
 }
 
 /* variants */
