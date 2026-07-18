@@ -2,7 +2,6 @@ import { useEffect, useId, useReducer, useRef } from "react";
 import type { ExtractError } from "@/lib/api";
 import {
   errorInfo,
-  spriteCopy,
   SPRITE_FAILED,
   reportIssueUrl,
 } from "@/features/extract/errorInfo";
@@ -68,10 +67,8 @@ export function FloatingError({
   // error-identity effect tell a retry failure apart from a fresh error.
   const didRetry = useRef(false);
 
-  // Focus targets for the alertdialog (A7): the widget root scopes the Escape
-  // listener, the bubble is where focus moves on open, the sprite is where it
-  // returns on collapse.
-  const rootRef = useRef<HTMLDivElement>(null);
+  // Focus targets for the alertdialog (A7): the bubble is where focus moves on
+  // open, the sprite is where it returns on collapse.
   const bubbleRef = useRef<HTMLDivElement>(null);
   const spriteRef = useRef<HTMLButtonElement>(null);
   // Previous open/retrying, so the focus effect can tell an open/collapse edge
@@ -83,7 +80,7 @@ export function FloatingError({
   const hintId = useId();
 
   const info = errorInfo(error.code);
-  const copy = state.failed ? SPRITE_FAILED : spriteCopy(error.code);
+  const copy = state.failed ? SPRITE_FAILED : info;
 
   // Fold each `error`/`terminal` change into the machine (fresh error, failed
   // retry, or an already-terminal paste failure). didRetry is consumed here.
@@ -217,7 +214,6 @@ export function FloatingError({
 
   return (
     <div
-      ref={rootRef}
       className={`${styles.efloat}${state.open ? ` ${styles.isOpen}` : ""}${
         state.leaving ? ` ${styles.isLeaving}` : ""
       }`}

@@ -46,6 +46,8 @@ export function recipeExtractor() {
         dispatch({ type: "success", recipe });
         return "success";
       } catch (err) {
+        // Not just our own signal: the browser can abort a fetch itself (e.g. on
+        // navigation), and that must never read as a user-visible failure.
         if (
           controller.signal.aborted ||
           (err instanceof DOMException && err.name === "AbortError")

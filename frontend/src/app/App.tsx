@@ -8,7 +8,7 @@ import {
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { recipeExtractor } from "@/features/extract/recipeExtractor.ts";
 import { cacheRecipe } from "@/lib/recipeCache.ts";
-import { spriteCopy } from "@/features/extract/errorInfo";
+import { errorInfo } from "@/features/extract/errorInfo";
 import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
 import { Background } from "@/components/Background/Background.tsx";
 import { ThemeToggle } from "@/components/ThemeToggle/ThemeToggle";
@@ -164,7 +164,7 @@ function App() {
           focus instead — announcing it here too would double up. */}
       <p className="visually-hidden" role="status">
         {showError && !extract.pasteFailed && extract.error
-          ? `${spriteCopy(extract.error.code).title} — recovery options are in the corner of the page.`
+          ? `${errorInfo(extract.error.code).title} — recovery options are in the corner of the page.`
           : ""}
       </p>
 
