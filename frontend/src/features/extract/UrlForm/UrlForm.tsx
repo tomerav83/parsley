@@ -6,7 +6,7 @@ interface UrlFormProps {
   onChange: (url: string) => void;
   onSubmit: () => void;
   loading: boolean;
-  inputRef?: RefObject<HTMLInputElement | null>;
+  inputRef: RefObject<HTMLInputElement | null>;
 }
 
 // The single input that drives the whole app. Squared, mono placeholder — the
@@ -21,7 +21,7 @@ export function UrlForm({
 }: UrlFormProps) {
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (value.trim()) onSubmit();
+    onSubmit();
   }
 
   return (
@@ -29,7 +29,6 @@ export function UrlForm({
       <input
         ref={inputRef}
         type="url"
-        inputMode="url"
         className={styles.input}
         placeholder="https://a-food-blog.com/best-roast-chicken"
         aria-label="Recipe URL"
