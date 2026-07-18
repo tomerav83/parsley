@@ -4,8 +4,8 @@ import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
 import { RecipeSkeleton } from "@/features/recipe/RecipeSkeleton/RecipeSkeleton";
 import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import { readCachedRecipe } from "@/lib/recipeCache.ts";
+import { BackButton } from "@/components/BackButton/BackButton";
 import styles from "./RecipeScreen.module.css";
-import btn from "@/components/Button.module.css";
 
 // Source label for the recipe bar: the site name if the backend gave one, else the
 // bare host of the source URL (falls back to the raw string if it won't parse).
@@ -48,20 +48,7 @@ export function RecipeScreen() {
     <div className={styles.recipeScreen}>
       <title>{recipe ? `${recipe.name} — Parsley` : "Parsley — recipe"}</title>
       <div className={styles.recipeBar}>
-        <button type="button" className={btn.back} onClick={backToSearch}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          NEW SEARCH
-        </button>
+        <BackButton onClick={backToSearch} />
         {recipe && (
           <span className={styles.recipeSrc}>
             <span className={styles.recipeSrcDot} aria-hidden />
