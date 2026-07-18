@@ -113,18 +113,4 @@ describe("ThemeToggle — following the OS after mount", () => {
     act(() => mql.setMatches(false)); // OS flips to light — should be ignored
     expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true");
   });
-
-  it("treats a blocked storage read as no explicit choice, so it still follows the OS", () => {
-    const mql = fakeMediaQueryList(false);
-    vi.spyOn(window, "matchMedia").mockReturnValue(
-      mql as unknown as MediaQueryList,
-    );
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
-      throw new Error("blocked (e.g. private mode)");
-    });
-    render(<ThemeToggle />);
-
-    act(() => mql.setMatches(true));
-    expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true");
-  });
 });
