@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { PasteHtmlForm } from "@/features/extract/PasteHtmlForm/PasteHtmlForm";
 import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import styles from "./PasteScreen.module.css";
@@ -8,12 +7,9 @@ import styles from "./PasteScreen.module.css";
 export function PasteScreen() {
   const { lastUrl, extract, submitPaste, backToSearch } = useAppOutlet();
 
-  useEffect(() => {
-    document.title = "Parsley — paste the page HTML";
-  }, []);
-
   return (
     <div className={styles.pasteScreen}>
+      <title>Parsley — paste the page HTML</title>
       <div className={styles.pasteInner}>
         <PasteHtmlForm
           url={lastUrl}

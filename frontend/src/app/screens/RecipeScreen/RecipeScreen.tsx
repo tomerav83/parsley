@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
 import { RecipeSkeleton } from "@/features/recipe/RecipeSkeleton/RecipeSkeleton";
@@ -48,12 +48,9 @@ export function RecipeScreen() {
     else requestRecipe(target);
   }, [target, recipe, requestRecipe, restore]);
 
-  useEffect(() => {
-    document.title = recipe ? `${recipe.name} — Parsley` : "Parsley — recipe";
-  }, [recipe]);
-
   return (
     <div className={styles.recipeScreen}>
+      <title>{recipe ? `${recipe.name} — Parsley` : "Parsley — recipe"}</title>
       <div className={styles.recipeBar}>
         <button type="button" className={btn.back} onClick={backToSearch}>
           <svg
