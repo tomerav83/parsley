@@ -48,12 +48,6 @@ export class ExtractError extends Error {
   }
 }
 
-// True when the failure means "we couldn't reach the site" — the frontend
-// offers the paste-HTML fallback for these.
-export function isFetchProblem(code: ErrorCode): boolean {
-  return code === "site_blocked" || code === "fetch_failed";
-}
-
 interface ErrorBody {
   code?: string;
   message?: string;
