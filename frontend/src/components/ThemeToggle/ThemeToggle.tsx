@@ -55,19 +55,12 @@ export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(currentTheme);
 
   // Follow the OS while the user hasn't chosen explicitly, so the icon stays in
-  // sync. Re-check the stored choice on every change (not just at mount): once the
-  // user picks a theme their explicit choice wins on <html>, so OS changes must be
-  // ignored — otherwise the icon would drift out of sync with the visible page.
+  // sync. An explicit choice lives as `data-theme` on <html>; while it's set, OS
+  // changes must be ignored or the icon would drift from the visible page.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
-      let chosen: string | null = null;
-      try {
-        chosen = localStorage.getItem("theme");
-      } catch {
-        // storage blocked (e.g. private mode) — treat as no explicit choice
-      }
-      if (chosen) return;
+      if (document.documentElement.getAttribute("data-theme")) return;
       setTheme(mq.matches ? "dark" : "light");
     };
     mq.addEventListener("change", onChange);

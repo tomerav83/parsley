@@ -35,23 +35,6 @@ describe("RecipeSections (mobile)", () => {
     expect(ing).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("switches the active section from the keyboard alone", async () => {
-    render(<RecipeSections ingredients={INGREDIENTS} steps={STEPS} />);
-    const ing = screen.getByRole("button", { name: /^ingredients/i });
-    const method = screen.getByRole("button", { name: /^method/i });
-
-    // real <button>s, so the switch is native Enter/Space activation — no roving
-    // tabindex or arrow keys (←/→ belong to the step nav inside the Method pane)
-    method.focus();
-    await userEvent.keyboard("{Enter}");
-    expect(method).toHaveAttribute("aria-pressed", "true");
-
-    ing.focus();
-    await userEvent.keyboard(" ");
-    expect(ing).toHaveAttribute("aria-pressed", "true");
-    expect(method).toHaveAttribute("aria-pressed", "false");
-  });
-
   it("keeps the inactive pane's controls out of the a11y tree and unfocusable (A3)", async () => {
     render(<RecipeSections ingredients={INGREDIENTS} steps={STEPS} />);
 

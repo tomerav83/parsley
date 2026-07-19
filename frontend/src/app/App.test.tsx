@@ -18,7 +18,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExtractError, type Recipe } from "@/lib/api.ts";
-import { appOutlet } from "@/app/router/appOutlet.ts";
+import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import App from "./App.tsx";
 import { HomeScreen } from "./screens/HomeScreen/HomeScreen.tsx";
 import { PasteScreen } from "./screens/PasteScreen/PasteScreen.tsx";
@@ -51,7 +51,7 @@ const RECIPE: Recipe = {
 };
 
 function StubRecipeScreen() {
-  const { extract } = appOutlet();
+  const { extract } = useAppOutlet();
   const [params] = useSearchParams();
   return (
     <div>

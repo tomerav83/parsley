@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useLayoutEffect,
   useRef,
   type KeyboardEvent,
@@ -31,7 +30,8 @@ function timerOf(step: string): string | null {
 // in one window). Re-runs whenever the shown text or the card's size changes —
 // including when a hidden mobile pane becomes visible (0 → real height fires the
 // observer). Only the visible <li> carries this ref; the hidden ones measure 0.
-function useFitText(text: string, base: number, min = 11.5) {
+function useFitText(text: string, base: number) {
+  const min = 11.5;
   const ref = useRef<HTMLParagraphElement>(null);
   useLayoutEffect(() => {
     const el = ref.current;
@@ -59,7 +59,7 @@ function useFitText(text: string, base: number, min = 11.5) {
       cancelled = true;
       observer.disconnect();
     };
-  }, [text, base, min]);
+  }, [text, base]);
   return ref;
 }
 
@@ -93,11 +93,8 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   const bodyRef = useFitText(steps[clamped] ?? "", 15.5);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
-  const go = useCallback(
-    (delta: number) =>
-      onIndex(Math.max(0, Math.min(count - 1, clamped + delta))),
-    [onIndex, count, clamped],
-  );
+  const go = (delta: number) =>
+    onIndex(Math.max(0, Math.min(count - 1, clamped + delta)));
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === "ArrowRight") {

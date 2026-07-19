@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useId, useReducer, useRef } from "react";
+import { useEffect, useId, useReducer, useRef } from "react";
 import type { ExtractError } from "@/lib/api";
 import {
   errorInfo,
-  spriteCopy,
   SPRITE_FAILED,
   reportIssueUrl,
 } from "@/features/extract/errorInfo";
@@ -21,11 +20,6 @@ interface FloatingErrorProps {
   onRetry: () => void; // re-run the extraction (must NOT clear `error` first)
   onDismiss: () => void; // clear the error and hide the widget
 }
-
-// How long the cartoon fly-away plays before we actually unmount (must match the
-// .efloat.isLeaving animation in FloatingError.module.css). Short under reduced motion.
-const FLY_MS = 620;
-const FLY_MS_REDUCED = 120;
 
 // The corner "sad parsley" — a small floating mascot that springs into the
 // bottom-right when an extraction fails. It starts collapsed: just the sprig plus
@@ -72,28 +66,21 @@ export function FloatingError({
   // True between clicking "Try again" and the next `error` change — lets the
   // error-identity effect tell a retry failure apart from a fresh error.
   const didRetry = useRef(false);
-  // Latest onDismiss, so the fly-away timeout always calls the current one
-  // without re-subscribing.
-  const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
 
-  // Focus targets for the alertdialog (A7): the widget root scopes the Escape
-  // listener, the bubble is where focus moves on open, the sprite is where it
-  // returns on collapse.
-  const rootRef = useRef<HTMLDivElement>(null);
+  // Focus targets for the alertdialog (A7): the bubble is where focus moves on
+  // open, the sprite is where it returns on collapse.
   const bubbleRef = useRef<HTMLDivElement>(null);
   const spriteRef = useRef<HTMLButtonElement>(null);
   // Previous open/retrying, so the focus effect can tell an open/collapse edge
   // (and a resolved retry) apart from an unrelated re-render.
-  const wasOpen = useRef(false);
-  const wasRetrying = useRef(false);
+  const prev = useRef({ open: false, retrying: false });
 
   // Stable ids tying the dialog to its title/hint (aria-labelledby/-describedby).
   const titleId = useId();
   const hintId = useId();
 
   const info = errorInfo(error.code);
-  const copy = state.failed ? SPRITE_FAILED : spriteCopy(error.code);
+  const copy = state.failed ? SPRITE_FAILED : info;
 
   // Fold each `error`/`terminal` change into the machine (fresh error, failed
   // retry, or an already-terminal paste failure). didRetry is consumed here.
@@ -108,21 +95,9 @@ export function FloatingError({
     didRetry.current = false;
   }, [error, terminal]);
 
-  // Once the fly-away is playing, wait out the animation then clear the error.
-  useEffect(() => {
-    if (!state.leaving) return;
-    const reduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-    const id = window.setTimeout(
-      () => onDismissRef.current(),
-      reduced ? FLY_MS_REDUCED : FLY_MS,
-    );
-    return () => window.clearTimeout(id);
-  }, [state.leaving]);
-
-  // Play the cartoon fly-away, then clear the error. Used by "Not now" + Escape.
-  const flyAway = useCallback(() => dispatch({ type: "flyAway" }), []);
+  // Play the cartoon fly-away, then clear the error (onDismiss fires from the
+  // root's onAnimationEnd when the fly-away finishes). Used by "Not now" + Escape.
+  const flyAway = () => dispatch({ type: "flyAway" });
 
   // Move focus with the dialog (A7). Opening moves focus to the primary action
   // (APG alertdialog default = first focusable, which the layout puts first);
@@ -131,36 +106,19 @@ export function FloatingError({
   // The fly-away restores focus itself (via the parent's onDismiss), so skip it.
   useEffect(() => {
     if (!state.leaving) {
-      const opened = state.open && !wasOpen.current;
+      const opened = state.open && !prev.current.open;
       const retryResolved =
-        state.open && wasRetrying.current && !state.retrying;
+        state.open && prev.current.retrying && !state.retrying;
       if (opened || retryResolved) {
         bubbleRef.current
           ?.querySelector<HTMLElement>("button:not([disabled]), a[href]")
           ?.focus();
-      } else if (!state.open && wasOpen.current) {
+      } else if (!state.open && prev.current.open) {
         spriteRef.current?.focus();
       }
     }
-    wasOpen.current = state.open;
-    wasRetrying.current = state.retrying;
+    prev.current = { open: state.open, retrying: state.retrying };
   }, [state.open, state.retrying, state.leaving]);
-
-  // Escape dismisses (a keyboard escape route for the non-modal dialog). The
-  // listener is attached to the widget root, not window, so it only fires while
-  // focus is inside the widget (the keydown bubbles up from the focused sprite or
-  // dialog control) — never hijacking Escape page-wide. Attaching it natively via
-  // ref, rather than as an onKeyDown prop on the non-interactive root, keeps the
-  // one root-level handler covering both the sprite and the dialog.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") flyAway();
-    }
-    root.addEventListener("keydown", onKey);
-    return () => root.removeEventListener("keydown", onKey);
-  }, [flyAway]);
 
   function handleRetry() {
     didRetry.current = true;
@@ -256,11 +214,23 @@ export function FloatingError({
 
   return (
     <div
-      ref={rootRef}
       className={`${styles.efloat}${state.open ? ` ${styles.isOpen}` : ""}${
         state.leaving ? ` ${styles.isLeaving}` : ""
       }`}
       aria-hidden={state.leaving}
+      // presentation: the root is a positioning wrapper; the handlers below only
+      // catch events bubbling from the real controls (satisfies jsx-a11y).
+      role="presentation"
+      // Escape dismisses (a keyboard escape route for the non-modal dialog).
+      // Bound on the root so it only fires while focus is inside the widget —
+      // never hijacking Escape page-wide.
+      onKeyDown={(e) => e.key === "Escape" && flyAway()}
+      // The fly-away finished (the .isLeaving animation on this element, not a
+      // bubbled child animation) → actually clear the error. Under reduced motion
+      // the global index.css net shrinks the animation to ~0ms, so this still fires.
+      onAnimationEnd={(e) =>
+        state.leaving && e.target === e.currentTarget && onDismiss()
+      }
     >
       <div
         ref={bubbleRef}

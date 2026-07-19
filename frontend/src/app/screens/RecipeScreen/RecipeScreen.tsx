@@ -1,27 +1,23 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
 import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
 import { RecipeSkeleton } from "@/features/recipe/RecipeSkeleton/RecipeSkeleton";
-import { appOutlet } from "@/app/router/appOutlet.ts";
+import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import { readCachedRecipe } from "@/lib/recipeCache.ts";
+import { BackButton } from "@/components/BackButton/BackButton";
 import styles from "./RecipeScreen.module.css";
-import btn from "@/components/Button.module.css";
 
 // Source label for the recipe bar: the site name if the backend gave one, else the
 // bare host of the source URL (falls back to the raw string if it won't parse).
 function hostOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url.replace(/^https?:\/\//, "").split("/")[0] ?? url;
-  }
+  return URL.parse(url)?.hostname.replace(/^www\./, "") ?? url;
 }
 
 // The recipe view: a fixed top bar (back to search + source) over a frame that
 // holds the card (or its skeleton while a request is in flight). Also the
 // deep-link entry point — /recipe?url=… on a hard load extracts that URL in place.
 export function RecipeScreen() {
-  const { extract, requestRecipe, backToSearch } = appOutlet();
+  const { extract, requestRecipe, backToSearch } = useAppOutlet();
   const [params] = useSearchParams();
   const target = params.get("url") ?? "";
   const { recipe, loading, restore } = extract;
@@ -48,27 +44,11 @@ export function RecipeScreen() {
     else requestRecipe(target);
   }, [target, recipe, requestRecipe, restore]);
 
-  useEffect(() => {
-    document.title = recipe ? `${recipe.name} — Parsley` : "Parsley — recipe";
-  }, [recipe]);
-
   return (
     <div className={styles.recipeScreen}>
+      <title>{recipe ? `${recipe.name} — Parsley` : "Parsley — recipe"}</title>
       <div className={styles.recipeBar}>
-        <button type="button" className={btn.back} onClick={backToSearch}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          NEW SEARCH
-        </button>
+        <BackButton onClick={backToSearch} />
         {recipe && (
           <span className={styles.recipeSrc}>
             <span className={styles.recipeSrcDot} aria-hidden />

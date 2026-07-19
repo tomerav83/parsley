@@ -1,10 +1,6 @@
-interface LeafProps {
-  className?: string;
-}
-
 // The Parsley sprig mark — a stem with paired leaflets. Inherits currentColor so
 // it takes the brand green wherever it's placed.
-export function ParsleyLogo({ className }: LeafProps) {
+export function ParsleyLogo({ className }: { className?: string }) {
   return (
     <svg
       className={className}

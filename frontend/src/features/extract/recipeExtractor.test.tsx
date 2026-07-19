@@ -11,7 +11,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExtractError, type Recipe } from "@/lib/api.ts";
-import { recipeExtractor } from "./recipeExtractor.ts";
+import { useRecipeExtractor } from "./recipeExtractor.ts";
 
 vi.mock("@/lib/api.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api.ts")>();
@@ -60,7 +60,7 @@ describe("recipeExtractor — request lifecycle", () => {
   it("runs submitting → success and forwards the url + an AbortSignal", async () => {
     const { promise, resolve } = deferred<Recipe>();
     mockedExtractRecipe.mockReturnValueOnce(promise);
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
 
     let outcome!: Promise<string>;
     act(() => {
@@ -86,7 +86,7 @@ describe("recipeExtractor — request lifecycle", () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("rate_limited", "slow down"),
     );
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
 
     await act(async () => {
       await result.current.runUrl("https://example.com/toast");
@@ -98,7 +98,7 @@ describe("recipeExtractor — request lifecycle", () => {
 
   it("wraps a non-ExtractError failure as a reportable unknown error", async () => {
     mockedExtractRecipe.mockRejectedValueOnce(new Error("boom"));
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
 
     await act(async () => {
       await result.current.runUrl("https://example.com/toast");
@@ -119,7 +119,7 @@ describe("recipeExtractor — supersede a stale request", () => {
     mockedExtractRecipe
       .mockReturnValueOnce(first.promise)
       .mockReturnValueOnce(second.promise);
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
 
     let outcomeA!: Promise<string>;
     let outcomeB!: Promise<string>;
@@ -147,7 +147,7 @@ describe("recipeExtractor — supersede a stale request", () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new DOMException("The operation was aborted.", "AbortError"),
     );
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
 
     let outcome!: string;
     await act(async () => {
@@ -161,7 +161,7 @@ describe("recipeExtractor — supersede a stale request", () => {
   it("restore() aborts any in-flight request and cannot be clobbered by its late response", async () => {
     const stale = deferred<Recipe>();
     mockedExtractRecipe.mockReturnValueOnce(stale.promise);
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
 
     let outcome!: Promise<string>;
     act(() => {
@@ -190,7 +190,7 @@ describe("recipeExtractor — retry vs. fresh submit", () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("fetch_failed", "no answer"),
     );
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
     await act(async () => {
       await result.current.runUrl("https://example.com/x");
     });
@@ -222,7 +222,7 @@ describe("recipeExtractor — paste vs. URL fetch", () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("network", "down"),
     );
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
     await act(async () => {
       await result.current.runUrl("https://example.com/x");
     });
@@ -239,7 +239,7 @@ describe("recipeExtractor — paste vs. URL fetch", () => {
 
   it("forwards html + url + an AbortSignal to extractRecipeFromHtml", async () => {
     mockedExtractRecipeFromHtml.mockResolvedValueOnce(RECIPE);
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
 
     await act(async () => {
       await result.current.runPaste(
@@ -261,7 +261,7 @@ describe("recipeExtractor — dismiss", () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("network", "down"),
     );
-    const { result } = renderHook(() => recipeExtractor());
+    const { result } = renderHook(() => useRecipeExtractor());
     await act(async () => {
       await result.current.runUrl("https://example.com/x");
     });

@@ -15,55 +15,29 @@ function formatMinutes(minutes: number): string {
   return rest ? `${hours}h ${rest}` : `${hours}h`;
 }
 
-interface Cell {
-  label: string;
-  value: string;
-}
-
-function buildCells(recipe: Recipe): Cell[] {
-  const cells: Cell[] = [];
-  if (recipe.prep_time_minutes)
-    cells.push({
-      label: "Prep",
-      value: formatMinutes(recipe.prep_time_minutes),
-    });
-  if (recipe.cook_time_minutes)
-    cells.push({
-      label: "Cook",
-      value: formatMinutes(recipe.cook_time_minutes),
-    });
-  if (recipe.total_time_minutes)
-    cells.push({
-      label: "Total",
-      value: formatMinutes(recipe.total_time_minutes),
-    });
-  if (recipe.yields) cells.push({ label: "Yield", value: recipe.yields });
-  return cells;
-}
-
 // The timing strip, pinned under the title. Specimen-style (direction B): hairline
 // dividers, mono uppercase labels, tabular figures. Renders nothing if no timings.
 export function TimingRow({ recipe, variant = "strip" }: TimingRowProps) {
-  const cells = buildCells(recipe);
+  const cells = (
+    [
+      ["Prep", recipe.prep_time_minutes],
+      ["Cook", recipe.cook_time_minutes],
+      ["Total", recipe.total_time_minutes],
+      ["Yield", recipe.yields],
+    ] as const
+  )
+    .filter(([, value]) => value)
+    .map(([label, value]) => ({
+      label,
+      value: typeof value === "number" ? formatMinutes(value) : value,
+    }));
   if (cells.length === 0) return null;
 
-  if (variant === "chips") {
-    return (
-      <dl className={styles.chips}>
-        {cells.map((cell) => (
-          <div key={cell.label} className={styles.chip}>
-            <dt>{cell.label}</dt>
-            <dd>{cell.value}</dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-
+  const isChips = variant === "chips";
   return (
-    <dl className={styles.strip}>
+    <dl className={isChips ? styles.chips : styles.strip}>
       {cells.map((cell) => (
-        <div key={cell.label}>
+        <div key={cell.label} className={isChips ? styles.chip : undefined}>
           <dt>{cell.label}</dt>
           <dd>{cell.value}</dd>
         </div>

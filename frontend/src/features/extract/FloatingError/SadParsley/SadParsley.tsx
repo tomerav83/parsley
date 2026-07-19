@@ -1,16 +1,12 @@
 import styles from "./SadParsley.module.css";
 
-interface SadParsleyProps {
-  className?: string;
-}
-
 // A wilted, downcast version of the Parsley sprig — three drooping leaflets over
 // a small face with sad slanted brows, a frown, and a single tear. The strokes
 // inherit the brand emerald (currentColor via the token), the face is punched out
 // with the page background, and the tear keeps its own water-blue. The `.pl-head`
 // group is the transform target the widget animates (the head-shake / droop); the
 // `.pl-tear` group is faded/dripped separately.
-export function SadParsley({ className }: SadParsleyProps) {
+export function SadParsley({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 100 110" fill="none" aria-hidden>
       <g

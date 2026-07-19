@@ -4,13 +4,11 @@
 // lives here as a named event, so "what happens after a failed retry" is readable
 // in one place.
 
+import type { ErrorInfo } from "@/features/extract/errorInfo";
+
 // The subset of an error's recovery affordances the machine needs to decide the
 // post-retry layout. Passed in by the view (from errorInfo) so this stays pure.
-export interface RetryInfo {
-  unexpected: boolean;
-  canPaste: boolean;
-  canEdit: boolean;
-}
+export type RetryInfo = Pick<ErrorInfo, "unexpected" | "canPaste" | "canEdit">;
 
 export interface FloatingErrorState {
   open: boolean; // action bubble expanded (vs. just the corner sprite)

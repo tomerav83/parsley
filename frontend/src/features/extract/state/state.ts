@@ -10,7 +10,7 @@
 
 import type { ExtractError, Recipe } from "@/lib/api.ts";
 
-export type ExtractStatus = "idle" | "submitting" | "success" | "error";
+type ExtractStatus = "idle" | "submitting" | "success" | "error";
 
 export interface ExtractState {
   status: ExtractStatus;
@@ -21,7 +21,7 @@ export interface ExtractState {
   pasteFailed: boolean;
 }
 
-export type ExtractAction =
+type ExtractAction =
   | { type: "submit"; isRetry: boolean }
   | { type: "success"; recipe: Recipe }
   | { type: "failure"; error: ExtractError; pasteFailed: boolean }

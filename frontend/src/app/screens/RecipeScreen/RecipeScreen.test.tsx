@@ -1,7 +1,7 @@
 // RecipeScreen's own job — deciding whether a deep-linked /recipe?url=… target
 // is already on screen, cached, or needs a network request — is independent of
 // which concrete recipeExtractor/App wiring sits behind the outlet context. So
-// `appOutlet` is mocked directly (a controllable AppOutletContext, not the real
+// `useAppOutlet` is mocked directly (a controllable AppOutletContext, not the real
 // hook) rather than rendering the real App: it isolates exactly the decision
 // logic under test (RecipeScreen's `requestedFor` guard) from App's own
 // nav/cache/focus behavior, already covered in App.test.tsx.
@@ -10,19 +10,19 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Recipe } from "@/lib/api.ts";
-import type { AppOutletContext } from "@/app/router/appOutlet.ts";
+import type { AppOutletContext } from "@/app/router/useAppOutlet.ts";
 import { RecipeScreen } from "./RecipeScreen.tsx";
 
-vi.mock("@/app/router/appOutlet.ts", () => ({
-  appOutlet: vi.fn(),
+vi.mock("@/app/router/useAppOutlet.ts", () => ({
+  useAppOutlet: vi.fn(),
 }));
 vi.mock("@/lib/recipeCache.ts", () => ({
   readCachedRecipe: vi.fn(),
 }));
 
-const { appOutlet } = await import("@/app/router/appOutlet.ts");
+const { useAppOutlet } = await import("@/app/router/useAppOutlet.ts");
 const { readCachedRecipe } = await import("@/lib/recipeCache.ts");
-const mockedAppOutlet = vi.mocked(appOutlet);
+const mockedAppOutlet = vi.mocked(useAppOutlet);
 const mockedReadCachedRecipe = vi.mocked(readCachedRecipe);
 
 afterEach(() => {

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import type { ExtractError } from "@/lib/api";
 import { errorInfo } from "@/features/extract/errorInfo";
+import { BackButton } from "@/components/BackButton/BackButton";
 import styles from "./PasteHtmlForm.module.css";
 import btn from "@/components/Button.module.css";
 
@@ -23,34 +24,17 @@ export function PasteHtmlForm({
   loading,
 }: PasteHtmlFormProps) {
   const [html, setHtml] = useState("");
-  const [touched, setTouched] = useState(false);
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const trimmed = html.trim();
     if (trimmed) onSubmit(trimmed);
-    else setTouched(true);
   }
-
-  const empty = touched && !html.trim();
 
   return (
     <div>
       <div className={styles.backrow}>
-        <button type="button" className={btn.back} onClick={onCancel}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          NEW SEARCH
-        </button>
+        <BackButton onClick={onCancel} />
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -74,32 +58,22 @@ export function PasteHtmlForm({
         )}
 
         <textarea
-          className={`${styles.input}${empty ? ` ${styles.isEmpty}` : ""}`}
+          className={styles.input}
           placeholder="<!doctype html> …paste the whole page here…"
           aria-label="Page HTML source"
           value={html}
           onChange={(event) => setHtml(event.target.value)}
           disabled={loading}
-          rows={8}
+          required
         />
 
-        <div className={styles.actions}>
-          <button
-            type="submit"
-            className={`${btn.btn} ${btn.primary}`}
-            disabled={loading}
-          >
-            {loading ? "EXTRACTING…" : "EXTRACT FROM HTML"}
-          </button>
-          <button
-            type="button"
-            className={`${btn.btn} ${btn.ghost}`}
-            onClick={onCancel}
-            disabled={loading}
-          >
-            Cancel
-          </button>
-        </div>
+        <button
+          type="submit"
+          className={`${btn.btn} ${btn.primary} ${styles.submit}`}
+          disabled={loading}
+        >
+          {loading ? "EXTRACTING…" : "EXTRACT FROM HTML"}
+        </button>
       </form>
     </div>
   );

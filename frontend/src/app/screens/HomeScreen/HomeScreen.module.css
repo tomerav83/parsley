@@ -50,7 +50,9 @@
   line-height: 1.5;
   color: var(--color-text-muted);
   margin: 0 auto 26px;
-  max-width: 40ch;
+  /* ≈40ch of Inter at 17px — px, not ch, so the metric-matched fallback measures
+     the same width before the font swap and the wrap count can't change. */
+  max-width: 440px;
 }
 .tagline b {
   color: var(--color-text);
