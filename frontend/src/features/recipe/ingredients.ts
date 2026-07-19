@@ -141,9 +141,11 @@ const FRACTION_MAP: Record<string, string> = {
   "⅞": "7/8",
 };
 
+const FRACTION_RE = new RegExp(`(\\d)?([${FRACTIONS}])`, "g");
+
 function expandFractions(text: string): string {
   return text.replace(
-    new RegExp(`(\\d)?([${FRACTIONS}])`, "g"),
+    FRACTION_RE,
     (_, whole: string | undefined, frac: string) =>
       (whole ? `${whole} ` : "") + FRACTION_MAP[frac],
   );

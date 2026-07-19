@@ -44,7 +44,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
             className={styles.heroImg}
             src={image}
             alt={recipe.name}
-            loading="lazy"
+            fetchPriority="high"
           />
           <div className={styles.heroScrim} aria-hidden />
           <div className={styles.heroBody}>
