@@ -6,7 +6,10 @@ import {
   useState,
 } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
-import { useRecipeExtractor } from "@/features/extract/recipeExtractor.ts";
+import {
+  useRecipeExtractor,
+  type RunResult,
+} from "@/features/extract/recipeExtractor.ts";
 import { cacheRecipe } from "@/lib/recipeCache.ts";
 import { errorInfo } from "@/features/extract/errorInfo";
 import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
@@ -110,11 +113,14 @@ function App() {
   );
 
   // "Try again" from the floating widget re-runs WITHOUT clearing the error, so
-  // the widget stays mounted to tell a second failure apart from a fresh one.
-  async function retry() {
-    if ((await runUrl(lastUrl, { retry: true })) === "success") {
+  // the widget stays mounted. The outcome flows back to the widget's handler,
+  // which folds a failure into its own state (R1) — no error-watching effect.
+  async function retry(): Promise<RunResult> {
+    const result = await runUrl(lastUrl, { retry: true });
+    if (result === "success") {
       navigate(recipePath(lastUrl), { viewTransition: true });
     }
+    return result;
   }
 
   function backToSearch() {

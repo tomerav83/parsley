@@ -1,5 +1,6 @@
 import { useEffect, useId, useReducer, useRef } from "react";
 import type { ExtractError } from "@/lib/api";
+import type { RunResult } from "@/features/extract/recipeExtractor.ts";
 import {
   errorInfo,
   SPRITE_FAILED,
@@ -17,7 +18,7 @@ interface FloatingErrorProps {
   terminal: boolean; // start opened in the report-only state (a failed paste)
   onPaste: () => void; // open the paste-HTML fallback
   onEdit: () => void; // refocus the URL field to fix the link
-  onRetry: () => void; // re-run the extraction (must NOT clear `error` first)
+  onRetry: () => Promise<RunResult>; // re-run the extraction, returning its outcome
   onDismiss: () => void; // clear the error and hide the widget
 }
 
@@ -46,9 +47,10 @@ interface FloatingErrorProps {
 // (fly-away → URL field) is the parent's job, in onDismiss.
 //
 // Retry flow: clicking "Try again" calls onRetry (which re-runs the extract
-// WITHOUT clearing `error`, so this component stays mounted). We detect the
-// outcome by watching `error`'s identity — a new ExtractError means the retry
-// failed. All the resulting state transitions live in ./state/state.ts.
+// WITHOUT clearing `error`, so this component stays mounted) and returns the
+// outcome. A failed retry dispatches `retryFailed`; success/abort resolve by the
+// widget unmounting (a newer run owns the screen). All transitions live in
+// ./state/state.ts; the post-retry layout is derived below from the error.
 export function FloatingError({
   error,
   sourceUrl,
@@ -63,9 +65,6 @@ export function FloatingError({
     terminal,
     initFloatingError,
   );
-  // True between clicking "Try again" and the next `error` change — lets the
-  // error-identity effect tell a retry failure apart from a fresh error.
-  const didRetry = useRef(false);
 
   // Focus targets for the alertdialog (A7): the bubble is where focus moves on
   // open, the sprite is where it returns on collapse.
@@ -80,20 +79,14 @@ export function FloatingError({
   const hintId = useId();
 
   const info = errorInfo(error.code);
-  const copy = state.failed ? SPRITE_FAILED : info;
-
-  // Fold each `error`/`terminal` change into the machine (fresh error, failed
-  // retry, or an already-terminal paste failure). didRetry is consumed here.
-  // retryInfo is recomputed inside so the effect's only inputs are error/terminal.
-  useEffect(() => {
-    dispatch({
-      type: "errorChanged",
-      terminal,
-      didRetry: didRetry.current,
-      retryInfo: errorInfo(error.code),
-    });
-    didRetry.current = false;
-  }, [error, terminal]);
+  // Post-retry layout, derived from the current error's affordances (R1). A
+  // terminal paste is failed from the start; otherwise a failed retry collapses
+  // to report-only only when nothing else can take over (unexpected, no paste),
+  // and spends the retry when a fallback (paste/edit) exists to hand off to.
+  const failed =
+    terminal || (state.retryFailed && info.unexpected && !info.canPaste);
+  const retryUsed = state.retryFailed && (info.canPaste || info.canEdit);
+  const copy = failed ? SPRITE_FAILED : info;
 
   // Play the cartoon fly-away, then clear the error (onDismiss fires from the
   // root's onAnimationEnd when the fly-away finishes). Used by "Not now" + Escape.
@@ -120,10 +113,10 @@ export function FloatingError({
     prev.current = { open: state.open, retrying: state.retrying };
   }, [state.open, state.retrying, state.leaving]);
 
-  function handleRetry() {
-    didRetry.current = true;
+  async function handleRetry() {
     dispatch({ type: "retryStart" });
-    onRetry();
+    // "success" unmounts the widget; "aborted" means a newer run owns the screen.
+    if ((await onRetry()) === "error") dispatch({ type: "retryFailed" });
   }
 
   // Action renderers, reused as either the full-width primary or a row secondary.
@@ -185,8 +178,8 @@ export function FloatingError({
   );
 
   // "Try again" is a one-shot: once a retry has failed and a fallback remains, it's
-  // gone and the fallback becomes primary (see the machine's errorChanged).
-  const canRetry = info.canRetry && !state.retryUsed;
+  // gone and the fallback becomes primary (see `retryUsed` above).
+  const canRetry = info.canRetry && !retryUsed;
 
   // Pick the primary by intent; everything else drops to the secondary row.
   const primaryKind = canRetry
@@ -247,7 +240,7 @@ export function FloatingError({
         </p>
 
         <div className={styles.actions}>
-          {state.failed ? (
+          {failed ? (
             // After a second failed retry: reporting is the only path left.
             reportBtn("primary", "Report on GitHub")
           ) : (
@@ -279,7 +272,7 @@ export function FloatingError({
       >
         <SadParsley className={styles.face} />
         <span className={styles.tag}>
-          {state.leaving ? "bye!" : state.failed ? "help?" : "oops!"}
+          {state.leaving ? "bye!" : failed ? "help?" : "oops!"}
         </span>
       </button>
     </div>
