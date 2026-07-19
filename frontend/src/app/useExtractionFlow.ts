@@ -31,8 +31,7 @@ export function useExtractionFlow() {
     const trimmed = url.trim();
     if (!trimmed) return;
     setLastUrl(trimmed);
-    // Stay on home while the request runs; only slide once a recipe lands, so a
-    // failed extract doesn't slide in then back.
+
     if ((await runUrl(trimmed)) === "success") {
       navigate(recipePath(trimmed), { viewTransition: true });
     }
