@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Recipe } from "@/lib/api.ts";
 import type { LoaderFunctionArgs } from "react-router";
+import { RouterContextProvider } from "react-router";
 import { recipeLoader } from "./recipeLoader.ts";
 
 vi.mock("@/lib/api.ts", () => ({ extractRecipe: vi.fn() }));
@@ -24,7 +25,13 @@ function args(target?: string): LoaderFunctionArgs {
   const url = target
     ? `https://app/recipe?url=${encodeURIComponent(target)}`
     : "https://app/recipe";
-  return { request: new Request(url), params: {}, context: {} };
+  return {
+    request: new Request(url),
+    params: {},
+    context: new RouterContextProvider(),
+    url: new URL(url),
+    pattern: "/recipe",
+  };
 }
 
 describe("recipeLoader", () => {
