@@ -17,17 +17,10 @@ function canonical(value: string): string {
     .trim();
 }
 
-function byline(recipe: Recipe): string {
-  const parts: string[] = [];
-  const seen = new Set<string>();
-  for (const value of [recipe.author, recipe.site_name]) {
-    if (!value) continue;
-    const key = canonical(value);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    parts.push(value);
-  }
-  return parts.join(" — ");
+function byline({ author, site_name }: Recipe): string {
+  if (author && site_name && canonical(author) === canonical(site_name))
+    return author;
+  return [author, site_name].filter(Boolean).join(" — ");
 }
 
 // The image URL comes from scraped/pasted page markup, so treat it as untrusted:
