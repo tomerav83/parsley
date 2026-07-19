@@ -1,8 +1,3 @@
-// `recipeExtractor` is a custom hook (it calls useReducer/useRef/useCallback and
-// is always invoked unconditionally at a component's top level), but it's named to
-// match its module rather than the use* convention — so the Rules-of-Hooks lint,
-// which keys off the `use` prefix, is disabled for this file.
-/* oxlint-disable react-hooks/rules-of-hooks */
 import { useCallback, useReducer, useRef } from "react";
 import {
   extractRecipe,
@@ -26,7 +21,7 @@ function toExtractError(err: unknown): ExtractError {
 // so a new request cancels the one before it (the retry button could otherwise
 // race the original and let the slower response win — REDESIGN C3). The screen the
 // app slides to on success stays App's concern; this hook only reports the outcome.
-export function recipeExtractor() {
+export function useRecipeExtractor() {
   const [state, dispatch] = useReducer(extractReducer, initialExtractState);
   const controllerRef = useRef<AbortController | null>(null);
 

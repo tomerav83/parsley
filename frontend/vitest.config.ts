@@ -4,8 +4,7 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 // The `@/ → src/` alias. Each project spawns its own Vite resolver and does NOT
-// inherit a root-level `resolve.alias`, so it's applied per-project below (and at
-// the root for good measure).
+// inherit a root-level `resolve.alias`, so it's applied per-project below.
 const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
 
 // Vitest config, kept separate from vite.config.ts on purpose: importing
@@ -28,7 +27,6 @@ const chromium = (options?: PlaywrightOptions) => ({
 });
 
 export default defineConfig({
-  resolve: { alias },
   test: {
     // `coverage` is process-wide, not per-project (Vitest's `NonProjectOptions`),
     // so it lives here rather than inside `unit`/`browser` below — and is

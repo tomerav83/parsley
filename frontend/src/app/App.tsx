@@ -6,7 +6,7 @@ import {
   useState,
 } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
-import { recipeExtractor } from "@/features/extract/recipeExtractor.ts";
+import { useRecipeExtractor } from "@/features/extract/recipeExtractor.ts";
 import { cacheRecipe } from "@/lib/recipeCache.ts";
 import { errorInfo } from "@/features/extract/errorInfo";
 import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
@@ -33,7 +33,7 @@ function recipePath(url: string): string {
 // the routed screen. App owns only the extraction lifecycle and the URL field's
 // text — everything else lives in the screens, which mount per-route.
 function App() {
-  const extract = recipeExtractor();
+  const extract = useRecipeExtractor();
   const navigate = useNavigate();
   const location = useLocation();
   const [url, setUrl] = useState("");

@@ -1,12 +1,12 @@
 import type { RefObject } from "react";
 import { useOutletContext } from "react-router";
-import type { recipeExtractor } from "@/features/extract/recipeExtractor.ts";
+import type { useRecipeExtractor } from "@/features/extract/recipeExtractor.ts";
 
 // Everything App (the layout route) shares with its screens. The extraction
 // lifecycle and the URL field live in App so they survive screens mounting and
 // unmounting as the route changes.
 export interface AppOutletContext {
-  extract: ReturnType<typeof recipeExtractor>;
+  extract: ReturnType<typeof useRecipeExtractor>;
   /** The URL field's current text (state lives in App so it survives route changes). */
   url: string;
   setUrl: (url: string) => void;
