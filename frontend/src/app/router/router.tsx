@@ -36,9 +36,19 @@ export const router = createBrowserRouter([
       {
         path: "recipe",
         lazy: {
+          // The loader resolves /recipe?url=… before the screen renders (cache-first,
+          // network only for a cold deep-link); a failed extract throws and the
+          // ErrorBoundary shows the sad-parsley in place. All three are code-split,
+          // so the recipe view stays off Home's first paint (REDESIGN F2).
           Component: async () =>
             (await import("@/app/screens/RecipeScreen/RecipeScreen"))
               .RecipeScreen,
+          loader: async () =>
+            (await import("@/app/screens/RecipeScreen/recipeLoader"))
+              .recipeLoader,
+          ErrorBoundary: async () =>
+            (await import("@/app/screens/RecipeScreen/RecipeError"))
+              .RecipeError,
         },
       },
       { path: "*", element: <Navigate to="/" replace /> },

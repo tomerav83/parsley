@@ -6,6 +6,7 @@ import {
   type Recipe,
 } from "@/lib/api.ts";
 import { extractReducer, initialExtractState } from "./state/state.ts";
+import { cacheRecipe } from "@/lib/recipeCache.ts";
 
 // The outcome of a run. "aborted" means a newer request superseded this one — the
 // caller should do nothing (the newer run owns the navigation), which is why it's
@@ -27,6 +28,7 @@ export function useRecipeExtractor() {
 
   const run = useCallback(
     async (
+      url: string,
       fetcher: (signal: AbortSignal) => Promise<Recipe>,
       isRetry: boolean,
       pasteFailed: boolean,
@@ -38,6 +40,10 @@ export function useRecipeExtractor() {
       try {
         const recipe = await fetcher(controller.signal);
         if (controller.signal.aborted) return "aborted";
+        // Cache before the caller navigates: the recipe route's loader reads this
+        // synchronously, so writing it here (not in a post-render effect) is what
+        // keeps a Home submit from re-fetching a recipe we already have.
+        cacheRecipe(url, recipe);
         dispatch({ type: "success", recipe });
         return "success";
       } catch (err) {
@@ -60,13 +66,23 @@ export function useRecipeExtractor() {
 
   const runUrl = useCallback(
     (url: string, opts?: { retry?: boolean }): Promise<RunResult> =>
-      run((signal) => extractRecipe(url, signal), opts?.retry ?? false, false),
+      run(
+        url,
+        (signal) => extractRecipe(url, signal),
+        opts?.retry ?? false,
+        false,
+      ),
     [run],
   );
 
   const runPaste = useCallback(
     (html: string, url: string): Promise<RunResult> =>
-      run((signal) => extractRecipeFromHtml(html, url, signal), false, true),
+      run(
+        url,
+        (signal) => extractRecipeFromHtml(html, url, signal),
+        false,
+        true,
+      ),
     [run],
   );
 
