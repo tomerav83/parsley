@@ -64,7 +64,10 @@ function makeContext(
     submitUrl: vi.fn(),
     submitPaste: vi.fn(),
     requestRecipe: vi.fn(),
+    retry: vi.fn(),
     backToSearch: vi.fn(),
+    openPaste: vi.fn(),
+    dismissError: vi.fn(),
     ...overrides,
   };
 }
