@@ -13,6 +13,18 @@
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Match browser chrome to the page background. Tracks OS preference (the
+         common case); won't follow the manual toggle without JS. -->
+    <meta
+      name="theme-color"
+      content="#ffffff"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#0d1411"
+      media="(prefers-color-scheme: dark)"
+    />
     <meta
       name="description"
       content="Paste a recipe link, get just the recipe — no life stories, no pop-ups."

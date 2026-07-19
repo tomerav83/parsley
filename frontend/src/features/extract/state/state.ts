@@ -1,12 +1,10 @@
-// The extraction flow as an explicit state machine, replacing the loading/recipe/
-// error boolean trio that could express impossible states (see REDESIGN C2). The
-// four statuses are mutually exclusive, so "loading with a stale recipe" or
-// "error next to a recipe" simply can't be represented.
+// The extraction flow as an explicit state machine (see REDESIGN C2). The four
+// statuses are mutually exclusive, so impossible states like "loading with a stale
+// recipe" or "error next to a recipe" simply can't be represented.
 //
-// One deliberate transition preserves the old behaviour: on a *retry* `submit`
-// keeps the current `error` set while the request is in flight, so the floating
-// error widget stays mounted and can tell a second failure apart from a fresh one.
-// A fresh `submit` clears it.
+// One deliberate transition: a *retry* `submit` keeps the current `error` set while
+// the request is in flight, so the floating error widget stays mounted and can tell
+// a second failure apart from a fresh one. A fresh `submit` clears it.
 
 import type { ExtractError, Recipe } from "@/lib/api.ts";
 

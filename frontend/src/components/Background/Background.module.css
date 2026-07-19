@@ -1,0 +1,71 @@
+/* Fixed, non-interactive layer behind the app.
+   NB z-index:0 (not -1): html/body carry an opaque background, and a negative-z
+   layer would paint behind it — invisible. 0 stays above the body wash but below
+   the later-painted app content; pointer-events:none keeps it inert. */
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: clip;
+  pointer-events: none;
+  /* sprigs inherit the brand green via currentColor, so theme flips recolor
+     them with no JS */
+  color: var(--color-brand);
+}
+
+/* The three motion channels sit on nested wrappers because each is its own
+   `transform` animation — on one element they'd overwrite each other.
+   .rise climbs the viewport, .sway drifts side to side, .spin slowly turns.
+   Per-sprig speeds, sizes and (negative) delays are inline styles from
+   Background.tsx. */
+
+.rise {
+  position: absolute;
+  top: 100%; /* born just below the viewport… */
+  animation: rise linear infinite;
+}
+
+@keyframes rise {
+  to {
+    transform: translateY(-120vh); /* …and gone just past the top */
+  }
+}
+
+.sway {
+  animation: sway ease-in-out infinite alternate;
+}
+
+@keyframes sway {
+  from {
+    transform: translateX(calc(-1 * var(--sway)));
+  }
+  to {
+    transform: translateX(var(--sway));
+  }
+}
+
+.spin {
+  animation: spin linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.spin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* No motion: pause rather than remove the animations — the negative delays have
+   already scattered the sprigs mid-flight, so pausing leaves a still frame. */
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .sway,
+  .spin {
+    animation-play-state: paused;
+  }
+}

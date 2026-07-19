@@ -41,7 +41,7 @@ export function UrlForm({
       />
       <button type="submit" className={styles.submit} disabled={loading}>
         {loading && <span className={styles.spinner} aria-hidden />}
-        <span>{loading ? "EXTRACTING" : "EXTRACT"}</span>
+        <span>{loading ? "EXTRACTING…" : "EXTRACT"}</span>
       </button>
     </form>
   );

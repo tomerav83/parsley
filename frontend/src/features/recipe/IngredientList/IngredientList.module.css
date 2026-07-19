@@ -42,6 +42,9 @@
   font-size: 15px;
   line-height: 1.35;
   cursor: pointer;
+  /* scraped ingredient text is UGC — let a long unbreakable token wrap instead
+     of overflowing the grid cell */
+  overflow-wrap: anywhere;
 }
 .list input:checked ~ .name {
   text-decoration: line-through;

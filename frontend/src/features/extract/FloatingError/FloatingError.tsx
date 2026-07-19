@@ -1,5 +1,7 @@
 import { useEffect, useId, useReducer, useRef } from "react";
+import type { ReactNode } from "react";
 import type { ExtractError } from "@/lib/api";
+import type { RunResult } from "@/features/extract/recipeExtractor.ts";
 import {
   errorInfo,
   SPRITE_FAILED,
@@ -17,8 +19,58 @@ interface FloatingErrorProps {
   terminal: boolean; // start opened in the report-only state (a failed paste)
   onPaste: () => void; // open the paste-HTML fallback
   onEdit: () => void; // refocus the URL field to fix the link
-  onRetry: () => void; // re-run the extraction (must NOT clear `error` first)
+  onRetry: () => Promise<RunResult>; // re-run the extraction, returning its outcome
   onDismiss: () => void; // clear the error and hide the widget
+}
+
+// One recovery action, rendered by <ActionButton> as either the full-width primary
+// or a secondary ghost. `href` makes it a link (Report); otherwise a button.
+interface Action {
+  key: string;
+  icon: ReactNode;
+  label: string;
+  primaryLabel?: string; // fuller copy when shown as the primary (else `label`)
+  onClick?: () => void;
+  href?: string;
+  disabled?: boolean;
+}
+
+function ActionButton({
+  action,
+  variant,
+}: {
+  action: Action;
+  variant: "primary" | "ghost";
+}) {
+  const className = `${btn.btn} ${btn.compact} ${btn[variant]}`;
+  const inner = (
+    <>
+      {action.icon}
+      {variant === "primary"
+        ? (action.primaryLabel ?? action.label)
+        : action.label}
+    </>
+  );
+  return action.href ? (
+    <a
+      className={className}
+      href={action.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={action.onClick}
+    >
+      {inner}
+    </a>
+  ) : (
+    <button
+      type="button"
+      className={className}
+      onClick={action.onClick}
+      disabled={action.disabled}
+    >
+      {inner}
+    </button>
+  );
 }
 
 // The corner "sad parsley" — a small floating mascot that springs into the
@@ -46,9 +98,10 @@ interface FloatingErrorProps {
 // (fly-away → URL field) is the parent's job, in onDismiss.
 //
 // Retry flow: clicking "Try again" calls onRetry (which re-runs the extract
-// WITHOUT clearing `error`, so this component stays mounted). We detect the
-// outcome by watching `error`'s identity — a new ExtractError means the retry
-// failed. All the resulting state transitions live in ./state/state.ts.
+// WITHOUT clearing `error`, so this component stays mounted) and returns the
+// outcome. A failed retry dispatches `retryFailed`; success/abort resolve by the
+// widget unmounting (a newer run owns the screen). All transitions live in
+// ./state/state.ts; the post-retry layout is derived below from the error.
 export function FloatingError({
   error,
   sourceUrl,
@@ -63,9 +116,6 @@ export function FloatingError({
     terminal,
     initFloatingError,
   );
-  // True between clicking "Try again" and the next `error` change — lets the
-  // error-identity effect tell a retry failure apart from a fresh error.
-  const didRetry = useRef(false);
 
   // Focus targets for the alertdialog (A7): the bubble is where focus moves on
   // open, the sprite is where it returns on collapse.
@@ -80,20 +130,14 @@ export function FloatingError({
   const hintId = useId();
 
   const info = errorInfo(error.code);
-  const copy = state.failed ? SPRITE_FAILED : info;
-
-  // Fold each `error`/`terminal` change into the machine (fresh error, failed
-  // retry, or an already-terminal paste failure). didRetry is consumed here.
-  // retryInfo is recomputed inside so the effect's only inputs are error/terminal.
-  useEffect(() => {
-    dispatch({
-      type: "errorChanged",
-      terminal,
-      didRetry: didRetry.current,
-      retryInfo: errorInfo(error.code),
-    });
-    didRetry.current = false;
-  }, [error, terminal]);
+  // Post-retry layout, derived from the current error's affordances. A
+  // terminal paste is failed from the start; otherwise a failed retry collapses
+  // to report-only only when nothing else can take over (unexpected, no paste),
+  // and spends the retry when a fallback (paste/edit) exists to hand off to.
+  const failed =
+    terminal || (state.retryFailed && info.unexpected && !info.canPaste);
+  const retryUsed = state.retryFailed && (info.canPaste || info.canEdit);
+  const copy = failed ? SPRITE_FAILED : info;
 
   // Play the cartoon fly-away, then clear the error (onDismiss fires from the
   // root's onAnimationEnd when the fly-away finishes). Used by "Not now" + Escape.
@@ -120,97 +164,56 @@ export function FloatingError({
     prev.current = { open: state.open, retrying: state.retrying };
   }, [state.open, state.retrying, state.leaving]);
 
-  function handleRetry() {
-    didRetry.current = true;
+  async function handleRetry() {
     dispatch({ type: "retryStart" });
-    onRetry();
+    // "success" unmounts the widget; "aborted" means a newer run owns the screen.
+    if ((await onRetry()) === "error") dispatch({ type: "retryFailed" });
   }
 
-  // Action renderers, reused as either the full-width primary or a row secondary.
-  const retryBtn = (variant: string) => (
-    <button
-      key="retry"
-      type="button"
-      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
-      onClick={handleRetry}
-      disabled={state.retrying}
-    >
-      {state.retrying ? (
-        <>
-          <span className={btn.spin} aria-hidden />
-          Retrying…
-        </>
-      ) : (
-        <>
-          <RetryIcon />
-          Try again
-        </>
-      )}
-    </button>
-  );
-  const pasteBtn = (variant: string, label: string) => (
-    <button
-      key="paste"
-      type="button"
-      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
-      onClick={onPaste}
-    >
-      <PasteIcon />
-      {label}
-    </button>
-  );
-  const editBtn = (variant: string) => (
-    <button
-      key="edit"
-      type="button"
-      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
-      onClick={onEdit}
-    >
-      <EditIcon />
-      Edit link
-    </button>
-  );
-  const reportBtn = (variant: string, label: string) => (
-    <a
-      key="report"
-      className={`${btn.btn} ${btn.compact} ${btn[variant]}`}
-      href={reportIssueUrl(error.code, sourceUrl)}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={onDismiss}
-    >
-      <GithubIcon />
-      {label}
-    </a>
-  );
-
   // "Try again" is a one-shot: once a retry has failed and a fallback remains, it's
-  // gone and the fallback becomes primary (see the machine's errorChanged).
-  const canRetry = info.canRetry && !state.retryUsed;
+  // gone and the fallback becomes primary (see `retryUsed` above).
+  const canRetry = info.canRetry && !retryUsed;
 
-  // Pick the primary by intent; everything else drops to the secondary row.
-  const primaryKind = canRetry
-    ? "retry"
-    : info.canPaste
-      ? "paste"
-      : info.canEdit
-        ? "edit"
-        : null;
-  const primary =
-    primaryKind === "retry"
-      ? retryBtn("primary")
-      : primaryKind === "paste"
-        ? pasteBtn("primary", "Paste the page")
-        : primaryKind === "edit"
-          ? editBtn("primary")
-          : null;
-  const secondary = [
-    info.canPaste && primaryKind !== "paste"
-      ? pasteBtn("ghost", "Paste page")
-      : null,
-    info.canEdit && primaryKind !== "edit" ? editBtn("ghost") : null,
-    info.unexpected ? reportBtn("ghost", "Report") : null,
-  ].filter(Boolean);
+  // Recovery actions in intent order: the first eligible is the full-width primary,
+  // the rest share the secondary ghost row. Report is always subordinate — it only
+  // becomes primary in the terminal/failed collapse below (rendered directly).
+  // Every error code offers at least one of retry/paste/edit, so a primary always
+  // exists. Each action's `primaryLabel` (when set) is its fuller full-width copy.
+  const reportAction: Action = {
+    key: "report",
+    icon: <GithubIcon />,
+    label: "Report",
+    primaryLabel: "Report on GitHub",
+    href: reportIssueUrl(error.code, sourceUrl),
+    onClick: onDismiss,
+  };
+  const [primary, ...secondary] = [
+    canRetry && {
+      key: "retry",
+      icon: state.retrying ? (
+        <span className={btn.spin} aria-hidden />
+      ) : (
+        <RetryIcon />
+      ),
+      label: state.retrying ? "Retrying…" : "Try again",
+      onClick: handleRetry,
+      disabled: state.retrying,
+    },
+    info.canPaste && {
+      key: "paste",
+      icon: <PasteIcon />,
+      label: "Paste page",
+      primaryLabel: "Paste the page",
+      onClick: onPaste,
+    },
+    info.canEdit && {
+      key: "edit",
+      icon: <EditIcon />,
+      label: "Edit link",
+      onClick: onEdit,
+    },
+    info.unexpected && reportAction,
+  ].filter(Boolean) as Action[];
 
   return (
     <div
@@ -247,14 +250,19 @@ export function FloatingError({
         </p>
 
         <div className={styles.actions}>
-          {state.failed ? (
-            // After a second failed retry: reporting is the only path left.
-            reportBtn("primary", "Report on GitHub")
+          {failed ? (
+            // After a second failed retry (or a terminal paste failure): reporting
+            // is the only path left.
+            <ActionButton action={reportAction} variant="primary" />
           ) : (
             <>
-              {primary}
+              {primary && <ActionButton action={primary} variant="primary" />}
               {secondary.length > 0 && (
-                <div className={btn.row}>{secondary}</div>
+                <div className={btn.row}>
+                  {secondary.map((a) => (
+                    <ActionButton key={a.key} action={a} variant="ghost" />
+                  ))}
+                </div>
               )}
             </>
           )}
@@ -279,7 +287,7 @@ export function FloatingError({
       >
         <SadParsley className={styles.face} />
         <span className={styles.tag}>
-          {state.leaving ? "bye!" : state.failed ? "help?" : "oops!"}
+          {state.leaving ? "bye!" : failed ? "help?" : "oops!"}
         </span>
       </button>
     </div>

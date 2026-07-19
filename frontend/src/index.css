@@ -155,21 +155,6 @@ body {
   );
 }
 
-/* Ambient drifting-sprigs canvas: fixed to the viewport, pinned below the app
-   content but above the body wash, and never interactive.
-   NB z-index:0 (not -1): the root html/body carry an opaque background, and a
-   negative-z layer paints *behind* the body background — which would hide the
-   canvas. z-index:0 keeps it above the wash but below the later-painted app
-   content, and pointer-events:none guarantees it never blocks interaction. */
-.sprig-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
 #root {
   min-height: 100dvh;
   display: flex;

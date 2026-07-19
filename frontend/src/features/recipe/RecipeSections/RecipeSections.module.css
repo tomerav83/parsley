@@ -38,6 +38,10 @@
     background 0.2s var(--curve),
     color 0.2s var(--curve);
 }
+.segBtn:hover:not([aria-pressed="true"]) {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
 .segBtn + .segBtn {
   border-left: 1.5px solid var(--color-border);
 }
