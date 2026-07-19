@@ -152,7 +152,6 @@ export function Background() {
     // needs no visibility handling — only reduced motion pauses it for real.
     function start() {
       cancelAnimationFrame(raf);
-      raf = 0;
       resize();
       // Reduced motion never animates: paint one frame and stay put.
       if (reduce.matches) frame(0);
@@ -184,7 +183,6 @@ export function Background() {
 
     return () => {
       cancelAnimationFrame(raf);
-      raf = 0;
       themeAttr.disconnect();
       window.removeEventListener("resize", onResize);
       scheme.removeEventListener("change", onScheme);
