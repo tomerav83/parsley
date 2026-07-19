@@ -1,11 +1,10 @@
-// The floating error widget's UI state as one explicit reducer, replacing the
-// five useState flags + two coordinating refs the component used to juggle
-// (REDESIGN C2). Every transition is a named event, so "what happens after a
-// failed retry" is readable in one place.
+// The floating error widget's UI state as one explicit reducer (REDESIGN C2).
+// Every transition is a named event, so "what happens after a failed retry" is
+// readable in one place.
 //
 // The retry outcome arrives through the click handler (retryFailed), not by
-// watching the `error` prop change in an effect (R1). The post-retry layout —
-// whether the widget collapses to report-only and whether retry is spent — is a
+// watching the `error` prop change in an effect. The post-retry layout — whether
+// the widget collapses to report-only and whether retry is spent — is a
 // render-time derivation from the current error's affordances, not stored state.
 
 export interface FloatingErrorState {

@@ -72,7 +72,7 @@ export function useExtractionFlow() {
 
   // "Try again" from the floating widget re-runs WITHOUT clearing the error, so
   // the widget stays mounted. The outcome flows back to the widget's handler,
-  // which folds a failure into its own state (R1) — no error-watching effect.
+  // which folds a failure into its own state — no error-watching effect.
   async function retry(): Promise<RunResult> {
     const result = await runUrl(lastUrl, { retry: true });
     if (result === "success") {
