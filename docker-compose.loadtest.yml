@@ -1,0 +1,72 @@
+# Prod-like load-testing harness (LOADTEST.md). NOT for dev — use
+# docker-compose.yml for that. Runs the backend the way one Vercel Fluid instance
+# would (1 vCPU / 2 GB, plain uvicorn, no --reload/watchfiles) against a local
+# mock upstream, so k6 measures our code's per-instance capacity without touching
+# real recipe sites or Vercel (which forbids load testing).
+#
+#   make loadtest-smoke   # 1-VU sanity, thresholds on (CI-cheap)
+#   make loadtest         # 15-min average-load baseline
+#   make loadtest-down    # tear the stack down
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev # deps are baked in; we override the --reload CMD below
+    # --timeout-keep-alive 65 (default 5): at 1 RPS the extract-html control lets a
+    # keepalive socket idle ~5s, racing uvicorn's close against k6's reuse and
+    # logging phantom EOF/reset "failures" that aren't 5xx. Widening the window
+    # past any run's idle gap removes the noise so a real reset stands out.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 65
+    volumes:
+      - ./backend:/app:ro # source only — prod-like means no reload watcher
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1" # /app is read-only; don't try to write __pycache__
+      LOADTEST_ALLOW_PRIVATE_HOSTS: "1" # reach the mock's private compose-network IP
+      LOADTEST_DISABLE_RATE_LIMIT: "1" # else slowapi 10/min measures the limiter, not us
+    cpus: 1.0
+    mem_limit: 2g
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  mock-upstream:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    command: uvicorn mock_upstream:app --host 0.0.0.0 --port 80
+    working_dir: /mock
+    volumes:
+      - ./loadtest:/mock:ro
+      - ./backend/tests/fixtures:/fixtures:ro # top-level, not under the read-only /mock mount
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      FIXTURES_DIR: /fixtures
+      LOADTEST_UPSTREAM_LATENCY_MS: "500" # production-shaped response time
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:80/recipe/graph_howtostep')"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  # `docker compose run --rm k6 run /scripts/<script>.js` waits for both deps to
+  # go healthy, then drives load over the compose network. profiles keeps it out
+  # of a plain `up` — it only ever runs on demand.
+  k6:
+    image: grafana/k6:latest
+    profiles: ["tools"]
+    volumes:
+      - ./loadtest:/scripts:ro
+      - ./backend/tests/fixtures:/fixtures:ro
+      - ./loadtest/.out:/out # writable: k6 --summary-export lands here for CI trend comparison
+    environment:
+      BASE_URL: http://backend:8000
+      UPSTREAM: http://mock-upstream
+    depends_on:
+      backend:
+        condition: service_healthy
+      mock-upstream:
+        condition: service_healthy

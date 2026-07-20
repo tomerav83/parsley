@@ -1,0 +1,134 @@
+# Post-merge (nightly) load-test baseline with trend-based regression detection.
+#
+# WHY NIGHTLY, NOT PER-MERGE: a 15-min baseline per merge burns Actions minutes
+# and queues on rapid merges (master runs must never cancel-in-progress). One run
+# a night is enough signal; a run covers every merge since the last baseline.
+#
+# WHY TREND-ONLY: hosted runners have variable, shared CPUs — their absolute ms
+# are NOT comparable to the locally-recorded baseline in LOADTEST.md, and vary
+# run-to-run. So we compare each run to the PREVIOUS run (relative Δ), kept in the
+# Actions cache, and only flag a p95 regression past a wide threshold. k6's own
+# absolute thresholds are left in (they create the tagged sub-metrics we read) but
+# not allowed to fail the job — the comparator owns the signal. See LOADTEST.md.
+name: Load-test baseline
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # nightly ~03:17 UTC (off the hour to dodge cron congestion)
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: "k6 hold duration (e.g. 1m to smoke-test this workflow, 15m for a real baseline)"
+        default: "15m"
+      threshold:
+        description: "Relative p95 regression threshold (0.30 = flag a 30% slowdown vs last run)"
+        default: "0.30"
+
+# Never run two baselines at once, and never cancel one mid-flight.
+concurrency:
+  group: loadtest-baseline
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write # to open/comment the regression issue
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history: attribution lists merges since the last baseline
+
+      # The previous run's summary + the commit it ran at. restore-keys grabs the
+      # most-recently-saved cache under the prefix (the exact run_id key never
+      # pre-exists), i.e. the prior run. Absent on the very first run.
+      - name: Restore previous baseline
+        uses: actions/cache/restore@v4
+        with:
+          path: loadtest/.store
+          key: loadtest-baseline-${{ github.run_id }}
+          restore-keys: |
+            loadtest-baseline-
+
+      - name: Run baseline
+        env:
+          DURATION: ${{ github.event.inputs.duration || '15m' }}
+        run: |
+          mkdir -p loadtest/.out && chmod 777 loadtest/.out  # k6 image writes as uid 12345
+          # `|| true`: a threshold breach must not fail the job on a variable
+          # runner — summary-export is written regardless, and the comparator
+          # decides. Thresholds stay enabled so the tagged sub-metrics exist.
+          docker compose -f docker-compose.loadtest.yml run --rm k6 \
+            run --summary-export /out/summary.json /scripts/baseline.js || true
+          test -s loadtest/.out/summary.json  # but a MISSING summary is a real failure
+
+      - name: Compare to previous run
+        id: compare
+        run: |
+          python3 loadtest/check_regression.py \
+            --current loadtest/.out/summary.json \
+            --previous loadtest/.store/summary.json \
+            --threshold '${{ github.event.inputs.threshold || '0.30' }}' \
+            --out-md loadtest/.out/table.md
+
+      - name: Assemble issue body (attribution since last baseline)
+        if: steps.compare.outputs.regression == 'true'
+        run: |
+          prev_sha=""
+          [ -f loadtest/.store/sha.txt ] && prev_sha="$(cat loadtest/.store/sha.txt)"
+          {
+            echo "## Load-test baseline regression"
+            echo
+            echo "**${{ steps.compare.outputs.reason }}** — detected on the nightly baseline."
+            echo
+            cat loadtest/.out/table.md
+            echo
+            if [ -n "$prev_sha" ] && git cat-file -e "$prev_sha^{commit}" 2>/dev/null; then
+              echo "### Merges since the last baseline"
+              echo
+              echo "Range \`${prev_sha:0:12}..${{ github.sha }}\` — [compare](${{ github.server_url }}/${{ github.repository }}/compare/${prev_sha}...${{ github.sha }})"
+              echo
+              git log --no-merges --format='- %h %s — @%an' "${prev_sha}..${{ github.sha }}" || true
+            else
+              echo "_First tracked run — no previous baseline commit to diff against._"
+            fi
+            echo
+            echo "[Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · thresholds & method: \`LOADTEST.md\`"
+          } > loadtest/.out/issue-body.md
+
+      - name: Open or update the regression issue
+        if: steps.compare.outputs.regression == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create perf-regression --color B60205 \
+            --description "Load-test baseline regressed vs the previous run" --force >/dev/null 2>&1 || true
+          # Dedup: one open issue for the ongoing regression, not one per night.
+          existing="$(gh issue list --label perf-regression --state open --limit 1 --json number --jq '.[0].number // empty')"
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file loadtest/.out/issue-body.md
+            echo "commented on #$existing"
+          else
+            gh issue create --label perf-regression \
+              --title "Load-test baseline regression ($(date -u +%Y-%m-%d))" \
+              --body-file loadtest/.out/issue-body.md
+          fi
+
+      # Become the reference for the NEXT run (even after a regression: so a
+      # sustained slowdown flags once, not every night). Trade-off: compares to the
+      # immediate prior run only, so a slow multi-night creep under the threshold
+      # can go unflagged — acceptable for v1; a rolling-median baseline is the upgrade.
+      - name: Save this run as the new reference
+        if: always() && hashFiles('loadtest/.out/summary.json') != ''
+        run: |
+          mkdir -p loadtest/.store
+          cp loadtest/.out/summary.json loadtest/.store/summary.json
+          echo "${{ github.sha }}" > loadtest/.store/sha.txt
+      - name: Persist reference
+        if: always() && hashFiles('loadtest/.store/summary.json') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: loadtest/.store
+          key: loadtest-baseline-${{ github.run_id }}

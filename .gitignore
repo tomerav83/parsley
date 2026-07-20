@@ -21,3 +21,6 @@ CLAUDE.local.md
 skills-lock.json
 .claude/skills/
 .agents/
+loadtest/.out/*
+!loadtest/.out/.gitkeep
+loadtest/.store/

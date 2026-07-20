@@ -1,6 +1,7 @@
 """Fetch remote recipe pages safely: SSRF-guarded, size- and time-capped."""
 
 import ipaddress
+import os
 import socket
 
 import httpx
@@ -75,6 +76,11 @@ def _assert_public_host(host: str) -> None:
     Checked after DNS resolution so a hostname pointing at 127.0.0.1 or
     169.254.x.x is caught, not just literal IPs.
     """
+    # Load-test escape hatch (off unless explicitly set): the mock upstream in
+    # docker-compose.loadtest.yml resolves to a private compose-network IP the
+    # guard would otherwise reject. Never set in prod — see LOADTEST.md.
+    if os.environ.get("LOADTEST_ALLOW_PRIVATE_HOSTS"):
+        return
     try:
         infos = socket.getaddrinfo(host, None)
     except socket.gaierror as exc:

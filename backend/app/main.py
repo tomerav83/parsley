@@ -2,6 +2,7 @@ import os
 from collections.abc import Awaitable, Callable
 from typing import Annotated
 
+import anyio
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -21,7 +22,13 @@ def get_fetch_page() -> FetchPage:
     return fetch_page
 
 
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiting is disabled under load testing (LOADTEST_DISABLE_RATE_LIMIT):
+# slowapi's 10/min would 429 the test within seconds and measure the limiter
+# instead of the app. Off means normal enforcement — see LOADTEST.md.
+limiter = Limiter(
+    key_func=get_remote_address,
+    enabled=not os.environ.get("LOADTEST_DISABLE_RATE_LIMIT"),
+)
 
 app = FastAPI(title="Parsley", description="Extract clean recipes from noisy recipe pages")
 app.state.limiter = limiter
@@ -91,7 +98,9 @@ async def extract(
 ) -> Recipe:
     url = str(payload.url)
     html = await fetch(url)
-    return extract_recipe(html, url)
+    # extract_recipe is CPU-bound (lxml + BeautifulSoup); run it off the event
+    # loop so one slow parse can't stall other requests sharing this instance.
+    return await anyio.to_thread.run_sync(extract_recipe, html, url)
 
 
 @app.post(
@@ -102,7 +111,10 @@ async def extract(
     },
 )
 @limiter.limit("10/minute")
-async def extract_html(request: Request, payload: ExtractHtmlRequest) -> Recipe:
+def extract_html(request: Request, payload: ExtractHtmlRequest) -> Recipe:
     """Extract from user-pasted page source — the fallback for sites that block
-    server-side fetching at the IP level. No network fetch, so no SSRF surface."""
+    server-side fetching at the IP level. No network fetch, so no SSRF surface.
+
+    A plain `def`, not `async` — FastAPI runs it in a threadpool, keeping the
+    CPU-bound parse off the event loop (there's no I/O here to await anyway)."""
     return extract_recipe(payload.html, str(payload.url))
