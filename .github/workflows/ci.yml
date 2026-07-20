@@ -146,3 +146,19 @@ jobs:
         run: npm run test:vrt
       - name: Build
         run: npm run build
+      # Frontend performance budget (Core Web Vitals) — LOADTEST.md Stage 4. Builds
+      # already ran above; lhci serves that dist/ locally (vite preview, SPA
+      # fallback), runs Lighthouse against / and /paste, and asserts the budget in
+      # frontend/lighthouserc.json. Reuses the job's build + change-detection; skips
+      # on PRs that don't touch the frontend (runs unconditionally on master, where
+      # steps.changed didn't run so the output is empty). Chrome comes from the
+      # ubuntu-latest image (google-chrome-stable, auto-detected by lhci).
+      #
+      # Budget is `warn` for now (calibrated off the first measured run: LCP ~2.2s,
+      # TBT ~250ms, CLS 0, ~198KB) — so this reports but never blocks. continue-on-error
+      # guards against an infra hiccup failing the required job while we confirm it
+      # runs green in CI; remove both once it does, then flip budgets to `error`.
+      - name: Lighthouse CI (performance budget)
+        if: steps.changed.outputs.frontend != 'false'
+        continue-on-error: true
+        run: npx lhci autorun
