@@ -32,6 +32,39 @@ jobs:
       - name: Test
         run: uv run pytest
 
+  # Smoke load test (LOADTEST.md Stage 1) — 1 VU, ~60s, thresholds on, so it's a
+  # real gate: catches "an endpoint got slow or broke under trivial load". Runs
+  # the prod-like harness (backend as one Fluid instance + mock upstream) via the
+  # same compose file as `make loadtest-smoke`. Gated to backend/loadtest changes
+  # so frontend-only PRs don't pay the ~90s; runs unconditionally on master.
+  loadtest-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Step-level gate, not a workflow `paths:` filter — same reasoning as the
+      # frontend job's change-detection: a `paths`-skipped required check reports
+      # Pending forever, an `if`-skipped step reports Success.
+      - name: Did the backend or load-test harness change?
+        id: changed
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Fail toward running: if we can't list files, run the smoke test.
+          if ! files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename'); then
+            echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if grep -qE '^(backend/|loadtest/|docker-compose\.loadtest\.yml)' <<<"$files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Smoke load test
+        if: steps.changed.outputs.changed != 'false'
+        run: docker compose -f docker-compose.loadtest.yml run --rm k6 run /scripts/smoke.js
+
   frontend:
     runs-on: ubuntu-latest
     # Argos authenticates tokenlessly: it verifies the upload by looking the run up
@@ -146,3 +179,19 @@ jobs:
         run: npm run test:vrt
       - name: Build
         run: npm run build
+      # Frontend performance budget (Core Web Vitals) — LOADTEST.md Stage 4. Builds
+      # already ran above; lhci serves that dist/ locally (vite preview, SPA
+      # fallback), runs Lighthouse against / and /paste, and asserts the budget in
+      # frontend/lighthouserc.json. Reuses the job's build + change-detection; skips
+      # on PRs that don't touch the frontend (runs unconditionally on master, where
+      # steps.changed didn't run so the output is empty). Chrome comes from the
+      # ubuntu-latest image (google-chrome-stable, auto-detected by lhci).
+      #
+      # Budget is `warn` for now (calibrated off the first measured run: LCP ~2.2s,
+      # TBT ~250ms, CLS 0, ~198KB) — so this reports but never blocks. continue-on-error
+      # guards against an infra hiccup failing the required job while we confirm it
+      # runs green in CI; remove both once it does, then flip budgets to `error`.
+      - name: Lighthouse CI (performance budget)
+        if: steps.changed.outputs.frontend != 'false'
+        continue-on-error: true
+        run: npx lhci autorun

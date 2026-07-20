@@ -88,8 +88,9 @@ The dev containers (`--reload`, watchfiles) don't represent production.
 Standard test-type ladder ([Grafana taxonomy](https://grafana.com/load-testing/types-of-load-testing/)),
 smallest useful subset:
 
-- `smoke.js` — 1 VU, ~60 s, all three endpoints, thresholds on. Wire into CI
-  on PR (cheap, catches "endpoint got slow/broken under trivial load").
+- `smoke.js` — 1 VU, ~60 s, all three endpoints, thresholds on. ✅ Wired into
+  CI as the `loadtest-smoke` job (gated to backend/loadtest changes) — a real
+  per-PR gate; catches "endpoint got slow/broken under trivial load".
 - `baseline.js` — average-load: ramp to 5 RPS extract (mocked upstream) +
   1 RPS extract-html as control, hold 15 min, thresholds as the KPI table.
   Run manually / on merge, not per-PR.
@@ -114,9 +115,11 @@ before/after baseline run as proof:
    output, with a full-page fallback for body-microdata sites. Proof is a Stage
    3 stress run (average-load baseline can't surface either — the loop never
    saturates at 5 RPS).
-2. **Blocking DNS in async path** — `_assert_public_host` calls sync
-   `socket.getaddrinfo` (`fetch.py:79`); same stall, seconds-long on slow DNS.
-   Fix: `loop.getaddrinfo()` (or anyio thread) — keeps the SSRF check identical.
+2. **Blocking DNS in async path** — ✅ DONE — `_assert_public_host` called sync
+   `socket.getaddrinfo` in the async path; same stall, seconds-long on slow DNS
+   (and the stress test confirmed it: a 50-VU no-parse run held the loop worse
+   than a real-parse run, health p95 1.07 s vs 546 ms). Fixed: resolution now
+   runs via `anyio.to_thread.run_sync` — SSRF check byte-identical, just off-loop.
 3. **Rate limiter is fiction on serverless** — slowapi in-memory counters are
    per-instance; on elastic instances the effective limit is
    `10/min × instance_count`, varying minute to minute, and counters vanish on
@@ -145,8 +148,38 @@ cut for small projects.
 
 ### Stage 4 — frontend budget (parallel-track, independent of Stages 0-3)
 
-Lighthouse CI against a preview URL with CWV-proxy budget asserts
-(LCP < 2.5 s, CLS < 0.1, TBT as INP lab proxy — INP needs field data).
+✅ **DONE** — Lighthouse CI with a CWV-proxy budget (LCP, CLS, TBT as INP lab
+proxy, total byte weight). `frontend/lighthouserc.json`; runs as a step in the
+existing CI `frontend` job (reuses its build + change-detection), gated to skip
+frontend-untouched PRs.
+
+- **Local build, not a preview URL** (deviation from the original line): the CI
+  job builds `dist/` and lhci serves it with `vite preview` (SPA fallback for
+  `/paste`), so Lighthouse measures our assets deterministically with zero Vercel
+  wiring or CDN/network noise. Lighthouse's *simulated* throttling makes the
+  numbers hardware-independent, so CI ≈ local. Preview-URL remains an optional
+  later informational check if real-edge numbers are ever wanted.
+- **Routes:** `/` and `/paste` (both render with no backend). `/recipe` is
+  deferred — its loader fetches `/api/extract`, so it needs a data strategy
+  (run the backend in the job, or seed the sessionStorage cache).
+- **Budgets are `warn` + `continue-on-error` for now** (measure-then-ratchet):
+  they report but don't block while we confirm the step runs green in CI, then
+  flip to `error`. Calibrated off the first measured run below.
+
+First measurement (median of 3, mobile simulated-throttle, commit on
+`feat/frontend-loadtest-cwv`):
+
+| Route | Perf | LCP | TBT | CLS | Total bytes |
+|---|---|---|---|---|---|
+| `/` | 92 | 2.18 s | 249 ms | 0.000 | 198 KB |
+| `/paste` | 95 | 2.36 s | 187 ms | 0.000 | 184 KB |
+
+Budget set to LCP < 2.5 s, CLS < 0.1, total bytes < 300 KB, **TBT < 400 ms** —
+the last deviates from the plan's aspirational 200 ms because home's real
+throttled-mobile TBT is 249 ms (369 KB main bundle parse under 4× CPU throttle).
+The gate guards against *regression*; getting TBT under 200 ms is a separate
+optimization (code-split/trim the main chunk), not a gate value.
+
 Optional later: k6-browser hybrid (a few browser VUs measuring vitals while
 protocol VUs load the API) if we ever want "UX under load" evidence
 ([k6 hybrid](https://grafana.com/docs/k6/latest/testing-guides/load-testing-websites/)).
