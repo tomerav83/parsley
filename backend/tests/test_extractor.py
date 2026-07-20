@@ -39,3 +39,22 @@ def test_page_without_recipe_raises() -> None:
 def test_non_html_content_raises() -> None:
     with pytest.raises(RecipeNotFoundError):
         extract_recipe("just some plain text, not even html", URL)
+
+
+def test_extracts_microdata_recipe_via_full_page_fallback() -> None:
+    """Recipes in body microdata have no JSON-LD, so the fast head+JSON-LD
+    reduction can't see them — the extractor must fall back to the full page."""
+    html = """<!doctype html><html><head><title>MD</title></head><body>
+    <div itemscope itemtype="https://schema.org/Recipe">
+      <h1 itemprop="name">Microdata Cake</h1>
+      <span itemprop="recipeIngredient">1 cup flour</span>
+      <span itemprop="recipeIngredient">2 eggs</span>
+      <ol><li itemprop="recipeInstructions">Mix well</li>
+          <li itemprop="recipeInstructions">Bake 30 min</li></ol>
+    </div></body></html>"""
+
+    recipe = extract_recipe(html, URL)
+
+    assert recipe.name == "Microdata Cake"
+    assert recipe.ingredients == ["1 cup flour", "2 eggs"]
+    assert recipe.steps == ["Mix well", "Bake 30 min"]

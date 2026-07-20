@@ -100,13 +100,20 @@ Run baseline, record numbers in this file, replace provisional thresholds
 with measured×1.5. Then fix the known defects, worst first — each fix gets a
 before/after baseline run as proof:
 
-1. **Event-loop blocking parse** — `extract_recipe` (CPU-bound lxml/extruct)
-   runs sync inside `async def` handlers (`main.py:94,108`): one slow parse
-   stalls every concurrent request on the instance, and Fluid instances
-   routinely multiplex dozens of requests ([Fluid docs](https://vercel.com/docs/fluid-compute)).
-   Fix: make `extract_html` a plain `def` (FastAPI threadpools it); in
-   `extract`, wrap the parse in `anyio.to_thread.run_sync`. Expected: the
-   single biggest p95-under-concurrency win.
+1. **Event-loop blocking parse** — ✅ DONE — `extract_recipe` (CPU-bound
+   lxml/extruct) ran sync inside `async def` handlers: one slow parse stalled
+   every concurrent request on the instance, and Fluid instances routinely
+   multiplex dozens of requests ([Fluid docs](https://vercel.com/docs/fluid-compute)).
+   Fixed: `extract_html` is now a plain `def` (FastAPI threadpools it) and
+   `extract` runs the parse via `anyio.to_thread.run_sync`. Shipped alongside a
+   bigger single-request win: `extract_recipe` now reduces the page to
+   `<head>` + JSON-LD before handing it to recipe-scrapers, whose default
+   BeautifulSoup builds a full Python DOM over the *whole* multi-MB page (7.5 s
+   of a 7.6 s parse in a profile) purely for `<head>` opengraph fallbacks.
+   Measured: a 2.5 MB JSON-LD page went 2377 ms → 52 ms (~45x), identical
+   output, with a full-page fallback for body-microdata sites. Proof is a Stage
+   3 stress run (average-load baseline can't surface either — the loop never
+   saturates at 5 RPS).
 2. **Blocking DNS in async path** — `_assert_public_host` calls sync
    `socket.getaddrinfo` (`fetch.py:79`); same stall, seconds-long on slow DNS.
    Fix: `loop.getaddrinfo()` (or anyio thread) — keeps the SSRF check identical.
