@@ -12,7 +12,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev # deps are baked in; we override the --reload CMD below
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    # --timeout-keep-alive 65 (default 5): at 1 RPS the extract-html control lets a
+    # keepalive socket idle ~5s, racing uvicorn's close against k6's reuse and
+    # logging phantom EOF/reset "failures" that aren't 5xx. Widening the window
+    # past any run's idle gap removes the noise so a real reset stands out.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-keep-alive 65
     volumes:
       - ./backend:/app:ro # source only — prod-like means no reload watcher
     environment:
