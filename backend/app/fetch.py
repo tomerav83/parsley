@@ -4,6 +4,7 @@ import ipaddress
 import os
 import socket
 
+import anyio
 import httpx
 
 # Many recipe sites sit behind Cloudflare/WP firewalls that reject default
@@ -56,7 +57,7 @@ class SiteBlockedError(FetchError):
     code = "site_blocked"
 
 
-def validate_url(url: str) -> httpx.URL:
+async def validate_url(url: str) -> httpx.URL:
     """Allow only http(s) URLs whose host resolves to public addresses."""
     try:
         parsed = httpx.URL(url)
@@ -66,11 +67,11 @@ def validate_url(url: str) -> httpx.URL:
         raise InvalidUrlError("Only http and https URLs are supported")
     if not parsed.host:
         raise InvalidUrlError("URL has no host")
-    _assert_public_host(parsed.host)
+    await _assert_public_host(parsed.host)
     return parsed
 
 
-def _assert_public_host(host: str) -> None:
+async def _assert_public_host(host: str) -> None:
     """Reject hosts that resolve to private/loopback/link-local/reserved addresses.
 
     Checked after DNS resolution so a hostname pointing at 127.0.0.1 or
@@ -81,8 +82,10 @@ def _assert_public_host(host: str) -> None:
     # guard would otherwise reject. Never set in prod — see LOADTEST.md.
     if os.environ.get("LOADTEST_ALLOW_PRIVATE_HOSTS"):
         return
+    # getaddrinfo is blocking; run it in a thread so a slow DNS lookup can't stall
+    # the event loop (which would stall every other request on this instance).
     try:
-        infos = socket.getaddrinfo(host, None)
+        infos = await anyio.to_thread.run_sync(socket.getaddrinfo, host, None)
     except socket.gaierror as exc:
         raise FetchError(f"Could not resolve host {host!r}") from exc
     for info in infos:
@@ -93,7 +96,7 @@ def _assert_public_host(host: str) -> None:
 
 async def fetch_page(url: str) -> str:
     """Fetch a page's HTML, re-validating the target host on every redirect."""
-    target = validate_url(url)
+    target = await validate_url(url)
     async with httpx.AsyncClient(
         timeout=TIMEOUT_SECONDS,
         headers=BROWSER_HEADERS,
@@ -109,7 +112,7 @@ async def fetch_page(url: str) -> str:
                 location = response.headers.get("location")
                 if not location:
                     raise FetchError("Redirect response without a Location header")
-                target = validate_url(str(target.join(location)))
+                target = await validate_url(str(target.join(location)))
                 continue
 
             if response.status_code in (401, 403, 429):

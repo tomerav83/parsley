@@ -53,9 +53,9 @@ def public_dns(monkeypatch: pytest.MonkeyPatch):
         "https://",
     ],
 )
-def test_rejects_non_http_or_malformed_urls(url: str) -> None:
+async def test_rejects_non_http_or_malformed_urls(url: str) -> None:
     with pytest.raises(InvalidUrlError):
-        validate_url(url)
+        await validate_url(url)
 
 
 @pytest.mark.parametrize(
@@ -69,25 +69,25 @@ def test_rejects_non_http_or_malformed_urls(url: str) -> None:
         "0.0.0.0",  # unspecified
     ],
 )
-def test_rejects_hosts_resolving_to_non_public_addresses(
+async def test_rejects_hosts_resolving_to_non_public_addresses(
     ip: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo(ip))
     with pytest.raises(BlockedUrlError):
-        validate_url("https://innocent-looking-host.com/recipe")
+        await validate_url("https://innocent-looking-host.com/recipe")
 
 
-def test_accepts_public_host() -> None:
-    assert validate_url("https://example.com/recipe").host == "example.com"
+async def test_accepts_public_host() -> None:
+    assert (await validate_url("https://example.com/recipe")).host == "example.com"
 
 
-def test_unresolvable_host_is_fetch_error(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_unresolvable_host_is_fetch_error(monkeypatch: pytest.MonkeyPatch) -> None:
     def _raise(host: str, port: object) -> list:
         raise socket.gaierror("no such host")
 
     monkeypatch.setattr(socket, "getaddrinfo", _raise)
     with pytest.raises(FetchError):
-        validate_url("https://does-not-exist.example/recipe")
+        await validate_url("https://does-not-exist.example/recipe")
 
 
 # --- fetch_page behavior ---

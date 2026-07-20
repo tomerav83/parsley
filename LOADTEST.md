@@ -114,9 +114,11 @@ before/after baseline run as proof:
    output, with a full-page fallback for body-microdata sites. Proof is a Stage
    3 stress run (average-load baseline can't surface either — the loop never
    saturates at 5 RPS).
-2. **Blocking DNS in async path** — `_assert_public_host` calls sync
-   `socket.getaddrinfo` (`fetch.py:79`); same stall, seconds-long on slow DNS.
-   Fix: `loop.getaddrinfo()` (or anyio thread) — keeps the SSRF check identical.
+2. **Blocking DNS in async path** — ✅ DONE — `_assert_public_host` called sync
+   `socket.getaddrinfo` in the async path; same stall, seconds-long on slow DNS
+   (and the stress test confirmed it: a 50-VU no-parse run held the loop worse
+   than a real-parse run, health p95 1.07 s vs 546 ms). Fixed: resolution now
+   runs via `anyio.to_thread.run_sync` — SSRF check byte-identical, just off-loop.
 3. **Rate limiter is fiction on serverless** — slowapi in-memory counters are
    per-instance; on elastic instances the effective limit is
    `10/min × instance_count`, varying minute to minute, and counters vanish on
