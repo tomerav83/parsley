@@ -24,6 +24,14 @@ LATENCY_S = int(os.environ.get("LOADTEST_UPSTREAM_LATENCY_MS", "500")) / 1000
 # {fixture_name: html} for every tests/fixtures/<name>/page.html.
 PAGES = {p.parent.name: p.read_text() for p in FIXTURES_DIR.glob("*/page.html")}
 
+# A large synthetic page (~1.5 MB) at /recipe/large for the stress test: a real
+# JSON-LD recipe wrapped in the ad/comment/markup bulk real recipe sites ship, so
+# extract's parse is CPU-heavy the way production is — the tiny fixtures would
+# only exercise fetch concurrency, not the parse-blocking the Stage 2 fix targets.
+_filler = '<div class="comment"><p>Lorem ipsum dolor sit amet.</p></div>' * 25000
+if "graph_howtostep" in PAGES:
+    PAGES["large"] = PAGES["graph_howtostep"].replace("</body>", _filler + "</body>")
+
 
 async def serve(request):
     await asyncio.sleep(LATENCY_S)

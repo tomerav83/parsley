@@ -134,6 +134,15 @@ actual per-instance ceiling here. Soak is skipped: stateless
 serverless + static SPA has minimal leak surface, and it's the standard first
 cut for small projects.
 
+- ✅ **`stress.js` DONE** — ramps to 50 VUs on `/recipe/large` (a ~1.5 MB
+  parse-heavy page the mock synthesizes, so the parse is CPU-bound like
+  production, not the tiny fixtures). A steady 5 RPS `/api/health` canary runs
+  alongside as the direct read on event-loop responsiveness. `make loadtest-stress`.
+  Result at 50 VUs (post-Stage-2-fix): **0 errors**, health p95 **546 ms**
+  (loop stays responsive — the parse is genuinely off-loop), extract p95 **4.47 s**
+  (graceful CPU-bound degradation on 1 vCPU). See the table below.
+- ⏳ `spike.js` and the breakpoint run still to write.
+
 ### Stage 4 — frontend budget (parallel-track, independent of Stages 0-3)
 
 Lighthouse CI against a preview URL with CWV-proxy budget asserts
@@ -155,6 +164,8 @@ protocol VUs load the API) if we ever want "UX under load" evidence
 |---|---|---|---|---|---|---|---|
 | 2026-07-20 | 0c15303 | baseline / extract (5 RPS, 15m) | 521 ms | 543 ms | 557 ms | 0 % | pre-fix. p95 ≈ 500 ms mock latency + ~42 ms overhead; instance near-idle (max 3 VUs) so this is the floor, not the ceiling — the blocking-parse defect bites under Stage 3 concurrency, not here |
 | 2026-07-20 | 0c15303 | baseline / extract-html (1 RPS, 15m) | 4.1 ms | 13.9 ms | 21.4 ms | 0 % | pre-fix. 7/931 requests hit `connection reset by peer` — uvicorn's 5 s keepalive idle-timeout racing k6 connection reuse at 1 RPS (extract, at 5 RPS, had 0 resets). Not a 5xx, not the blocking-parse defect; a load-gen artifact (reproduced next run: 4 EOF/reset, still 0 5xx). Mitigated by `--timeout-keep-alive 65` on the harness backend |
+| 2026-07-20 | e3eaac6 | stress / extract (50 VUs, ~1.5 MB page) | 2.39 s | 4.47 s | — (max 4.71 s) | 0 % | post-fix. Ramp 0→50 VUs on a parse-heavy page. Graceful CPU-bound degradation on 1 vCPU (50 threads parsing 1.5 MB saturate the core); no errors, no meltdown |
+| 2026-07-20 | e3eaac6 | stress / health canary (5 RPS during 50-VU load) | 43 ms | 546 ms | — (max 844 ms) | 0 % | post-fix. **The Stage 2 proof**: health stays sub-second under full extract stress → the parse is genuinely off the event loop. The ~½ s elevation is CPU/GIL contention on 1 core (inherent), not loop-blocking. An earlier no-parse run held the loop worse (health p95 1.07 s) via the still-sync `getaddrinfo` — i.e. defect #2 (blocking DNS) is the next under-load win |
 
 Thresholds ratcheted off this baseline (commit 0c15303): extract p95 4000→1000 ms,
 extract-html p95 1500→100 ms. extract-html's gate is generous relative to its
