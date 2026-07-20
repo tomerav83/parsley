@@ -21,7 +21,13 @@ def get_fetch_page() -> FetchPage:
     return fetch_page
 
 
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiting is disabled under load testing (LOADTEST_DISABLE_RATE_LIMIT):
+# slowapi's 10/min would 429 the test within seconds and measure the limiter
+# instead of the app. Off means normal enforcement — see LOADTEST.md.
+limiter = Limiter(
+    key_func=get_remote_address,
+    enabled=not os.environ.get("LOADTEST_DISABLE_RATE_LIMIT"),
+)
 
 app = FastAPI(title="Parsley", description="Extract clean recipes from noisy recipe pages")
 app.state.limiter = limiter

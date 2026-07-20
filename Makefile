@@ -1,4 +1,5 @@
-.PHONY: docker-config start stop restart rebuild status logs lint format test build
+.PHONY: docker-config start stop restart rebuild status logs lint format test build \
+        loadtest loadtest-smoke loadtest-down
 
 # Run every `docker compose` command against a project-local Docker config with
 # credential helpers stripped, so builds work regardless of the global ~/.docker
@@ -61,3 +62,18 @@ test:
 
 build:
 	cd frontend && npm run build
+
+# Prod-like load-testing harness (docker-compose.loadtest.yml, LOADTEST.md). k6
+# runs on the compose network with SLO thresholds that exit non-zero on breach,
+# so a run is its own CI gate. `run` starts the backend + mock upstream and leaves
+# them up; `loadtest-down` tears them back down.
+LT = docker compose -f docker-compose.loadtest.yml
+
+loadtest-smoke: docker-config
+	$(LT) run --rm k6 run /scripts/smoke.js
+
+loadtest: docker-config
+	$(LT) run --rm k6 run /scripts/baseline.js
+
+loadtest-down: docker-config
+	$(LT) down
