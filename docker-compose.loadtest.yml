@@ -61,6 +61,7 @@ services:
     volumes:
       - ./loadtest:/scripts:ro
       - ./backend/tests/fixtures:/fixtures:ro
+      - ./loadtest/.out:/out # writable: k6 --summary-export lands here for CI trend comparison
     environment:
       BASE_URL: http://backend:8000
       UPSTREAM: http://mock-upstream

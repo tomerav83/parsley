@@ -8,6 +8,10 @@ import { hitExtract, hitExtractHtml, RECIPES } from './common.js';
 
 const RECIPE_HTML = open('/fixtures/graph_howtostep/page.html');
 
+// Hold duration is env-overridable so a manual CI dispatch can run a quick 1m
+// smoke of the baseline shape; defaults to the real 15m average-load window.
+const HOLD = __ENV.DURATION || '15m';
+
 export const options = {
   scenarios: {
     // extract: brief ramp to 5 RPS so a cold start doesn't skew p95, then hold.
@@ -19,16 +23,17 @@ export const options = {
       maxVUs: 100,
       stages: [
         { target: 5, duration: '30s' },
-        { target: 5, duration: '15m' },
+        { target: 5, duration: HOLD },
       ],
       exec: 'extractScenario',
     },
     // extract_html: 1 RPS parse-only control — isolates parse cost from fetch.
+    // (Ends ~30s before extract, which also ramps; the sample skew is harmless.)
     extractHtml: {
       executor: 'constant-arrival-rate',
       rate: 1,
       timeUnit: '1s',
-      duration: '15m30s',
+      duration: HOLD,
       preAllocatedVUs: 5,
       maxVUs: 20,
       exec: 'extractHtmlScenario',
