@@ -88,8 +88,9 @@ The dev containers (`--reload`, watchfiles) don't represent production.
 Standard test-type ladder ([Grafana taxonomy](https://grafana.com/load-testing/types-of-load-testing/)),
 smallest useful subset:
 
-- `smoke.js` — 1 VU, ~60 s, all three endpoints, thresholds on. Wire into CI
-  on PR (cheap, catches "endpoint got slow/broken under trivial load").
+- `smoke.js` — 1 VU, ~60 s, all three endpoints, thresholds on. ✅ Wired into
+  CI as the `loadtest-smoke` job (gated to backend/loadtest changes) — a real
+  per-PR gate; catches "endpoint got slow/broken under trivial load".
 - `baseline.js` — average-load: ramp to 5 RPS extract (mocked upstream) +
   1 RPS extract-html as control, hold 15 min, thresholds as the KPI table.
   Run manually / on merge, not per-PR.

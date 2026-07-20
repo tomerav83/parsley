@@ -32,6 +32,39 @@ jobs:
       - name: Test
         run: uv run pytest
 
+  # Smoke load test (LOADTEST.md Stage 1) — 1 VU, ~60s, thresholds on, so it's a
+  # real gate: catches "an endpoint got slow or broke under trivial load". Runs
+  # the prod-like harness (backend as one Fluid instance + mock upstream) via the
+  # same compose file as `make loadtest-smoke`. Gated to backend/loadtest changes
+  # so frontend-only PRs don't pay the ~90s; runs unconditionally on master.
+  loadtest-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Step-level gate, not a workflow `paths:` filter — same reasoning as the
+      # frontend job's change-detection: a `paths`-skipped required check reports
+      # Pending forever, an `if`-skipped step reports Success.
+      - name: Did the backend or load-test harness change?
+        id: changed
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Fail toward running: if we can't list files, run the smoke test.
+          if ! files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename'); then
+            echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if grep -qE '^(backend/|loadtest/|docker-compose\.loadtest\.yml)' <<<"$files"; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Smoke load test
+        if: steps.changed.outputs.changed != 'false'
+        run: docker compose -f docker-compose.loadtest.yml run --rm k6 run /scripts/smoke.js
+
   frontend:
     runs-on: ubuntu-latest
     # Argos authenticates tokenlessly: it verifies the upload by looking the run up
