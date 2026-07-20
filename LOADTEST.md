@@ -146,4 +146,11 @@ protocol VUs load the API) if we ever want "UX under load" evidence
 
 | Date | Commit | Scenario | p50 | p95 | p99 | Error % | Notes |
 |---|---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — | fill from Stage 2 |
+| 2026-07-20 | 0c15303 | baseline / extract (5 RPS, 15m) | 521 ms | 543 ms | 557 ms | 0 % | pre-fix. p95 ≈ 500 ms mock latency + ~42 ms overhead; instance near-idle (max 3 VUs) so this is the floor, not the ceiling — the blocking-parse defect bites under Stage 3 concurrency, not here |
+| 2026-07-20 | 0c15303 | baseline / extract-html (1 RPS, 15m) | 4.1 ms | 13.9 ms | 21.4 ms | 0 % | pre-fix. 7/931 requests hit `connection reset by peer` — uvicorn's 5 s keepalive idle-timeout racing k6 connection reuse at 1 RPS (extract, at 5 RPS, had 0 resets). Not a 5xx, not the blocking-parse defect; a load-gen artifact. Fix if it recurs: `--timeout-keep-alive 65` or k6 `noConnectionReuse` |
+
+Thresholds ratcheted off this baseline (commit 0c15303): extract p95 4000→1000 ms,
+extract-html p95 1500→100 ms. extract-html's gate is generous relative to its
+14 ms baseline (the ×1.5/×2 rule yields a ~28 ms gate that flakes on a
+variance-dominated sub-20 ms endpoint); at 100 ms it still catches the
+blocking-parse regression decisively (that manifests as hundreds of ms).
