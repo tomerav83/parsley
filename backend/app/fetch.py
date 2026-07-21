@@ -1,6 +1,7 @@
 """Fetch remote recipe pages safely: SSRF-guarded, size- and time-capped."""
 
 import ipaddress
+import logging
 import os
 import socket
 
@@ -36,6 +37,8 @@ TIMEOUT_SECONDS = 10.0
 MAX_REDIRECTS = 5
 MAX_BYTES = 3 * 1024 * 1024
 BLOCKED_STATUSES = (401, 402, 403, 429)
+
+logger = logging.getLogger(__name__)
 
 
 class FetchError(Exception):
@@ -105,8 +108,15 @@ async def fetch_page(url: str) -> str:
     target = await validate_url(url)
     try:
         return await _fetch_via_httpx(target)
-    except SiteBlockedError:
-        return await _fetch_via_curl_cffi(target)
+    except SiteBlockedError as exc:
+        logger.warning("httpx blocked on %s (%s); retrying via curl_cffi", target, exc)
+        try:
+            html = await _fetch_via_curl_cffi(target)
+        except SiteBlockedError as curl_exc:
+            logger.warning("curl_cffi also blocked on %s (%s)", target, curl_exc)
+            raise
+        logger.info("curl_cffi fallback succeeded on %s", target)
+        return html
 
 
 async def _fetch_via_httpx(target: httpx.URL) -> str:
@@ -149,6 +159,7 @@ async def _fetch_via_curl_cffi(target: httpx.URL) -> str:
                 response = await session.get(str(target), allow_redirects=False)
             except CurlRequestException as exc:
                 raise FetchError(f"Could not fetch page: {exc}") from exc
+            logger.info("curl_cffi %s -> HTTP %s", target, response.status_code)
 
             if response.status_code in (301, 302, 303, 307, 308):
                 location = response.headers.get("location")
