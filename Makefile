@@ -1,5 +1,5 @@
 .PHONY: docker-config start stop restart rebuild status logs lint format test build \
-        loadtest loadtest-smoke loadtest-stress loadtest-down
+        loadtest loadtest-smoke loadtest-stress loadtest-spike loadtest-breakpoint loadtest-down
 
 # Run every `docker compose` command against a project-local Docker config with
 # credential helpers stripped, so builds work regardless of the global ~/.docker
@@ -75,9 +75,16 @@ loadtest-smoke: docker-config
 loadtest: docker-config
 	$(LT) run --rm k6 run /scripts/baseline.js
 
-# Stage 3: ramp to 50 VUs on a parse-heavy page to find the degradation shape.
+# Stage 3: ramp to 50 VUs on a parse-heavy page to find the degradation shape;
+# spike bursts 0→100 VUs (recovery test); breakpoint ramps until it breaks (ceiling).
 loadtest-stress: docker-config
 	$(LT) run --rm k6 run /scripts/stress.js
+
+loadtest-spike: docker-config
+	$(LT) run --rm k6 run /scripts/spike.js
+
+loadtest-breakpoint: docker-config
+	$(LT) run --rm k6 run /scripts/breakpoint.js
 
 loadtest-down: docker-config
 	$(LT) down
