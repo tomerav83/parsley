@@ -14,7 +14,7 @@
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: subgrid;
-  align-items: baseline;
+  align-items: start;
   padding: 8px 0;
   border-bottom: 1px dotted var(--color-border);
 }
@@ -28,8 +28,8 @@
 .list input {
   width: 16px;
   height: 16px;
+  margin-top: 2px;
   accent-color: var(--color-brand);
-  align-self: center;
 }
 .qty {
   font-family: var(--mono);

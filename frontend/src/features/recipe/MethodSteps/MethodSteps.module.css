@@ -2,8 +2,9 @@
    a row beneath the card, so they never steal height from the step's reading area
    (they used to, most noticeably on mobile). The card can also be swiped. Every
    step is an <li> in the DOM (so the whole method is exposed and prints); only the
-   current one is shown, the rest carry `hidden`. The visible card fills the leftover
-   height and its body auto-fits (MethodSteps) so a long step never clips. */
+   current one is shown, the rest carry `hidden`. A step too long for the card
+   clips under a fade, shows the stacked-sheets glyph, and taps open to the
+   full-step lightbox (a native <dialog>). */
 .method {
   flex: 1 1 auto;
   min-height: 0;
@@ -114,12 +115,31 @@
   background: var(--color-bg);
   box-shadow: var(--shadow-soft);
 }
+/* an overflowing card is one big forgiving tap target for the lightbox */
+.tappable {
+  cursor: pointer;
+  transition:
+    transform 0.13s var(--curve),
+    box-shadow 0.2s var(--curve);
+}
+.tappable:hover {
+  box-shadow: 0 18px 40px -22px
+    color-mix(in srgb, var(--color-brand) 60%, transparent);
+}
+.tappable:active {
+  transform: scale(0.985);
+}
 .cardHead {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+.cardHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 7px;
 }
 .num {
   font-family: var(--mono);
@@ -130,28 +150,143 @@
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
-.body {
+/* the clipping box the overflow check measures; a too-long step is cut here
+   under the fade, with the full text one tap away in the lightbox */
+.bodyBox {
   flex: 1 1 auto;
   min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.body {
   margin: 0;
   font-size: 15.5px;
   line-height: 1.55;
   color: var(--color-text);
-  /* the fit routine keeps text within this box for realistic steps; the rare
-     step too long to fit even at the readable floor scrolls here rather than
-     clipping (a real, visible scrollbar — never a hidden one). */
+}
+.fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 52px;
+  pointer-events: none;
+  background: linear-gradient(transparent, var(--color-bg));
+}
+
+/* --- stacked-sheets glyph: "more pages under this one" — the tap cue -------
+   Small on purpose: it only draws the eye, the whole card is the target. */
+.sheets {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+}
+.sheets:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 4px;
+  border-radius: 5px;
+}
+.sheets span {
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--color-brand);
+  border-radius: 5px;
+  background: var(--color-bg);
+}
+/* the top sheets fan out and settle back — the stack about to lift open */
+.sheets span:nth-child(1) {
+  transform: translate(4px, -4px);
+  opacity: 0.4;
+  animation: fan1 2.6s var(--curve) infinite;
+}
+.sheets span:nth-child(2) {
+  transform: translate(2px, -2px);
+  opacity: 0.7;
+  animation: fan2 2.6s var(--curve) infinite;
+}
+.tappable:hover .sheets span {
+  animation-play-state: paused;
+}
+.tappable:hover .sheets span:nth-child(1) {
+  transform: translate(6px, -6px);
+}
+.tappable:hover .sheets span:nth-child(2) {
+  transform: translate(3px, -3px);
+}
+@keyframes fan1 {
+  0%,
+  100% {
+    transform: translate(4px, -4px);
+  }
+  50% {
+    transform: translate(7px, -7px);
+  }
+}
+@keyframes fan2 {
+  0%,
+  100% {
+    transform: translate(2px, -2px);
+  }
+  50% {
+    transform: translate(3.5px, -3.5px);
+  }
+}
+
+/* --- the lightbox: the step card lifted up over a dimmed backdrop ---------- */
+.lightbox {
+  width: min(560px, 92vw);
+  max-height: 82dvh;
+  border: 2px solid
+    color-mix(in srgb, var(--color-brand) 55%, var(--color-border));
+  border-radius: 18px;
+  padding: 0; /* padding lives on the inner wrapper so it scrolls with the text */
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow);
+  cursor: pointer; /* the whole surface is the dismiss target */
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-brand) 40%, transparent)
     transparent;
 }
-.body::-webkit-scrollbar {
-  width: 7px;
+.lightbox[open] {
+  animation: zoom 0.34s var(--curve);
 }
-.body::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-brand) 40%, transparent);
-  border-radius: 4px;
+.lightbox::backdrop {
+  background: rgba(0, 0, 0, 0.52);
+}
+@keyframes zoom {
+  from {
+    transform: scale(0.88);
+    opacity: 0.6;
+  }
+}
+.lightInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+.lightNum {
+  font-size: 36px;
+  display: block;
+}
+.lightBody {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheets span,
+  .lightbox[open] {
+    animation: none;
+  }
 }
 .timer {
   flex: 0 1 auto;
@@ -207,11 +342,16 @@
     font-size: 13px !important;
     padding-top: 1px;
   }
-  .body {
+  .bodyBox {
     overflow: visible !important;
-    font-size: 12px !important; /* the fit routine may have set an inline size */
   }
-  .timer {
+  .body {
+    font-size: 12px !important;
+  }
+  .timer,
+  .sheets,
+  .fade,
+  .lightbox {
     display: none !important;
   }
 }

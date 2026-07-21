@@ -15,21 +15,21 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url("./assets/fonts/Inter-variable.woff2") format("woff2");
+  src: url("/fonts/Inter-variable.woff2") format("woff2");
 }
 @font-face {
   font-family: "Space Mono";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url("./assets/fonts/SpaceMono-Regular.woff2") format("woff2");
+  src: url("/fonts/SpaceMono-Regular.woff2") format("woff2");
 }
 @font-face {
   font-family: "Space Mono";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url("./assets/fonts/SpaceMono-Bold.woff2") format("woff2");
+  src: url("/fonts/SpaceMono-Bold.woff2") format("woff2");
 }
 
 /* Metric-matched local fallbacks: sized so the swap to the real font moves

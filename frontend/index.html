@@ -12,6 +12,25 @@
       } catch (e) {}
     </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Preload so the browser fetches these before it parses index.css and
+         discovers the @font-face rules — without this, the fallback font is
+         visibly showing until CSS parsing kicks off the font fetch, which is
+         the "glitch" fdea881 didn't fix (that commit only killed the layout
+         shift, not the visible font swap itself). -->
+    <link
+      rel="preload"
+      href="/fonts/Inter-variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/SpaceMono-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- Match browser chrome to the page background. Tracks OS preference (the
          common case); won't follow the manual toggle without JS. -->

@@ -1,6 +1,12 @@
-import { useRef, type KeyboardEvent, type TouchEvent } from "react";
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type TouchEvent,
+} from "react";
+import { flushSync } from "react-dom";
 import styles from "./MethodSteps.module.css";
-import { useFitText } from "./useFitText.ts";
 
 interface MethodStepsProps {
   steps: string[];
@@ -37,22 +43,75 @@ function Chevron({ dir }: { dir: "prev" | "next" }) {
   );
 }
 
+// Does the active step's text overflow its fixed-height box? Drives the
+// stacked-sheets cue: an overflowing card clips with a fade and opens the
+// full-step lightbox instead of shrinking its type.
+// Re-measures on resize — including a hidden mobile pane becoming visible
+// (0 → real height fires the observer) — and once the webfonts land, whose
+// metrics change the text's height but not the box's.
+function useOverflows(text: string) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [overflows, setOverflows] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      if (el.clientHeight === 0) return; // hidden pane — nothing to measure yet
+      setOverflows(el.scrollHeight > el.clientHeight + 1);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    let cancelled = false;
+    document.fonts?.ready.then(() => {
+      if (!cancelled) measure();
+    });
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [text]);
+  return { ref, overflows };
+}
+
 // The Method panel: one step at a time. The Prev/Next controls live in the panel
 // HEADER (not a row under the card), so they never eat into the step card's
 // reading area — the concern was they stole height on mobile. The card itself can
-// also be swiped left/right. Every step is a real <li> so the whole method is in
-// the DOM (and prints); only the current one is shown, the rest carry the `hidden`
+// also be swiped. Every step is a real <li> so the whole method is in the DOM
+// (and prints); only the current one is shown, the rest carry the `hidden`
 // attribute (out of the a11y tree + tab order, not merely aria-hidden). Keys are
 // scoped to this element, never window, so they don't hijack the page. The step
 // index is controlled so the mobile segment can label it.
+//
+// A step too long for the card no longer shrinks its type: it clips under a fade,
+// grows a stacked-sheets glyph ("more pages under this one"), and the whole card
+// becomes a tap target that lifts the full step into a lightbox over a dimmed
+// backdrop. Short steps stay clean — no cue, no tap.
 export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   const count = steps.length;
   const clamped = Math.max(0, Math.min(count - 1, index));
-  const bodyRef = useFitText(steps[clamped] ?? "", 15.5);
+  const { ref: bodyRef, overflows } = useOverflows(steps[clamped] ?? "");
   const touch = useRef<{ x: number; y: number } | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  // The lightbox's content only mounts while it's open — a closed <dialog>
+  // otherwise keeps a duplicate copy of the step's text in the DOM.
+  const [lightOpen, setLightOpen] = useState(false);
 
   const go = (delta: number) =>
     onIndex(Math.max(0, Math.min(count - 1, clamped + delta)));
+
+  const openFull = () => {
+    const d = dialogRef.current;
+    if (!d || d.open) return;
+    // flushSync so the content exists before showModal picks the dialog's
+    // initial focus target.
+    flushSync(() => setLightOpen(true));
+    d.showModal();
+  };
+
+  // Tapping anywhere in the lightbox — backdrop or the step text itself —
+  // closes it back to the card.
+  const onLightboxClick = () => dialogRef.current?.close();
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (e.key === "ArrowRight") {
@@ -66,7 +125,7 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
 
   // Horizontal swipe walks the steps — the thumb-friendly path that keeps the
   // controls out of the card. Only clearly-horizontal swipes count, so a vertical
-  // drag (e.g. scrolling a very long step) is left alone.
+  // drag (e.g. scrolling the open lightbox) is left alone.
   function onTouchStart(e: TouchEvent) {
     const t = e.touches[0];
     if (t) touch.current = { x: t.clientX, y: t.clientY };
@@ -135,6 +194,7 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
         {steps.map((s, i) => {
           const timer = timerOf(s);
           const active = i === clamped;
+          const tappable = active && overflows;
           return (
             <li
               key={i}
@@ -142,19 +202,75 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
               hidden={!active}
               aria-current={active ? "step" : undefined}
             >
-              <article className={styles.card}>
+              {/* The card-wide click is pointer convenience over a big, forgiving
+                  target; the sheets glyph is the real, focusable control, so the
+                  step text stays plain readable content rather than becoming a
+                  giant button label. */}
+              {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
+              <article
+                className={
+                  tappable ? `${styles.card} ${styles.tappable}` : styles.card
+                }
+                onClick={tappable ? openFull : undefined}
+              >
                 <div className={styles.cardHead}>
                   <span className={styles.num}>{pad(i + 1)}</span>
-                  {timer && <span className={styles.timer}>⏱ {timer}</span>}
+                  <div className={styles.cardHeadRight}>
+                    {timer && <span className={styles.timer}>⏱ {timer}</span>}
+                    {tappable && (
+                      <button
+                        type="button"
+                        className={styles.sheets}
+                        aria-label="Read the full step"
+                        aria-haspopup="dialog"
+                        onClick={openFull}
+                      >
+                        <span />
+                        <span />
+                        <span />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <p className={styles.body} ref={active ? bodyRef : undefined}>
-                  {s}
-                </p>
+                <div
+                  className={styles.bodyBox}
+                  ref={active ? bodyRef : undefined}
+                >
+                  <p className={styles.body}>{s}</p>
+                  {tappable && <div className={styles.fade} aria-hidden />}
+                </div>
               </article>
             </li>
           );
         })}
       </ol>
+
+      {/* The lightbox: the current step in full, zoomed up over a dimmed backdrop.
+          A native <dialog> — Escape, focus trapping and the backdrop come free.
+          No close button: a tap anywhere in the dialog (backdrop or text) closes
+          it, so the whole surface is the dismiss target instead of one small icon.
+          Key/touch events are stopped so the carousel behind it doesn't walk.
+          Deliberately no timer chip in here: the chip lives on the card. */}
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+      <dialog
+        ref={dialogRef}
+        className={styles.lightbox}
+        aria-label={`Step ${pad(clamped + 1)} in full — tap anywhere to close`}
+        onClick={onLightboxClick}
+        onClose={() => setLightOpen(false)}
+        onKeyDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      >
+        {lightOpen && (
+          <div className={styles.lightInner}>
+            <span className={`${styles.num} ${styles.lightNum}`}>
+              {pad(clamped + 1)}
+            </span>
+            <p className={styles.lightBody}>{steps[clamped]}</p>
+          </div>
+        )}
+      </dialog>
     </div>
   );
 }
