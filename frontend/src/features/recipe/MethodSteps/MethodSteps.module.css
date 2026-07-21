@@ -115,9 +115,13 @@
   background: var(--color-bg);
   box-shadow: var(--shadow-soft);
 }
-/* an overflowing card is one big forgiving tap target for the lightbox */
+/* an overflowing card is one big forgiving tap target for the lightbox.
+   -webkit-tap-highlight-color: mobile WebKit/Chrome paint their own
+   translucent blue highlight over a tapped element until the lightbox
+   steals focus — the :active scale-down below is the intended feedback. */
 .tappable {
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
   transition:
     transform 0.13s var(--curve),
     box-shadow 0.2s var(--curve);
@@ -183,6 +187,7 @@
   padding: 0;
   background: none;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .sheets:focus-visible {
   outline: 2px solid var(--color-brand);
