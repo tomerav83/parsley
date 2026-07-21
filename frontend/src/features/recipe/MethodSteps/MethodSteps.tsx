@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -92,6 +93,7 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   const clamped = Math.max(0, Math.min(count - 1, index));
   const { ref: bodyRef, overflows } = useOverflows(steps[clamped] ?? "");
   const touch = useRef<{ x: number; y: number } | null>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   // The lightbox's content only mounts while it's open — a closed <dialog>
   // otherwise keeps a duplicate copy of the step's text in the DOM.
@@ -130,6 +132,30 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
     const t = e.touches[0];
     if (t) touch.current = { x: t.clientX, y: t.clientY };
   }
+
+  // Claims the horizontal drag as ours via a real (non-passive) listener —
+  // React attaches onTouchMove as passive, so preventDefault() there is a
+  // silent no-op. Without this, an unclaimed horizontal touchmove leaves
+  // Android Chrome's own gesture recognizer thinking a pan is in progress,
+  // and the *next* tap anywhere gets consumed just to settle it instead of
+  // registering as a click — surfacing as "swipe steps, then need to tap
+  // twice" on whatever you tap next.
+  useEffect(() => {
+    const el = groupRef.current;
+    if (!el) return;
+    function onMove(e: globalThis.TouchEvent) {
+      const start = touch.current;
+      const cur = e.touches[0];
+      if (!start || !cur) return;
+      const dx = cur.clientX - start.x;
+      const dy = cur.clientY - start.y;
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
+        e.preventDefault();
+      }
+    }
+    el.addEventListener("touchmove", onMove, { passive: false });
+    return () => el.removeEventListener("touchmove", onMove);
+  }, []);
   function onTouchEnd(e: TouchEvent) {
     const end = e.changedTouches[0];
     if (!touch.current || !end) return;
@@ -150,6 +176,7 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
     // https://www.w3.org/WAI/ARIA/apg/patterns/carousel/
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
+      ref={groupRef}
       className={styles.method}
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="group"

@@ -64,6 +64,14 @@ describe("MethodSteps", () => {
     expect(screen.getByText(/preheat/)).toBeVisible();
   });
 
+  it("ignores keys other than the arrows", async () => {
+    render(<Harness />);
+    screen.getByRole("group", { name: /method steps/i }).focus();
+
+    await userEvent.keyboard("{Enter}");
+    expect(screen.getByText(/preheat/)).toBeVisible();
+  });
+
   it("surfaces a parsed cooking duration as a timer chip", async () => {
     render(<Harness />);
     await userEvent.click(screen.getByRole("button", { name: /next step/i }));
@@ -92,6 +100,49 @@ describe("MethodSteps", () => {
     fireEvent.touchStart(group, { touches: [touch(group, 100, 100)] });
     fireEvent.touchEnd(group, { changedTouches: [touch(group, 100, 200)] });
     expect(screen.getByText(/roast/)).toBeVisible(); // vertical drag: no navigation
+  });
+
+  it("walks to the previous step on a rightward horizontal swipe", () => {
+    render(<Harness />);
+    const group = screen.getByRole("group", { name: /method steps/i });
+
+    fireEvent.touchStart(group, { touches: [touch(group, 100, 100)] });
+    fireEvent.touchEnd(group, { changedTouches: [touch(group, 200, 100)] });
+    expect(screen.getByText(/preheat/)).toBeVisible(); // clamped: already first
+  });
+
+  it("ignores a touchend or touchmove with no matching touchstart", () => {
+    render(<Harness />);
+    const group = screen.getByRole("group", { name: /method steps/i });
+
+    fireEvent.touchEnd(group, { changedTouches: [touch(group, 100, 100)] });
+    expect(screen.getByText(/preheat/)).toBeVisible(); // no-op, not a crash
+
+    const move = fireEvent.touchMove(group, {
+      touches: [touch(group, 100, 100)],
+    });
+    expect(move).toBe(true); // nothing to compare against — never prevented
+  });
+
+  it("claims a horizontal drag via touchmove so the browser doesn't treat it as an unclaimed pan", () => {
+    // Regression: without preventDefault() on the horizontal touchmove, Android
+    // Chrome's gesture recognizer treats an unclaimed drag as an ambiguous pan
+    // and swallows the *next* tap anywhere just to settle it — surfacing as
+    // "swipe steps, then need to tap twice on whatever's tapped next."
+    render(<Harness />);
+    const group = screen.getByRole("group", { name: /method steps/i });
+
+    fireEvent.touchStart(group, { touches: [touch(group, 200, 100)] });
+    const horizontalMove = fireEvent.touchMove(group, {
+      touches: [touch(group, 150, 102)],
+    });
+    expect(horizontalMove).toBe(false); // false === preventDefault() was called
+
+    fireEvent.touchStart(group, { touches: [touch(group, 200, 100)] });
+    const verticalMove = fireEvent.touchMove(group, {
+      touches: [touch(group, 202, 150)],
+    });
+    expect(verticalMove).toBe(true); // vertical scroll stays native
   });
 
   it("opens the full step in a lightbox for an overflowing card, and closes on tap", async () => {
