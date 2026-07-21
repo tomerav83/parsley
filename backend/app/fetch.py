@@ -37,6 +37,8 @@ TIMEOUT_SECONDS = 10.0
 MAX_REDIRECTS = 5
 MAX_BYTES = 3 * 1024 * 1024
 BLOCKED_STATUSES = (401, 402, 403, 429)
+BLOCKED_RETRY_ATTEMPTS = 2
+BLOCKED_RETRY_BACKOFF_SECONDS = 1.5
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +106,26 @@ async def fetch_page(url: str) -> str:
     """Fetch a page's HTML. Sites that block a plain httpx client (Cloudflare/Akamai
     bot walls) get a second attempt with a real Chrome TLS/JA3 fingerprint before
     giving up — that's enough to get past several major recipe sites' front doors.
+
+    A block can also be down to which IP the current invocation happens to be
+    running from (shared serverless egress pool), not the client at all — a
+    retry of the whole httpx-then-curl_cffi cycle covers that case.
     """
     target = await validate_url(url)
+    for attempt in range(1, BLOCKED_RETRY_ATTEMPTS + 1):
+        try:
+            return await _fetch_with_fallback(target)
+        except SiteBlockedError:
+            if attempt == BLOCKED_RETRY_ATTEMPTS:
+                raise
+            logger.warning(
+                "attempt %d/%d blocked on %s; retrying", attempt, BLOCKED_RETRY_ATTEMPTS, target
+            )
+            await anyio.sleep(BLOCKED_RETRY_BACKOFF_SECONDS)
+    raise AssertionError("unreachable")
+
+
+async def _fetch_with_fallback(target: httpx.URL) -> str:
     try:
         return await _fetch_via_httpx(target)
     except SiteBlockedError as exc:
