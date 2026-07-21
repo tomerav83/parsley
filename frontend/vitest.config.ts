@@ -68,10 +68,10 @@ export default defineConfig({
         // just run `npm run test:coverage` and let it update the file. Measured
         // 57.27/45.16/48.93/55.53 before Phase 5's G4 tests landed; these
         // reflect that work. See REDESIGN.md Phase 5.
-        lines: 92.46,
-        branches: 83.62,
-        functions: 88.42,
-        statements: 91.8,
+        lines: 95.17,
+        branches: 87.7,
+        functions: 91.4,
+        statements: 94.5,
       },
     },
     projects: [
