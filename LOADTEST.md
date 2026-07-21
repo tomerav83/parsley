@@ -144,7 +144,20 @@ cut for small projects.
   Result at 50 VUs (post-Stage-2-fix): **0 errors**, health p95 **546 ms**
   (loop stays responsive — the parse is genuinely off-loop), extract p95 **4.47 s**
   (graceful CPU-bound degradation on 1 vCPU). See the table below.
-- ⏳ `spike.js` and the breakpoint run still to write.
+- ✅ **`spike.js` DONE** — 0→100 VU burst then drop (`make loadtest-spike`).
+  Result: **0 errors** through the surge; it sheds the crowd without falling
+  over and recovers (health median settles once the burst ends). Latency spikes
+  hard during the hold (health p95 ~6.7 s) — pure 1-vCPU CPU saturation, so the
+  only gate is survival (bounded 5xx), not latency. See the table below.
+- ✅ **breakpoint DONE** (`breakpoint.js`, `make loadtest-breakpoint`) — linear
+  ramp until it broke. **Ceiling ≈ 180 VUs (~11 extract req/s)** on 1 vCPU with
+  a 1.5 MB page, where extract p95 crosses 15 s. Key finding: the ceiling is
+  **latency-bound, not error-bound** — even at the breaking point there are
+  **0 5xx**; requests queue in the parse threadpool and get slow rather than
+  shedding or erroring. There's no backpressure/queue-timeout, so under sustained
+  overload latency grows unboundedly (Vercel's function timeout would eventually
+  cut these; locally they just pile up). A concurrency cap / queue timeout is the
+  natural follow-up if per-instance load shedding is ever wanted.
 
 ### Stage 4 — frontend budget (parallel-track, independent of Stages 0-3)
 
@@ -189,7 +202,8 @@ protocol VUs load the API) if we ever want "UX under load" evidence
 - `make loadtest-smoke` green in CI on every PR.
 - `make loadtest` (baseline) green against measured thresholds after the
   Stage 2 fixes, numbers recorded below.
-- Breakpoint ceiling recorded below; rate limiting enforced at the edge.
+- ✅ Breakpoint ceiling recorded below (~180 VUs / ~11 req/s, latency-bound).
+  ⏳ Rate limiting enforced at the edge — defect #3, still open (Vercel WAF rule).
 
 ### Recorded baselines
 
@@ -199,6 +213,8 @@ protocol VUs load the API) if we ever want "UX under load" evidence
 | 2026-07-20 | 0c15303 | baseline / extract-html (1 RPS, 15m) | 4.1 ms | 13.9 ms | 21.4 ms | 0 % | pre-fix. 7/931 requests hit `connection reset by peer` — uvicorn's 5 s keepalive idle-timeout racing k6 connection reuse at 1 RPS (extract, at 5 RPS, had 0 resets). Not a 5xx, not the blocking-parse defect; a load-gen artifact (reproduced next run: 4 EOF/reset, still 0 5xx). Mitigated by `--timeout-keep-alive 65` on the harness backend |
 | 2026-07-20 | e3eaac6 | stress / extract (50 VUs, ~1.5 MB page) | 2.39 s | 4.47 s | — (max 4.71 s) | 0 % | post-fix. Ramp 0→50 VUs on a parse-heavy page. Graceful CPU-bound degradation on 1 vCPU (50 threads parsing 1.5 MB saturate the core); no errors, no meltdown |
 | 2026-07-20 | e3eaac6 | stress / health canary (5 RPS during 50-VU load) | 43 ms | 546 ms | — (max 844 ms) | 0 % | post-fix. **The Stage 2 proof**: health stays sub-second under full extract stress → the parse is genuinely off the event loop. The ~½ s elevation is CPU/GIL contention on 1 core (inherent), not loop-blocking. An earlier no-parse run held the loop worse (health p95 1.07 s) via the still-sync `getaddrinfo` — i.e. defect #2 (blocking DNS) is the next under-load win |
+| 2026-07-21 | 6e4f61c | spike / extract (0→100 VU burst, ~1.5 MB) | 6.09 s | 8.97 s | — (max 9.35 s) | 0 % | all fixes in. Survives the HN-hug burst with 0 errors and recovers; extreme latency during the hold is 1-vCPU CPU saturation, not failure |
+| 2026-07-21 | 6e4f61c | breakpoint / extract (ramp to failure, ~1.5 MB) | 6.7 s | 15.6 s | — (max 17.4 s) | 0 % | **per-instance ceiling ≈ 180 VUs / ~11 req/s** where p95 crosses 15 s. Latency-bound, not error-bound — 0 5xx even at breaking point; requests queue in the parse threadpool rather than shedding |
 
 Thresholds ratcheted off this baseline (commit 0c15303): extract p95 4000→1000 ms,
 extract-html p95 1500→100 ms. extract-html's gate is generous relative to its
