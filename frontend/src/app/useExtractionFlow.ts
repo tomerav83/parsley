@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useNavigationType } from "react-router";
 import {
   useRecipeExtractor,
   type RunResult,
@@ -17,6 +17,8 @@ function recipePath(url: string): string {
 export function useExtractionFlow() {
   const extract = useRecipeExtractor();
   const navigate = useNavigate();
+  const location = useLocation();
+  const navigationType = useNavigationType();
   const [url, setUrl] = useState("");
   // The URL of the most recent request — the key retry and the paste fallback
   // re-address. The extractor caches each successful recipe by it (so the recipe
@@ -26,6 +28,15 @@ export function useExtractionFlow() {
   const urlFieldRef = useRef<HTMLInputElement>(null);
 
   const { runUrl, runPaste, dismiss } = extract;
+
+  // Only the browser's own back/forward buttons ("POP") land on Home without
+  // running any of our code, so this only has to cover that case — every other
+  // way of reaching "/" already sets `url` itself: backToSearch clears it,
+  // RecipeError's "Edit link" deliberately pre-fills it with the failed URL.
+  // Scoping to POP keeps this from re-clearing (or worse, stomping) either.
+  useEffect(() => {
+    if (location.pathname === "/" && navigationType === "POP") setUrl("");
+  }, [location.pathname, navigationType]);
 
   async function submitUrl() {
     const trimmed = url.trim();
@@ -62,7 +73,7 @@ export function useExtractionFlow() {
   function backToSearch() {
     dismiss();
     setUrl(""); // "new search" starts from a clean field
-    navigate("/", { viewTransition: true });
+    navigate("/", { replace: true, viewTransition: true });
   }
 
   function openPaste() {
