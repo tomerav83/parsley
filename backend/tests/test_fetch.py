@@ -157,7 +157,6 @@ async def test_bot_protection_raises_site_blocked_when_curl_cffi_also_blocked(
     status: int, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     respx.get("https://example.com/recipe").respond(status)
-    monkeypatch.setattr("app.fetch.BLOCKED_RETRY_BACKOFF_SECONDS", 0)
 
     async def fake_curl_fetch(target: httpx.URL) -> str:
         raise SiteBlockedError("still blocked")
@@ -166,22 +165,6 @@ async def test_bot_protection_raises_site_blocked_when_curl_cffi_also_blocked(
 
     with pytest.raises(SiteBlockedError):
         await fetch_page("https://example.com/recipe")
-
-
-@respx.mock
-async def test_retry_recovers_after_first_cycle_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A block can be down to which serverless egress IP served this attempt —
-    retrying the whole httpx-then-curl_cffi cycle should recover on the next IP."""
-    route = respx.get("https://example.com/recipe")
-    route.side_effect = [httpx.Response(403), httpx.Response(200, text="<html>ok</html>")]
-    monkeypatch.setattr("app.fetch.BLOCKED_RETRY_BACKOFF_SECONDS", 0)
-
-    async def fake_curl_fetch(target: httpx.URL) -> str:
-        raise SiteBlockedError("blocked too")
-
-    monkeypatch.setattr("app.fetch._fetch_via_curl_cffi", fake_curl_fetch)
-
-    assert await fetch_page("https://example.com/recipe") == "<html>ok</html>"
 
 
 @respx.mock

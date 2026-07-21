@@ -7,12 +7,12 @@ import socket
 
 import anyio
 import httpx
-from curl_cffi.requests import AsyncSession
-from curl_cffi.requests.exceptions import RequestException as CurlRequestException
 
 # Many recipe sites sit behind Cloudflare/WP firewalls that reject default
 # python client headers; a full browser-like header set gets the same HTML a
-# person would. (IP-level blocks are handled by the paste-HTML fallback, not here.)
+# person would. IP-level blocks (our shared datacenter egress being flagged) can't
+# be fixed from here — those fall through to the third-party fetchers below, with
+# the paste-HTML fallback as the final resort.
 #
 # Accept-Encoding must only list codings httpx can decode — advertising one we
 # can't (e.g. brotli without the `brotli` dep) returns undecodable bytes, not an
@@ -33,12 +33,10 @@ BROWSER_HEADERS = {
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "none",
 }
-TIMEOUT_SECONDS = 10.0
+TIMEOUT_SECONDS = 6.0
 MAX_REDIRECTS = 5
 MAX_BYTES = 3 * 1024 * 1024
 BLOCKED_STATUSES = (401, 402, 403, 429)
-BLOCKED_RETRY_ATTEMPTS = 2
-BLOCKED_RETRY_BACKOFF_SECONDS = 1.5
 
 logger = logging.getLogger(__name__)
 
@@ -107,25 +105,13 @@ async def fetch_page(url: str) -> str:
     bot walls) get a second attempt with a real Chrome TLS/JA3 fingerprint before
     giving up — that's enough to get past several major recipe sites' front doors.
 
-    A block can also be down to which IP the current invocation happens to be
-    running from (shared serverless egress pool), not the client at all — a
-    retry of the whole httpx-then-curl_cffi cycle covers that case.
+    Deliberately doesn't retry a still-blocked cycle: verified against EatingWell
+    that the block is IP-reputation based, not a transient fluke — a fresh
+    Cloudflare Worker IP got flagged too, after one prior use elsewhere. Retrying
+    from the same shared egress pool just doubles latency for no better odds, so
+    a block goes straight to the paste-HTML fallback instead.
     """
     target = await validate_url(url)
-    for attempt in range(1, BLOCKED_RETRY_ATTEMPTS + 1):
-        try:
-            return await _fetch_with_fallback(target)
-        except SiteBlockedError:
-            if attempt == BLOCKED_RETRY_ATTEMPTS:
-                raise
-            logger.warning(
-                "attempt %d/%d blocked on %s; retrying", attempt, BLOCKED_RETRY_ATTEMPTS, target
-            )
-            await anyio.sleep(BLOCKED_RETRY_BACKOFF_SECONDS)
-    raise AssertionError("unreachable")
-
-
-async def _fetch_with_fallback(target: httpx.URL) -> str:
     try:
         return await _fetch_via_httpx(target)
     except SiteBlockedError as exc:
@@ -172,7 +158,15 @@ async def _fetch_via_httpx(target: httpx.URL) -> str:
 async def _fetch_via_curl_cffi(target: httpx.URL) -> str:
     """Retry with an impersonated Chrome TLS fingerprint + header order — what actually
     trips bot walls is the httpx/requests TLS signature, not the User-Agent string.
+
+    Imports curl_cffi lazily: it bundles a ~30MB compiled libcurl (vs. httpx's
+    ~700KB), and this path only runs for the minority of requests httpx doesn't
+    already handle. An eager module-level import would pay that cold-start cost
+    on every single request, blocked or not.
     """
+    from curl_cffi.requests import AsyncSession
+    from curl_cffi.requests.exceptions import RequestException as CurlRequestException
+
     async with AsyncSession(timeout=TIMEOUT_SECONDS, impersonate="chrome") as session:
         for _ in range(MAX_REDIRECTS + 1):
             try:
