@@ -126,9 +126,15 @@
     transform 0.13s var(--curve),
     box-shadow 0.2s var(--curve);
 }
-.tappable:hover {
-  box-shadow: 0 18px 40px -22px
-    color-mix(in srgb, var(--color-brand) 60%, transparent);
+/* hover-capable devices only: on iOS, a `:hover` rule on an element that
+   wasn't already in a hover-eligible state eats the first tap to enter the
+   synthetic hover state, so a freshly-`.tappable` card needed two taps to
+   open — one to "hover", one to click. */
+@media (hover: hover) {
+  .tappable:hover {
+    box-shadow: 0 18px 40px -22px
+      color-mix(in srgb, var(--color-brand) 60%, transparent);
+  }
 }
 .tappable:active {
   transform: scale(0.985);
@@ -212,14 +218,16 @@
   opacity: 0.7;
   animation: fan2 2.6s var(--curve) infinite;
 }
-.tappable:hover .sheets span {
-  animation-play-state: paused;
-}
-.tappable:hover .sheets span:nth-child(1) {
-  transform: translate(6px, -6px);
-}
-.tappable:hover .sheets span:nth-child(2) {
-  transform: translate(3px, -3px);
+@media (hover: hover) {
+  .tappable:hover .sheets span {
+    animation-play-state: paused;
+  }
+  .tappable:hover .sheets span:nth-child(1) {
+    transform: translate(6px, -6px);
+  }
+  .tappable:hover .sheets span:nth-child(2) {
+    transform: translate(3px, -3px);
+  }
 }
 @keyframes fan1 {
   0%,
