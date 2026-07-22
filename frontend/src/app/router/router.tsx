@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import App from "@/app/App.tsx";
 import { HomeScreen } from "@/app/screens/HomeScreen/HomeScreen";
+import { ExtractScreen } from "@/app/screens/ExtractScreen/ExtractScreen";
 
 // Data-mode router (REDESIGN D6): real URLs, browser back/forward, and
 // deep-linkable recipes (/recipe?url=…). Data mode — createBrowserRouter, not
@@ -26,6 +27,11 @@ export const router = createBrowserRouter([
     HydrateFallback: () => null,
     children: [
       { index: true, Component: HomeScreen },
+      // The transition screen: work orb while extracting, the failure panel in
+      // place on error. Eager (not lazy) — a submit navigates here immediately, so
+      // it must paint the work orb without waiting on a chunk fetch. It imports no
+      // recipe code, so it stays clear of the F2 "recipe off first paint" invariant.
+      { path: "extract", Component: ExtractScreen },
       {
         path: "paste",
         lazy: {

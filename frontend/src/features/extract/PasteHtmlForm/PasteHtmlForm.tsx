@@ -1,13 +1,10 @@
 import { useState, type FormEvent } from "react";
-import type { ExtractError } from "@/lib/api";
-import { errorInfo } from "@/features/extract/errorInfo";
 import { BackButton } from "@/components/BackButton/BackButton";
 import styles from "./PasteHtmlForm.module.css";
 import btn from "@/components/Button.module.css";
 
 interface PasteHtmlFormProps {
   url: string;
-  error: ExtractError | null; // a failure from a previous paste attempt
   onSubmit: (html: string) => void;
   onCancel: () => void;
   loading: boolean;
@@ -16,9 +13,10 @@ interface PasteHtmlFormProps {
 // Fallback for sites that block server-side fetching at the IP level: the user
 // opens the page in their own browser, copies the page source, and pastes it
 // here. We extract from that HTML directly — no fetch, so the block is bypassed.
+// A failed paste is terminal, so it doesn't surface here — it returns to the
+// transition screen's report-only state (see useExtractionFlow.submitPaste).
 export function PasteHtmlForm({
   url,
-  error,
   onSubmit,
   onCancel,
   loading,
@@ -50,12 +48,6 @@ export function PasteHtmlForm({
           <kbd>Ctrl</kbd>+<kbd>A</kbd> <kbd>Ctrl</kbd>+<kbd>C</kbd> and paste it
           below. We read the recipe straight from the HTML.
         </p>
-
-        {error && (
-          <p className={styles.error} role="alert">
-            {errorInfo(error.code).title} — {errorInfo(error.code).hint}
-          </p>
-        )}
 
         <textarea
           className={styles.input}

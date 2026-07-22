@@ -1,0 +1,33 @@
+/* Full-viewport liquid overlay. Sits above all chrome (ThemeToggle is 70) and
+   swallows input while a wave is running so the covered UI can't be clicked. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  visibility: hidden;
+  pointer-events: none;
+}
+.overlay[data-stage] {
+  visibility: visible;
+}
+/* only the covering stages swallow input — during "exit" the wave is
+   decoration over an already-interactive screen */
+.overlay[data-stage="cover"] {
+  pointer-events: auto;
+}
+
+/* The art is the clip's own 1280x720 space. `slice` keeps silhouettes
+   undistorted at any viewport aspect; xMin pins the action to the leading
+   edge (mirrored to xMax by the RTL scaleX(-1)). */
+.wave {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.emerald {
+  fill: var(--color-brand);
+}
+.amber {
+  fill: var(--amber-500);
+}

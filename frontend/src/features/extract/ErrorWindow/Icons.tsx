@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
-// Small inline icons for the floating error's actions — one visual language
+// Small inline icons for the error window's actions — one visual language
 // (rounded caps/joins, ~1.9px stroke, inherit currentColor). Internal to
-// FloatingError; lifted out of the component so the view file stays about layout.
+// ErrorWindow; lifted out of the component so the view file stays about layout.
 
 const icon = (paths: ReactNode, strokeWidth = 1.9) => (
   <svg

@@ -1,0 +1,125 @@
+/* The failure figure: the leaf in its porthole (LeafOrb) over a mono state
+   badge, the cause + fix copy, and the recovery actions — an unboxed centred
+   column on the transition screen's own ground, matching the working state (no
+   card, border, or footer). The porthole is the same element the wait shows, so
+   a failure lands where the leaf already was (see ErrorWindow.tsx). */
+
+/* keydown-catcher wrapper: no box of its own, so the figure centres directly in
+   ExtractScreen's flex. */
+.keys {
+  display: contents;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 13px;
+  width: min(440px, 92vw);
+  animation: figure-in 0.38s var(--curve) both;
+}
+@keyframes figure-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.orb {
+  --d: 232px;
+  margin-bottom: 2px;
+}
+/* Short viewports (landscape phones): the copy and actions matter more than a
+   big porthole. */
+@media (max-height: 640px) {
+  .orb {
+    --d: 168px;
+  }
+}
+
+.title {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  font-size: 21px;
+  line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+}
+/* the "tried twice" count trailing the title — a subtle mono marker, not part
+   of the sentence */
+.retryCount {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 0.66em;
+  font-weight: 700;
+  color: var(--color-danger);
+  vertical-align: 0.12em;
+}
+.hint {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  max-width: 36ch;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* Actions, stacked by importance: prominent primary, quiet secondary row, then
+   the subtle dismiss link. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  margin-top: 5px;
+}
+
+/* the prominent primary — a wide, comfortable CTA, not a cramped chip */
+.wide {
+  width: min(300px, 100%);
+  padding-top: 12px;
+  padding-bottom: 12px;
+  font-size: 14px;
+  border-radius: 11px;
+}
+
+/* the lesser fixes — a centred row of ghost buttons under the primary */
+.secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px;
+}
+
+/* the quiet "none of these" escape hatch — a subtle text link at the foot */
+.dismiss {
+  margin-top: 3px;
+  padding: 7px 12px;
+  background: none;
+  border: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+.dismiss:hover {
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+@media print {
+  .figure {
+    display: none !important;
+  }
+}

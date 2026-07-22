@@ -25,7 +25,7 @@ function randomSprig(index: number) {
     phase: Math.random(),
     swayAmp: 6 + Math.random() * 18,
     swayDur: 26 + Math.random() * 10,
-    spin: 90 + Math.random() * 150,
+    spin: 30 + Math.random() * 50,
     spinDir: index % 2 ? "normal" : "reverse",
   } as const;
 }

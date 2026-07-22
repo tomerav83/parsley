@@ -4,6 +4,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { ignoreSkippedViewTransitions } from "@/lib/viewTransitionGuard.ts";
+
+// The submit flow chains view-transition navigations; a superseded one rejects
+// with a benign AbortError React Router doesn't surface — keep it from tripping
+// Vitest's unhandled-rejection guard.
+ignoreSkippedViewTransitions();
 
 afterEach(() => {
   cleanup();

@@ -136,10 +136,32 @@ async def test_too_many_redirects() -> None:
         await fetch_page("https://example.com/loop")
 
 
-@pytest.mark.parametrize("status", [401, 403, 429])
+@pytest.mark.parametrize("status", [401, 402, 403, 429])
 @respx.mock
-async def test_bot_protection_statuses_raise_site_blocked(status: int) -> None:
+async def test_bot_protection_status_falls_back_to_curl_cffi(
+    status: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
     respx.get("https://example.com/recipe").respond(status)
+
+    async def fake_curl_fetch(target: httpx.URL) -> str:
+        return "<html>fetched via curl_cffi</html>"
+
+    monkeypatch.setattr("app.fetch._fetch_via_curl_cffi", fake_curl_fetch)
+
+    assert await fetch_page("https://example.com/recipe") == "<html>fetched via curl_cffi</html>"
+
+
+@pytest.mark.parametrize("status", [401, 402, 403, 429])
+@respx.mock
+async def test_bot_protection_raises_site_blocked_when_curl_cffi_also_blocked(
+    status: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    respx.get("https://example.com/recipe").respond(status)
+
+    async def fake_curl_fetch(target: httpx.URL) -> str:
+        raise SiteBlockedError("still blocked")
+
+    monkeypatch.setattr("app.fetch._fetch_via_curl_cffi", fake_curl_fetch)
 
     with pytest.raises(SiteBlockedError):
         await fetch_page("https://example.com/recipe")

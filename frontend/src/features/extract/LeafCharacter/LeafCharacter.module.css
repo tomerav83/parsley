@@ -1,0 +1,266 @@
+/* The cut-out puppet's paint and motion. Layer geometry (the inline % offsets)
+   comes from frontend/.visual-check/crop_poses.py; every part rests exactly
+   where it was cut from the illustration, so animation:none — the
+   prefers-reduced-motion state — is pixel-identical to the original art. In
+   dark themes the sprite sits on a cream sticker chip: the art is drawn for a
+   light ground (dark ink limbs, gray rain cloud), and a raster can't retheme.
+   The chip lives on .char while all motion lives inside .fig, so the chip
+   itself never moves. */
+
+.char {
+  position: relative;
+  display: block;
+  max-width: 100%;
+  user-select: none;
+}
+
+.fig {
+  position: relative;
+  display: block;
+}
+
+.base {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-user-drag: none;
+}
+
+.part {
+  position: absolute;
+  height: auto;
+  -webkit-user-drag: none;
+}
+
+/* ---- eyes ---- */
+
+/* Closed-lid overlay, flashed briefly = a blink. The double-blink beat
+   (two flashes close together, then a long gap) reads more alive than a
+   metronome. */
+.lids {
+  opacity: 0;
+  animation: blink 4.6s infinite;
+}
+.char[data-mood="flat"] .lids {
+  animation-name: blinkslow; /* sleepy: longer, heavier closes */
+  animation-duration: 5.4s;
+}
+@keyframes blinkslow {
+  0%,
+  88% {
+    opacity: 0;
+  }
+  89.5%,
+  96% {
+    opacity: 1;
+  }
+  97.5%,
+  100% {
+    opacity: 0;
+  }
+}
+.char[data-mood="over"] .lids,
+.char[data-mood="weird"] .lids {
+  animation-duration: 2.9s; /* stressed */
+}
+@keyframes blink {
+  0%,
+  91.4% {
+    opacity: 0;
+  }
+  91.8%,
+  94.2% {
+    opacity: 1;
+  }
+  94.6%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ---- work: the focus ticks pop ---- */
+.ticks {
+  transform-origin: 90% 90%;
+  animation: ticks 2.3s ease-in-out infinite;
+}
+@keyframes ticks {
+  0%,
+  58%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+  66% {
+    opacity: 0.2;
+    transform: scale(0.85);
+  }
+  76% {
+    opacity: 1;
+    transform: scale(1.07);
+  }
+}
+
+/* ---- hmm: the ?? float and swap emphasis ---- */
+.qq {
+  transform-origin: 20% 80%;
+  animation: qq 3.8s ease-in-out infinite;
+}
+@keyframes qq {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(-2.5%) rotate(2deg);
+  }
+  65% {
+    transform: translateY(1.2%) rotate(-1.4deg);
+  }
+}
+
+/* ---- flat: the body sighs and shivers under the drifting cloud ---- */
+
+/* Breathing lives on .base (feet pinned by the bottom origin), NOT on .fig —
+   the cloud and rain must not bob with the body. The lids ride ~2px high at
+   peak inhale; their +6px margin hides it. */
+.char[data-mood="flat"] .base {
+  transform-origin: 50% 96%;
+  animation: sigh 5.2s ease-in-out infinite;
+}
+@keyframes sigh {
+  0%,
+  80%,
+  100% {
+    transform: none;
+  }
+  38% {
+    transform: scaleY(1.018) scaleX(1.004); /* slow inhale */
+  }
+  55%,
+  70% {
+    transform: scaleY(0.988); /* heavy exhale sag */
+  }
+  62% {
+    transform: translateX(-1px) scaleY(0.988); /* cold shiver */
+  }
+  64% {
+    transform: translateX(1px) scaleY(0.988);
+  }
+  66% {
+    transform: translateX(-0.7px) scaleY(0.988);
+  }
+}
+
+.cloud {
+  animation: cloud 7.5s ease-in-out infinite;
+}
+@keyframes cloud {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateX(1.6%);
+  }
+}
+
+/* Streaks erased from the sprite and redrawn here so they can move. The band
+   spans from under the cloud to above the puddle; drop sizes are % of the
+   band, so the fall scales with the render size. */
+.rainband {
+  position: absolute;
+  inset: 25% 8% 42% 8%;
+  overflow: hidden;
+}
+.drop {
+  position: absolute;
+  top: 0;
+  width: 1.8%;
+  height: 13%;
+  border-radius: 999px;
+  background: rgb(173 201 220 / 0.95);
+  transform: translateY(-120%) rotate(9deg);
+  animation: fall 0.95s linear infinite;
+}
+@keyframes fall {
+  0% {
+    transform: translateY(-120%) rotate(9deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(820%) rotate(9deg);
+    opacity: 0;
+  }
+}
+
+/* ---- over/weird: the sweat drip and the whole-figure tremble ---- */
+.sweat {
+  animation: drip 3.4s ease-in infinite;
+}
+@keyframes drip {
+  0% {
+    opacity: 0;
+    transform: none;
+  }
+  12%,
+  58% {
+    opacity: 1;
+    transform: none;
+  }
+  84%,
+  100% {
+    opacity: 0;
+    transform: translateY(55%) scaleY(1.1);
+  }
+}
+
+.char[data-mood="over"] .fig,
+.char[data-mood="weird"] .fig {
+  animation: jitter 0.42s steps(1, end) infinite;
+}
+@keyframes jitter {
+  25% {
+    transform: translate(0.7px, -0.5px);
+  }
+  50% {
+    transform: translate(-0.6px, 0.4px);
+  }
+  75% {
+    transform: translate(0.5px, 0.6px);
+  }
+}
+
+/* Same dual-selector dark detection as index.css: OS preference unless the
+   toggle forced light, or the toggle forced dark. (Chip padding sits on .char,
+   outside .fig, so the layer %-geometry is unaffected.) */
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .char {
+    padding: 6px;
+    border-radius: 6px;
+    background: #f6f2e8;
+  }
+}
+:global(:root[data-theme="dark"]) .char {
+  padding: 6px;
+  border-radius: 6px;
+  background: #f6f2e8;
+}
+
+/* Motionless = the original still, so just switch everything off. The CSS
+   rain would freeze mid-air, so it hides instead. */
+@media (prefers-reduced-motion: reduce) {
+  .char[data-mood] .fig,
+  .char[data-mood] .part,
+  .char[data-mood] .drop {
+    animation: none;
+  }
+  .char[data-mood] .rainband {
+    display: none;
+  }
+}
