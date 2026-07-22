@@ -1,7 +1,7 @@
 // The overlay + module controller in real Chromium: registration, the
-// under-cover swap contract, input swallowing, and the whirl showing only
-// while an extraction is actually pending. Timing here is real (a full wave
-// is ~1.6s), so assertions use generous waitFor windows.
+// under-cover swap contract, input swallowing, and the deep-in-work mascot
+// showing only while an extraction is actually pending. Timing here is real
+// (a full wave is ~1.6s), so assertions use generous waitFor windows.
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,7 +17,12 @@ import {
 const overlay = () =>
   document.querySelector<HTMLDivElement>('div[aria-hidden="true"]')!;
 const emeraldD = () =>
-  overlay().querySelectorAll("path")[1]!.getAttribute("d") ?? "";
+  overlay()
+    .querySelector("svg")!
+    .querySelectorAll("path")[1]!
+    .getAttribute("d") ?? "";
+const workChar = () =>
+  overlay().querySelector<HTMLElement>("[data-whirl-char]")!;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -82,17 +87,12 @@ describe("LiquidTransition", () => {
     });
   }, 10_000);
 
-  it("an instantly-settling task still shows the whirlpool beat", async () => {
+  it("an instantly-settling task still shows the working-mascot beat", async () => {
     render(<LiquidTransition />);
     const covered = waveExtract(() => Promise.resolve("fast"));
-    // even though the task settled before cover, the whirl must appear
+    // even though the task settled before cover, the mascot must appear
     await vi.waitFor(
-      () => {
-        const shown = [...overlay().querySelectorAll("g")].filter(
-          (g) => g.style.visibility === "visible",
-        );
-        expect(shown.length).toBe(1);
-      },
+      () => expect(workChar().style.visibility).toBe("visible"),
       { timeout: 5000 },
     );
     expect(await covered).toBe("fast");
@@ -110,21 +110,16 @@ describe("LiquidTransition", () => {
     );
   }, 10_000);
 
-  it("waveExtract whirls only while the task pends, then reveals on demand", async () => {
+  it("waveExtract shows the mascot only while the task pends, then reveals on demand", async () => {
     render(<LiquidTransition />);
     let resolveTask!: (v: string) => void;
     const task = new Promise<string>((r) => (resolveTask = r));
 
     const covered = waveExtract(() => task);
 
-    // once covered and still pending, one whirl pose is visible
+    // once covered and still pending, the working mascot is visible
     await vi.waitFor(
-      () => {
-        const shown = [...overlay().querySelectorAll("g")].filter(
-          (g) => g.style.visibility === "visible",
-        );
-        expect(shown.length).toBe(1);
-      },
+      () => expect(workChar().style.visibility).toBe("visible"),
       { timeout: 5000 },
     );
 

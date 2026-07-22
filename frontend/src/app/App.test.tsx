@@ -1,5 +1,5 @@
 // Exercises App as the layout route it is: real HomeScreen/PasteScreen (so
-// submitting goes through the actual UrlForm/PasteHtmlForm and FloatingError,
+// submitting goes through the actual UrlForm/PasteHtmlForm and ErrorWindow,
 // queried by role) inside a memory router. RecipeScreen is stubbed — its own
 // deep-link/cache logic has its own test file — this one only needs to prove
 // App navigated there and handed off the right outlet context.
@@ -120,7 +120,7 @@ describe("App — submit outcome drives navigation", () => {
     expect(cached[RECIPE.source_url]).toMatchObject({ name: "Toast" });
   });
 
-  it("does not navigate when the submit fails, and surfaces the floating error", async () => {
+  it("does not navigate when the submit fails, and surfaces the error window", async () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("fetch_failed", "no answer"),
     );
@@ -131,7 +131,7 @@ describe("App — submit outcome drives navigation", () => {
     // Assert on the router's own location, not just DOM presence — a
     // navigation that fires and is then raced away by a later assertion would
     // otherwise slip through a purely DOM-timing-based check.
-    await screen.findByRole("button", { name: /show options/i });
+    await screen.findByRole("alertdialog");
     expect(router.state.location.pathname).toBe("/");
     expect(screen.queryByTestId("recipe-url")).toBeNull();
     expect(sessionStorage.getItem("parsley:recipes")).toBeNull();
@@ -152,10 +152,8 @@ describe("App — error recovery wiring", () => {
     const input = screen.getByRole("textbox", { name: /recipe url/i });
     await submitUrl(RECIPE.source_url);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /show options/i }),
-    );
-    const dialog = screen.getByRole("alertdialog");
+    // the window opens focused, so Escape lands inside it
+    const dialog = await screen.findByRole("alertdialog");
     await userEvent.keyboard("{Escape}");
     await vi.waitFor(() => expect(dialog).not.toBeInTheDocument());
 
@@ -168,12 +166,11 @@ describe("App — error recovery wiring", () => {
     );
     renderApp();
     await submitUrl(RECIPE.source_url);
-    await userEvent.click(
-      screen.getByRole("button", { name: /show options/i }),
-    );
 
     mockedExtractRecipe.mockResolvedValueOnce(RECIPE);
-    await userEvent.click(screen.getByRole("button", { name: /try again/i }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /try again/i }),
+    );
 
     await screen.findByTestId("recipe-url");
     expect(mockedExtractRecipe).toHaveBeenLastCalledWith(
@@ -191,10 +188,7 @@ describe("App — error recovery wiring", () => {
     await submitUrl(RECIPE.source_url);
 
     await userEvent.click(
-      screen.getByRole("button", { name: /show options/i }),
-    );
-    await userEvent.click(
-      screen.getByRole("button", { name: /paste the page/i }),
+      await screen.findByRole("button", { name: /paste the page/i }),
     );
 
     const textarea = await screen.findByRole("textbox", {

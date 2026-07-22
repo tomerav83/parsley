@@ -49,16 +49,16 @@ const ERROR_INFO: Record<ErrorCode, ErrorInfo> = {
     unexpected: false,
   },
   fetch_failed: {
-    title: "We couldn't load that page",
-    hint: "The site didn't respond as expected. Try again, or paste the page's HTML below to skip the fetch.",
+    title: "Hmm. That page wouldn't load",
+    hint: "The site didn't respond as expected. Try again, or paste the page's HTML to skip the fetch.",
     canPaste: true,
     canEdit: false,
     canRetry: true,
     unexpected: true,
   },
   rate_limited: {
-    title: "Slow down a moment",
-    hint: "You've made a lot of requests. Wait a minute, then try again.",
+    title: "Whoa — one at a time",
+    hint: "You've made a lot of requests at once. We're catching our breath — wait a minute, then try again.",
     canPaste: false,
     canEdit: false,
     canRetry: true,
@@ -86,12 +86,19 @@ export function errorInfo(code: ErrorCode): ErrorInfo {
   return ERROR_INFO[code] ?? ERROR_INFO.unknown;
 }
 
-// Shown once a retry has failed a second time and the widget collapses to just the
-// "Report on GitHub" action — reached only for `unexpected` codes with no paste
-// fallback (paste, when available, is kept so it outlives a failed retry).
-export const SPRITE_FAILED: Pick<ErrorInfo, "title" | "hint"> = {
-  title: "Yeah… still stuck",
+// Shown when a retry has failed too and no fallback remains, so the window
+// collapses to just "Report on GitHub" — reached only for `unexpected` codes
+// with no paste fallback (paste, when available, outlives a failed retry).
+export const RETRY_STUCK: Pick<ErrorInfo, "title" | "hint"> = {
+  title: "Weird. Still nothing",
   hint: "Two tries, no response — that one's on us, not you.",
+};
+
+// A failed paste is the end of the recovery road: the pasted page itself gave
+// us nothing, so reporting is all that's left.
+export const PASTE_DEAD: Pick<ErrorInfo, "title" | "hint"> = {
+  title: "Not today",
+  hint: "Even the pasted page gave us nothing we could read as a recipe. That one's on us — report it and we'll fix it.",
 };
 
 const REPO = "tomerav83/parsley";

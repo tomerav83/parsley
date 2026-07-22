@@ -1,8 +1,7 @@
 import { useLayoutEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router";
 import { useExtractionFlow } from "@/app/transitions/useExtractionFlow.ts";
-import { errorInfo } from "@/features/extract/errorInfo";
-import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
+import { ErrorWindow } from "@/features/extract/ErrorWindow/ErrorWindow";
 import { Background } from "@/components/Background/Background.tsx";
 import { ThemeToggle } from "@/components/ThemeToggle/ThemeToggle";
 import styles from "./App.module.css";
@@ -43,7 +42,7 @@ function App() {
   }, [location.pathname, location.key]);
 
   // errorSurfaced holds a fresh failure back until its wave has covered the
-  // screen, so the mascot springs in beneath the wave instead of beside it.
+  // screen, so the window mounts beneath the wave instead of beside it.
   const showError = flow.extract.error !== null && onHome && flow.errorSurfaced;
 
   return (
@@ -54,21 +53,12 @@ function App() {
         <Outlet context={flow} />
       </main>
 
-      {/* A fresh failure arrives as the collapsed corner sprite without moving
-          focus, so this always-mounted live region announces it to assistive
-          tech (WCAG 4.1.3). The terminal case auto-opens the dialog and moves
-          focus instead — announcing it here too would double up. */}
-      <p className="visually-hidden" role="status">
-        {showError && !flow.extract.pasteFailed && flow.extract.error
-          ? `${errorInfo(flow.extract.error.code).title} — recovery options are in the corner of the page.`
-          : ""}
-      </p>
-
-      {/* Extraction failures on the search flow surface here, as a floating
-          mascot fixed to the viewport corner. The paste screen keeps its own
-          inline error so the pasted HTML isn't lost. */}
+      {/* Extraction failures on the search flow surface here, as the centered
+          leaf-mascot window (it moves focus to its primary action, which also
+          makes its title/hint announce — no separate live region needed). The
+          paste screen keeps its own inline error so the pasted HTML isn't lost. */}
       {flow.extract.error && showError && (
-        <FloatingError
+        <ErrorWindow
           error={flow.extract.error}
           sourceUrl={flow.lastUrl}
           terminal={flow.extract.pasteFailed}

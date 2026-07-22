@@ -56,10 +56,13 @@
 
 :root {
   /* ---- primitives: the raw palette (theme-independent) ------------------ */
+  --green-900: #064e3b;
+  --green-800: #065f46;
   --green-700: #047857;
   --green-600: #059669;
   --green-500: #10b981;
   --green-400: #34d399;
+  --green-300: #6ee7b7;
   --amber-700: #b5620a;
   --amber-500: #f5a623;
 
@@ -79,6 +82,19 @@
   --color-danger-border: #eac7c0;
   --shadow: 0 24px 60px -34px rgba(4, 120, 87, 0.45);
   --shadow-soft: 0 14px 34px -22px rgba(4, 120, 87, 0.4);
+
+  /* The leaf mascot's paintbox (LeafCharacter). `limb` is the free-standing
+     legs/arms — it needs page-bg contrast, so it brightens in dark; `ink` is
+     the facial strokes on the leaf — it needs leaf-fill contrast, so it stays
+     deep in both themes. */
+  --color-leaf: var(--green-500);
+  --color-leaf-shade: var(--green-600);
+  --color-leaf-light: var(--green-300);
+  --color-leaf-line: var(--green-800);
+  --color-leaf-vein: var(--green-700);
+  --color-leaf-limb: var(--green-900);
+  --color-leaf-ink: var(--green-900);
+  --color-leaf-water: #5db6e8;
 
   --sans: "Inter", "Inter Fallback", system-ui, "Segoe UI", Roboto, sans-serif;
   --mono:
@@ -119,6 +135,10 @@
     --color-danger-border: #4a2620;
     --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
     --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
+    --color-leaf-light: var(--green-400);
+    --color-leaf-line: var(--green-900);
+    --color-leaf-limb: var(--green-600);
+    --color-leaf-water: #8fd3ff;
   }
 }
 :root[data-theme="dark"] {
@@ -137,6 +157,10 @@
   --color-danger-border: #4a2620;
   --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
   --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
+  --color-leaf-light: var(--green-400);
+  --color-leaf-line: var(--green-900);
+  --color-leaf-limb: var(--green-600);
+  --color-leaf-water: #8fd3ff;
 }
 
 * {

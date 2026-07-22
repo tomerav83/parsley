@@ -1,7 +1,7 @@
 // RecipeError is the recipe route's ErrorBoundary: a thin adapter that reads the
-// loader's thrown error (useRouteError) and renders the shared FloatingError. The
+// loader's thrown error (useRouteError) and renders the shared ErrorWindow. The
 // one bit of real logic is the ExtractError guard — anything that isn't one
-// becomes a generic "something went wrong" so the widget never renders a raw
+// becomes a generic "something went wrong" so the window never renders a raw
 // stack. Driven through a memory router whose loader throws, so useRouteError
 // resolves for real; useAppOutlet's handlers are stubbed.
 import { render, screen } from "@testing-library/react";
@@ -58,25 +58,22 @@ function renderWithThrown(
   render(<Stub initialEntries={["/recipe?url=https://x.com/toast"]} />);
 }
 
-// The widget starts collapsed; open the bubble to read the alertdialog it names.
-async function openBubble() {
-  await userEvent.click(
-    await screen.findByRole("button", { name: /show options/i }),
-  );
-  return screen.getByRole("alertdialog");
+// The window opens centered and focused — the alertdialog is queryable at once.
+async function findDialog() {
+  return await screen.findByRole("alertdialog");
 }
 
 describe("RecipeError", () => {
   it("passes a thrown ExtractError through unchanged (its code drives the copy)", async () => {
     renderWithThrown(new ExtractError("site_blocked", "blocked"));
-    expect(await openBubble()).toHaveAccessibleName(
+    expect(await findDialog()).toHaveAccessibleName(
       /that site blocked our reader/i,
     );
   });
 
   it("wraps a non-ExtractError in the generic 'unknown' error instead of leaking it", async () => {
     renderWithThrown(new TypeError("undefined is not a function"));
-    const dialog = await openBubble();
+    const dialog = await findDialog();
     expect(dialog).toHaveAccessibleName(/something went wrong/i);
     expect(dialog).not.toHaveAccessibleName(/undefined is not a function/i);
   });
@@ -86,7 +83,7 @@ describe("RecipeError", () => {
     renderWithThrown(new ExtractError("site_blocked", "blocked"), {
       openPasteFor,
     });
-    await openBubble();
+    await findDialog();
     await userEvent.click(screen.getByRole("button", { name: /paste/i }));
     expect(openPasteFor).toHaveBeenCalledWith("https://x.com/toast");
   });
@@ -96,7 +93,7 @@ describe("RecipeError", () => {
     renderWithThrown(new ExtractError("invalid_url", "not a link"), {
       setUrl,
     });
-    await openBubble();
+    await findDialog();
     await userEvent.click(screen.getByRole("button", { name: /edit link/i }));
     expect(setUrl).toHaveBeenCalledWith("https://x.com/toast");
     expect(await screen.findByText("Home")).toBeInTheDocument();
@@ -106,7 +103,7 @@ describe("RecipeError", () => {
     const recipe = { name: "Toast", source_url: "u" } as Recipe;
     mockedExtract.mockResolvedValue(recipe);
     renderWithThrown(new ExtractError("network", "offline"));
-    await openBubble();
+    await findDialog();
     await userEvent.click(screen.getByRole("button", { name: /try again/i }));
     expect(mockedExtract).toHaveBeenCalledWith("https://x.com/toast");
     await vi.waitFor(() =>
