@@ -1,468 +1,266 @@
-/* The leaf mascot's paint and motion. Geometry lives in leafBody.ts and the
-   scene JSX; everything visual routes through the --color-leaf-* tokens so the
-   character follows the theme. Each mood's loop is scoped under its root class
-   (.work/.hmm/.weird/.flat/.over — composed in LeafCharacter.tsx). */
+/* The cut-out puppet's paint and motion. Layer geometry (the inline % offsets)
+   comes from frontend/.visual-check/crop_poses.py; every part rests exactly
+   where it was cut from the illustration, so animation:none — the
+   prefers-reduced-motion state — is pixel-identical to the original art. In
+   dark themes the sprite sits on a cream sticker chip: the art is drawn for a
+   light ground (dark ink limbs, gray rain cloud), and a raster can't retheme.
+   The chip lives on .char while all motion lives inside .fig, so the chip
+   itself never moves. */
 
 .char {
+  position: relative;
   display: block;
-  overflow: visible;
-}
-
-/* ---- shared anatomy ---- */
-.body {
-  fill: var(--color-leaf);
-  stroke: var(--color-leaf-line);
-  stroke-width: 3;
-  stroke-linejoin: round;
-}
-.shadeDk {
-  fill: var(--color-leaf-shade);
-  opacity: 0.25;
-}
-.shadeDk2 {
-  fill: var(--color-leaf-shade);
-  opacity: 0.18;
-}
-.shadeLt {
-  fill: var(--color-leaf-light);
-  opacity: 0.5;
-}
-.veins {
-  fill: none;
-  stroke: var(--color-leaf-vein);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  opacity: 0.9;
-}
-.limb {
-  fill: none;
-  stroke: var(--color-leaf-limb);
-  stroke-width: 4.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.hand {
-  fill: var(--color-leaf-limb);
-}
-.eyeW {
-  fill: #fff;
-  stroke: var(--color-leaf-ink);
-  stroke-width: 2.2;
-}
-.pupil {
-  fill: var(--color-leaf-ink);
-}
-.glint {
-  fill: #fff;
-}
-.brow,
-.mouth {
-  fill: none;
-  stroke: var(--color-leaf-ink);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-}
-.mouthO {
-  fill: none;
-  stroke: var(--color-leaf-ink);
-  stroke-width: 2;
-}
-.lens {
-  fill: rgba(255, 255, 255, 0.92);
-  stroke: var(--color-leaf-ink);
-  stroke-width: 2.8;
-}
-.lidHalf {
-  fill: var(--color-leaf);
-  stroke: var(--color-leaf-ink);
-  stroke-width: 2.2;
-}
-.shadow {
-  fill: var(--color-leaf-limb);
-  opacity: 0.12;
-}
-.htext {
-  font-family: "Comic Sans MS", "Chalkboard SE", "Segoe Print", cursive;
-  font-weight: 700;
-  fill: var(--color-leaf-ink);
-}
-/* floating marks sit on the page bg, not the leaf */
-.q1,
-.q2,
-.qq {
-  fill: var(--color-leaf-limb);
+  max-width: 100%;
+  user-select: none;
 }
 
 .fig {
-  transform-box: fill-box;
-  transform-origin: 50% 88%;
+  position: relative;
+  display: block;
 }
 
-/* ---- work: gentle bob, typing hands, focus ticks ---- */
-.work .fig {
-  animation: leaf-work-bob 1.8s ease-in-out infinite;
+.base {
+  display: block;
+  width: 100%;
+  height: auto;
+  -webkit-user-drag: none;
 }
-@keyframes leaf-work-bob {
+
+.part {
+  position: absolute;
+  height: auto;
+  -webkit-user-drag: none;
+}
+
+/* ---- eyes ---- */
+
+/* Closed-lid overlay, flashed briefly = a blink. The double-blink beat
+   (two flashes close together, then a long gap) reads more alive than a
+   metronome. */
+.lids {
+  opacity: 0;
+  animation: blink 4.6s infinite;
+}
+.char[data-mood="flat"] .lids {
+  animation-name: blinkslow; /* sleepy: longer, heavier closes */
+  animation-duration: 5.4s;
+}
+@keyframes blinkslow {
   0%,
-  100% {
-    transform: translateY(0);
+  88% {
+    opacity: 0;
   }
-  50% {
-    transform: translateY(2.5px);
-  }
-}
-.armT {
-  animation: leaf-type 0.24s linear infinite alternate;
-}
-.armT2 {
-  animation-delay: 0.12s;
-}
-@keyframes leaf-type {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-2.6px);
-  }
-}
-.tick {
-  stroke: var(--color-leaf-vein);
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  animation: leaf-tick 1.4s ease-in-out infinite;
-}
-.tick2 {
-  animation-delay: 0.45s;
-}
-@keyframes leaf-tick {
-  0%,
-  60%,
-  100% {
-    opacity: 0.15;
-  }
-  30% {
+  89.5%,
+  96% {
     opacity: 1;
   }
+  97.5%,
+  100% {
+    opacity: 0;
+  }
 }
-/* laptop + mug props: deliberately neutral so the emerald reads as THE color */
-.lid {
-  fill: #9b9ba3;
-  stroke: #55555e;
-  stroke-width: 2.8;
+.char[data-mood="over"] .lids,
+.char[data-mood="weird"] .lids {
+  animation-duration: 2.9s; /* stressed */
 }
-.logo {
-  fill: var(--color-leaf);
-  stroke: #55555e;
-  stroke-width: 1.8;
-}
-.deck {
-  fill: #84848e;
-  stroke: #55555e;
-  stroke-width: 2.8;
-  stroke-linejoin: round;
-}
-.mug {
-  fill: #fff;
-  stroke: var(--color-leaf-limb);
-  stroke-width: 2.6;
-}
-.mugHandle {
-  fill: none;
-  stroke: var(--color-leaf-limb);
-  stroke-width: 2.6;
+@keyframes blink {
+  0%,
+  91.4% {
+    opacity: 0;
+  }
+  91.8%,
+  94.2% {
+    opacity: 1;
+  }
+  94.6%,
+  100% {
+    opacity: 0;
+  }
 }
 
-/* ---- hmm: lean, glance up-left, chin tap, staggered ?? ---- */
-.hmm .fig {
-  animation: leaf-lean 3.4s ease-in-out infinite;
+/* ---- work: the focus ticks pop ---- */
+.ticks {
+  transform-origin: 90% 90%;
+  animation: ticks 2.3s ease-in-out infinite;
 }
-@keyframes leaf-lean {
+@keyframes ticks {
   0%,
-  15% {
-    transform: rotate(0deg);
-  }
-  45%,
-  75% {
-    transform: rotate(-5deg);
-  }
-  100% {
-    transform: rotate(0deg);
-  }
-}
-.pupilsHmm {
-  animation: leaf-look-up 3.4s ease-in-out infinite;
-}
-@keyframes leaf-look-up {
-  0%,
-  15% {
-    transform: translate(0, 0);
-  }
-  45%,
-  80% {
-    transform: translate(-2.4px, -2.8px);
-  }
-  100% {
-    transform: translate(0, 0);
-  }
-}
-.chin {
-  transform-box: fill-box;
-  transform-origin: 20% 50%;
-  animation: leaf-tap 3.4s ease-in-out infinite;
-}
-@keyframes leaf-tap {
-  0%,
-  38%,
   58%,
   100% {
-    transform: rotate(0deg);
-  }
-  44%,
-  52% {
-    transform: rotate(-8deg);
-  }
-}
-.q1 {
-  animation: leaf-qbob 3.4s ease-in-out infinite;
-}
-.q2 {
-  animation: leaf-qbob 3.4s 0.35s ease-in-out infinite;
-}
-@keyframes leaf-qbob {
-  0%,
-  18% {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  42%,
-  80% {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
-  100% {
-    opacity: 0;
-    transform: translateY(-5px);
+  66% {
+    opacity: 0.2;
+    transform: scale(0.85);
+  }
+  76% {
+    opacity: 1;
+    transform: scale(1.07);
   }
 }
 
-/* ---- weird: double-take, darting pupils, head scratch ---- */
-.weird .fig {
-  animation: leaf-dtake 4.2s ease-in-out infinite;
+/* ---- hmm: the ?? float and swap emphasis ---- */
+.qq {
+  transform-origin: 20% 80%;
+  animation: qq 3.8s ease-in-out infinite;
 }
-@keyframes leaf-dtake {
+@keyframes qq {
   0%,
-  55%,
   100% {
-    transform: rotate(0deg);
+    transform: none;
   }
-  60% {
-    transform: rotate(-4deg);
+  30% {
+    transform: translateY(-2.5%) rotate(2deg);
+  }
+  65% {
+    transform: translateY(1.2%) rotate(-1.4deg);
+  }
+}
+
+/* ---- flat: the body sighs and shivers under the drifting cloud ---- */
+
+/* Breathing lives on .base (feet pinned by the bottom origin), NOT on .fig —
+   the cloud and rain must not bob with the body. The lids ride ~2px high at
+   peak inhale; their +6px margin hides it. */
+.char[data-mood="flat"] .base {
+  transform-origin: 50% 96%;
+  animation: sigh 5.2s ease-in-out infinite;
+}
+@keyframes sigh {
+  0%,
+  80%,
+  100% {
+    transform: none;
+  }
+  38% {
+    transform: scaleY(1.018) scaleX(1.004); /* slow inhale */
+  }
+  55%,
+  70% {
+    transform: scaleY(0.988); /* heavy exhale sag */
+  }
+  62% {
+    transform: translateX(-1px) scaleY(0.988); /* cold shiver */
   }
   64% {
-    transform: rotate(3.5deg);
+    transform: translateX(1px) scaleY(0.988);
   }
-  68% {
-    transform: rotate(-2.5deg);
+  66% {
+    transform: translateX(-0.7px) scaleY(0.988);
   }
-  72% {
-    transform: rotate(0deg);
-  }
-}
-.pupilsWeird {
-  animation: leaf-dart 4.2s ease-in-out infinite;
-}
-@keyframes leaf-dart {
-  0%,
-  20% {
-    transform: translateX(0);
-  }
-  28%,
-  46% {
-    transform: translateX(-2.8px);
-  }
-  54%,
-  78% {
-    transform: translateX(2.4px);
-  }
-  88%,
-  100% {
-    transform: translateX(0);
-  }
-}
-.scratch {
-  transform-box: fill-box;
-  transform-origin: 15% 95%;
-  animation: leaf-scratch 0.5s ease-in-out infinite alternate;
-}
-@keyframes leaf-scratch {
-  from {
-    transform: rotate(-3deg);
-  }
-  to {
-    transform: rotate(5deg);
-  }
-}
-.qq {
-  animation: leaf-qbob 4.2s ease-in-out infinite;
 }
 
-/* ---- flat (not today): sad sway, drifting cloud, rain, puddle ---- */
-.flat .fig {
-  animation: leaf-sad-sway 4s ease-in-out infinite;
-}
-@keyframes leaf-sad-sway {
-  0%,
-  100% {
-    transform: rotate(-1.4deg) translateY(0);
-  }
-  50% {
-    transform: rotate(1.4deg) translateY(1.5px);
-  }
-}
-.cloud path {
-  fill: #575c63;
-  stroke: #3b4046;
-  stroke-width: 2.6;
-  stroke-linejoin: round;
-}
 .cloud {
-  animation: leaf-cloud-drift 5s ease-in-out infinite;
+  animation: cloud 7.5s ease-in-out infinite;
 }
-@keyframes leaf-cloud-drift {
+@keyframes cloud {
   0%,
   100% {
-    transform: translateX(-3px);
+    transform: none;
   }
   50% {
-    transform: translateX(3px);
-  }
-}
-.rain {
-  fill: none;
-  stroke: var(--color-leaf-water);
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  animation: leaf-rain 1.1s linear infinite;
-}
-@keyframes leaf-rain {
-  0% {
-    opacity: 0;
-    transform: translateY(0);
-  }
-  15% {
-    opacity: 0.9;
-  }
-  80% {
-    opacity: 0.9;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(44px);
-  }
-}
-.puddle {
-  fill: var(--color-leaf-water);
-  opacity: 0.45;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: leaf-puddle 4s ease-in-out infinite;
-}
-@keyframes leaf-puddle {
-  0%,
-  100% {
-    transform: scaleX(1);
-  }
-  50% {
-    transform: scaleX(1.05);
+    transform: translateX(1.6%);
   }
 }
 
-/* ---- over (rate limited): jitter, pupil shake, scroll wobble, sweat ---- */
-.over .fig {
-  animation: leaf-jitter 0.28s steps(2) infinite;
+/* Streaks erased from the sprite and redrawn here so they can move. The band
+   spans from under the cloud to above the puddle; drop sizes are % of the
+   band, so the fall scales with the render size. */
+.rainband {
+  position: absolute;
+  inset: 25% 8% 42% 8%;
+  overflow: hidden;
 }
-@keyframes leaf-jitter {
+.drop {
+  position: absolute;
+  top: 0;
+  width: 1.8%;
+  height: 13%;
+  border-radius: 999px;
+  background: rgb(173 201 220 / 0.95);
+  transform: translateY(-120%) rotate(9deg);
+  animation: fall 0.95s linear infinite;
+}
+@keyframes fall {
   0% {
-    transform: translate(0.9px, -0.5px) rotate(0.4deg);
+    transform: translateY(-120%) rotate(9deg);
+    opacity: 0;
   }
-  50% {
-    transform: translate(-0.9px, 0.6px) rotate(-0.4deg);
+  8% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.95;
   }
   100% {
-    transform: translate(0.6px, 0.4px) rotate(0.2deg);
+    transform: translateY(820%) rotate(9deg);
+    opacity: 0;
   }
 }
-.pupilsOver {
-  animation: leaf-pshake 0.4s steps(2) infinite;
-}
-@keyframes leaf-pshake {
-  from {
-    transform: translateX(0.7px);
-  }
-  to {
-    transform: translateX(-0.7px);
-  }
-}
-.scroll {
-  transform-box: fill-box;
-  transform-origin: 50% 5%;
-  animation: leaf-scroll-wob 0.5s ease-in-out infinite alternate;
-}
-@keyframes leaf-scroll-wob {
-  from {
-    transform: rotate(-1.2deg);
-  }
-  to {
-    transform: rotate(1.4deg);
-  }
-}
+
+/* ---- over/weird: the sweat drip and the whole-figure tremble ---- */
 .sweat {
-  fill: var(--color-leaf-water);
-  animation: leaf-sweat 1.6s ease-in infinite;
+  animation: drip 3.4s ease-in infinite;
 }
-@keyframes leaf-sweat {
-  0%,
-  30% {
+@keyframes drip {
+  0% {
     opacity: 0;
-    transform: translateY(0);
+    transform: none;
   }
-  40% {
+  12%,
+  58% {
     opacity: 1;
+    transform: none;
   }
-  85% {
-    opacity: 1;
-    transform: translateY(9px);
-  }
+  84%,
   100% {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(55%) scaleY(1.1);
   }
 }
-.paper {
-  fill: #fbf7ec;
-  stroke: #8a7a5c;
-  stroke-width: 2.6;
-  stroke-linejoin: round;
+
+.char[data-mood="over"] .fig,
+.char[data-mood="weird"] .fig {
+  animation: jitter 0.42s steps(1, end) infinite;
 }
-.todo {
-  font-family: "Comic Sans MS", "Chalkboard SE", "Segoe Print", cursive;
-  font-weight: 700;
-  fill: #6b5b3e;
-}
-.checkbox rect {
-  fill: none;
-  stroke: #8a7a5c;
-  stroke-width: 1.8;
-}
-.todoLine path {
-  fill: none;
-  stroke: #b9a98c;
-  stroke-width: 2;
-  stroke-linecap: round;
+@keyframes jitter {
+  25% {
+    transform: translate(0.7px, -0.5px);
+  }
+  50% {
+    transform: translate(-0.6px, 0.4px);
+  }
+  75% {
+    transform: translate(0.5px, 0.6px);
+  }
 }
 
+/* Same dual-selector dark detection as index.css: OS preference unless the
+   toggle forced light, or the toggle forced dark. (Chip padding sits on .char,
+   outside .fig, so the layer %-geometry is unaffected.) */
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .char {
+    padding: 6px;
+    border-radius: 6px;
+    background: #f6f2e8;
+  }
+}
+:global(:root[data-theme="dark"]) .char {
+  padding: 6px;
+  border-radius: 6px;
+  background: #f6f2e8;
+}
+
+/* Motionless = the original still, so just switch everything off. The CSS
+   rain would freeze mid-air, so it hides instead. */
 @media (prefers-reduced-motion: reduce) {
-  .char * {
-    animation: none !important;
+  .char[data-mood] .fig,
+  .char[data-mood] .part,
+  .char[data-mood] .drop {
+    animation: none;
+  }
+  .char[data-mood] .rainband {
+    display: none;
   }
 }

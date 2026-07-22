@@ -46,7 +46,6 @@
   box-shadow: var(--shadow);
   padding: 8px 12px 4px;
 }
-.whirlChar svg {
+.whirlChar [data-mood] {
   width: 100%;
-  height: auto;
 }
