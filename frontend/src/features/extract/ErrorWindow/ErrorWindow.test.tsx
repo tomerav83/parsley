@@ -24,13 +24,15 @@ function renderWindow(
   return props;
 }
 
-describe("ErrorWindow (alertdialog)", () => {
-  it("exposes a named, described alertdialog", () => {
+describe("ErrorWindow (failure panel)", () => {
+  it("announces the failure as an alert carrying the cause + fix copy", () => {
     renderWindow();
-    const dialog = screen.getByRole("alertdialog");
-    // named by the title, described by the hint (aria-labelledby/-describedby)
-    expect(dialog).toHaveAccessibleName(/one at a time/i);
-    expect(dialog).toHaveAccessibleDescription(/lot of requests/i);
+    // role="alert" so it announces when it morphs in from the work orb
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /one at a time/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/lot of requests/i)).toBeInTheDocument();
   });
 
   it("moves focus to the primary action when it appears", () => {
@@ -43,18 +45,19 @@ describe("ErrorWindow (alertdialog)", () => {
       error: new ExtractError("unknown", "boom"),
       terminal: true,
     });
-    const dialog = screen.getByRole("alertdialog");
-    expect(dialog).toHaveAccessibleName(/not today/i);
-    expect(dialog).toHaveAttribute("data-mood", "flat");
+    expect(
+      screen.getByRole("heading", { name: /not today/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveAttribute("data-mood", "flat");
     expect(
       screen.getByRole("link", { name: /report on github/i }),
     ).toHaveFocus();
     expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
   });
 
-  it("Escape from inside the window dismisses it", async () => {
+  it("Escape from inside the panel dismisses it", async () => {
     const { onDismiss } = renderWindow();
-    // focus landed inside on mount — Escape is scoped to the window
+    // focus landed inside on mount — Escape is scoped to the panel
     await userEvent.keyboard("{Escape}");
     expect(onDismiss).toHaveBeenCalledOnce();
   });
@@ -116,10 +119,7 @@ describe("ErrorWindow (retry escalation)", () => {
     );
     const paste = screen.getByRole("button", { name: /paste the page/i });
     expect(paste).toHaveFocus();
-    expect(screen.getByRole("alertdialog")).toHaveAttribute(
-      "data-mood",
-      "weird",
-    );
+    expect(screen.getByRole("alert")).toHaveAttribute("data-mood", "weird");
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
@@ -137,9 +137,9 @@ describe("ErrorWindow (retry escalation)", () => {
       name: /report on github/i,
     });
     expect(report).toHaveFocus();
-    expect(screen.getByRole("alertdialog")).toHaveAccessibleName(
-      /still nothing/i,
-    );
+    expect(
+      screen.getByRole("heading", { name: /still nothing/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /try again/i })).toBeNull();
   });
 });

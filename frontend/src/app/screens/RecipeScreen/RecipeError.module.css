@@ -1,0 +1,16 @@
+/* Centring shell for the recipe route's ErrorBoundary — the failure panel
+   (ErrorWindow) is inline now, so it needs a host that fills the app frame and
+   centres it, the same way ExtractScreen does for the submit flow. */
+
+.screen {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  padding: 32px 24px 56px;
+}
+.wrap {
+  margin: auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}

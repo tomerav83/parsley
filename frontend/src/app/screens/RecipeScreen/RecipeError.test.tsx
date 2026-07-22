@@ -58,24 +58,31 @@ function renderWithThrown(
   render(<Stub initialEntries={["/recipe?url=https://x.com/toast"]} />);
 }
 
-// The window opens centered and focused — the alertdialog is queryable at once.
+// The panel opens focused — its alert region and heading are queryable at once.
 async function findDialog() {
-  return await screen.findByRole("alertdialog");
+  return await screen.findByRole("alert");
 }
 
 describe("RecipeError", () => {
   it("passes a thrown ExtractError through unchanged (its code drives the copy)", async () => {
     renderWithThrown(new ExtractError("site_blocked", "blocked"));
-    expect(await findDialog()).toHaveAccessibleName(
-      /that site blocked our reader/i,
-    );
+    await findDialog();
+    expect(
+      await screen.findByRole("heading", {
+        name: /that site blocked our reader/i,
+      }),
+    ).toBeInTheDocument();
   });
 
   it("wraps a non-ExtractError in the generic 'unknown' error instead of leaking it", async () => {
     renderWithThrown(new TypeError("undefined is not a function"));
-    const dialog = await findDialog();
-    expect(dialog).toHaveAccessibleName(/something went wrong/i);
-    expect(dialog).not.toHaveAccessibleName(/undefined is not a function/i);
+    await findDialog();
+    expect(
+      await screen.findByRole("heading", { name: /something went wrong/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/undefined is not a function/i),
+    ).not.toBeInTheDocument();
   });
 
   it("routes the paste fallback through openPasteFor with the failed url", async () => {

@@ -31,21 +31,3 @@
 .amber {
   fill: var(--amber-500);
 }
-
-/* The deep-in-work mascot's chip: page background punched out of the cover
-   (the same negative-space trick the old foam used), squared like the rest of
-   the mise-en-place geometry, sized to stay clear of the wave's crest. */
-.whirlChar {
-  position: absolute;
-  left: 50%;
-  top: 46%;
-  transform: translate(-50%, -50%);
-  width: min(52vmin, 330px);
-  background: var(--color-bg);
-  border: 2px solid var(--color-border);
-  box-shadow: var(--shadow);
-  padding: 8px 12px 4px;
-}
-.whirlChar [data-mood] {
-  width: 100%;
-}

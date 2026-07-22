@@ -1,19 +1,19 @@
 import styles from "./LeafCharacter.module.css";
-import flatBase from "./poses/flat.webp";
-import flatCloud from "./poses/flat-cloud.webp";
-import flatLids from "./poses/flat-lids.webp";
-import hmmBase from "./poses/hmm.webp";
-import hmmLids from "./poses/hmm-lids.webp";
-import hmmQq from "./poses/hmm-qq.webp";
-import overBase from "./poses/over.webp";
-import overLids from "./poses/over-lids.webp";
-import overSweat from "./poses/over-sweat.webp";
-import weirdBang from "./poses/weird-bang.webp";
-import weirdBase from "./poses/weird.webp";
-import weirdLids from "./poses/weird-lids.webp";
-import workBase from "./poses/work.webp";
-import workLids from "./poses/work-lids.webp";
-import workTicks from "./poses/work-ticks.webp";
+import flatBase from "./poses/flat/flat.webp";
+import flatCloud from "./poses/flat/flat-cloud.webp";
+import flatLids from "./poses/flat/flat-lids.webp";
+import hmmBase from "./poses/hmm/hmm.webp";
+import hmmLids from "./poses/hmm/hmm-lids.webp";
+import hmmQq from "./poses/hmm/hmm-qq.webp";
+import overBase from "./poses/over/over.webp";
+import overLids from "./poses/over/over-lids.webp";
+import overSweat from "./poses/over/over-sweat.webp";
+import weirdBang from "./poses/weird/weird-bang.webp";
+import weirdBase from "./poses/weird/weird.webp";
+import weirdLids from "./poses/weird/weird-lids.webp";
+import workBase from "./poses/work/work.webp";
+import workLids from "./poses/work/work-lids.webp";
+import workTicks from "./poses/work/work-ticks.webp";
 
 // The Parsley mascot — the approved character art cut into a CSS puppet.
 // frontend/.visual-check/crop_poses.py slices each img.png pose into a base

@@ -11,29 +11,40 @@ import {
 } from "@/features/extract/recipeExtractor.ts";
 import {
   liquidAvailable,
-  waveExtract,
   wavePass,
-  waveReveal,
   type Dir,
 } from "../LiquidTransition/liquidController.ts";
+
+export const EXTRACT_PATH = "/extract";
+
+// Fast sites resolve before the mascot registers. Hold the work screen for a
+// beat so the character is actually seen — a deliberate floor, not a stall.
+const MIN_WORK_MS = 600;
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function recipePath(url: string): string {
   return `/recipe?${new URLSearchParams({ url })}`;
 }
 
 // Filmstrip order of the screens (mirrors App's orderOf): higher = further
-// forward, so a POP to a lower index is a back move and drains RTL.
+// forward, so a POP to a lower index is a back move and drains RTL. The transition
+// screen and the paste fallback both sit one step in from home.
 function screenOrder(pathname: string): number {
   if (pathname.startsWith("/recipe")) return 2;
   if (pathname.startsWith("/paste")) return 1;
+  if (pathname.startsWith(EXTRACT_PATH)) return 1;
   return 0;
 }
 
 // The Home-side extraction journey, packaged as one hook so App renders chrome:
-// submit → navigate, retry, and the paste fallback. Deep-link entry (/recipe?url=…
-// on a hard load) and the recipe read itself are the recipe route's loader now —
-// not this hook. App owns the extraction lifecycle and the URL field's text;
-// everything else lives in the screens, which mount per-route.
+// submit → move to the transition screen → land the recipe or show the failure
+// in that same screen; plus retry and the paste fallback.
+//
+// History model: home is pushed onto; every screen after it (transition, paste,
+// recipe) REPLACES the one before, so history stays [home, current] and Back from
+// anywhere lands on home — never back on the transition screen (the ask). The
+// transition screen (/extract) is only ever reached through submitUrl, so a stray
+// landing bounces itself home (see ExtractScreen).
 export function useExtractionFlow() {
   const extract = useRecipeExtractor();
   const navigate = useNavigate();
@@ -46,24 +57,12 @@ export function useExtractionFlow() {
   // cache here.
   const [lastUrl, setLastUrl] = useState("");
   const urlFieldRef = useRef<HTMLInputElement>(null);
-  // True while a wave-covered extraction is in flight. The extractor's state
-  // settles with the request itself — which can be well before the wave has
-  // covered the screen — so App must not surface a FRESH failure (the corner
-  // mascot springing in) until the covered run resolves. See errorSurfaced.
-  const [waveBusy, setWaveBusy] = useState(false);
-  const [errorSurfaced, setErrorSurfaced] = useState(false);
+  // Set when a dismissal (Not now / Edit link) sends us home, so the effect below
+  // restores focus to the URL field once Home has mounted (APG: return focus to an
+  // element that continues the workflow).
+  const refocusField = useRef(false);
 
   const { runUrl, runPaste, dismiss } = extract;
-
-  // A fresh error surfaces only once no wave is mid-cover (on the fallback
-  // path waveBusy is never set, so it surfaces immediately — the pre-wave
-  // behavior). Once surfaced it STAYS surfaced until the error clears: a
-  // retry runs under a new wave with the widget still mounted, which is what
-  // preserves its one-shot retry accounting.
-  useEffect(() => {
-    if (!extract.error) setErrorSurfaced(false);
-    else if (!waveBusy) setErrorSurfaced(true);
-  }, [extract.error, waveBusy]);
 
   // Only the browser's own back/forward buttons ("POP") land on Home without
   // running any of our code, so this only has to cover that case — every other
@@ -74,12 +73,20 @@ export function useExtractionFlow() {
     if (location.pathname === "/" && navigationType === "POP") setUrl("");
   }, [location.pathname, navigationType]);
 
-  // Browser back/forward is a POP: it swaps the route without touching go()/
-  // runCovered, so on its own it skips the wave. Block the POP, play the wave,
-  // and let proceed() commit the swap under full cover — the same cover→reveal
-  // the in-app buttons get. Scoped to POP (our PUSH/REPLACE navigations already
-  // wave), real screen changes only, and only when the overlay is live: reduced
-  // motion and tests fall through to the browser's plain back/forward.
+  // Restore focus to the URL field after a dismissal returns us home. Runs as an
+  // effect (after App's layout-effect route-heading focus), so it wins.
+  useEffect(() => {
+    if (location.pathname === "/" && refocusField.current) {
+      refocusField.current = false;
+      urlFieldRef.current?.focus();
+    }
+  }, [location.pathname]);
+
+  // Browser back/forward is a POP: it swaps the route without touching go(), so on
+  // its own it skips the wave. Block the POP, play the wave, and let proceed()
+  // commit the swap under full cover — the same cover→reveal the in-app buttons
+  // get. Scoped to POP, real screen changes only, and only when the overlay is
+  // live: reduced motion and tests fall through to the browser's plain back/forward.
   const blocker = useBlocker(
     ({ currentLocation, nextLocation, historyAction }) =>
       historyAction === "POP" &&
@@ -101,131 +108,114 @@ export function useExtractionFlow() {
     void wavePass(dir, () => blocker.proceed());
   }, [blocker, location.pathname]);
 
-  // Liquid-wave navigation (approved v5.1 design) with the view-transition
-  // slide as the fallback. liquidAvailable() is false when the overlay isn't
-  // mounted (tests mount App without it) or the user prefers reduced motion —
-  // both keep the pre-wave behavior exactly.
-  //
-  // Wave-only pass-through: cover in `dir`, swap the route under full cover,
-  // reveal in the same direction. No whirlpool (nothing to wait for).
-  function go(dir: Dir, to: string, opts?: { replace?: boolean }) {
+  // Liquid-wave navigation (approved v5.1 design) with the view-transition slide
+  // as the fallback. liquidAvailable() is false when the overlay isn't mounted
+  // (tests mount App without it) or the user prefers reduced motion — both keep
+  // the pre-wave behavior exactly. `afterSwap` runs under full cover alongside the
+  // route commit (used to clear error state as we leave the transition screen, so
+  // it never flashes its stray-landing guard on the way out). The returned promise
+  // resolves once the wave has fully revealed.
+  function go(
+    dir: Dir,
+    to: string,
+    opts?: { replace?: boolean },
+    afterSwap?: () => void,
+  ): Promise<void> {
     if (!liquidAvailable()) {
       navigate(to, { ...opts, viewTransition: true });
-      return;
+      afterSwap?.();
+      return Promise.resolve();
     }
-    void wavePass(dir, () => navigate(to, opts));
+    return wavePass(dir, () => {
+      navigate(to, opts);
+      afterSwap?.();
+    });
   }
 
-  // Extraction under cover: the surge starts with the request, the whirlpool
-  // holds while it pends, and the result decides the reveal — land forward on
-  // the recipe, or drain back (RTL) to the screen we never left. "aborted"
-  // (superseded request) drains too: the newer run owns any navigation.
-  async function runCovered(
-    run: () => Promise<RunResult>,
-    successUrl: string,
-  ): Promise<RunResult> {
-    if (!liquidAvailable()) {
-      const result = await run();
-      if (result === "success") {
-        navigate(recipePath(successUrl), { viewTransition: true });
-      }
-      return result;
-    }
-    setWaveBusy(true);
-    try {
-      const result = await waveExtract(run);
-      // The reveal is deliberately NOT awaited: the outcome must reach the
-      // caller as the drain begins, so whatever the wave uncovers (the floating
-      // error's retry button, a form's spinner) has already settled — not still
-      // spinning under a receding wave. The swap inside waveReveal still runs
-      // synchronously, under full cover.
-      if (result === "success") {
-        void waveReveal(1, () => navigate(recipePath(successUrl)));
-      } else {
-        void waveReveal(-1);
-      }
-      return result;
-    } finally {
-      // clears under full cover (≥2 buffered frames before the reveal opens),
-      // so a fresh error mounts its widget beneath the wave, not beside it
-      setWaveBusy(false);
-    }
-  }
-
+  // Submit from Home: move to the transition screen (work orb shows while the
+  // request pends), then land the recipe on success. A failure needs no
+  // navigation — the transition screen reads the error off context and morphs the
+  // orb in place. "aborted" (a newer submit superseded this one) leaves the screen
+  // to the newer run.
   async function submitUrl() {
     const trimmed = url.trim();
     if (!trimmed) return;
     setLastUrl(trimmed);
-    await runCovered(() => runUrl(trimmed), trimmed);
+    const running = runUrl(trimmed);
+    await go(1, EXTRACT_PATH);
+    const [result] = await Promise.all([running, delay(MIN_WORK_MS)]);
+    if (result === "success") {
+      await go(1, recipePath(trimmed), { replace: true });
+    }
   }
 
+  // "Try again" from the transition screen: re-run WITHOUT clearing the error (so
+  // the error panel stays mounted and its one-shot retry accounting survives — the
+  // button just spins). Success waves on to the recipe; a second failure flows back
+  // to the panel, which escalates the mood.
+  async function retry(): Promise<RunResult> {
+    const result = await runUrl(lastUrl, { retry: true });
+    if (result === "success") {
+      await go(1, recipePath(lastUrl), { replace: true });
+    }
+    return result;
+  }
+
+  // Paste fallback submit: success lands the recipe; a failure is the end of the
+  // recovery road (terminal), so it returns to the transition screen — replacing
+  // the paste screen — where ExtractScreen shows the flat, report-only state.
+  // "aborted" leaves the paste screen to the newer run.
   async function submitPaste(html: string) {
-    if (!liquidAvailable()) {
-      const result = await runPaste(html, lastUrl);
-      if (result === "success") {
-        navigate(recipePath(lastUrl), { viewTransition: true });
-      } else if (result === "error") {
-        // A failed paste is the end of the recovery road — return home, where it
-        // surfaces as the corner widget in its report-only terminal state.
-        navigate("/", { viewTransition: true });
-      }
-      return;
+    const result = await runPaste(html, lastUrl);
+    if (result === "success") {
+      await go(1, recipePath(lastUrl), { replace: true });
+    } else if (result === "error") {
+      await go(1, EXTRACT_PATH, { replace: true });
     }
-    setWaveBusy(true);
-    try {
-      const result = await waveExtract(() => runPaste(html, lastUrl));
-      // reveals not awaited — same reasoning as runCovered
-      if (result === "success") {
-        void waveReveal(1, () => navigate(recipePath(lastUrl)));
-      } else if (result === "error") {
-        // paste → home is a back move in the filmstrip, so the wave drains RTL
-        void waveReveal(-1, () => navigate("/"));
-      } else {
-        void waveReveal(-1); // aborted: reveal the paste screen we never left
-      }
-    } finally {
-      setWaveBusy(false);
-    }
-  }
-
-  // "Try again" from the floating widget re-runs WITHOUT clearing the error, so
-  // the widget stays mounted. The outcome flows back to the widget's handler,
-  // which folds a failure into its own state — no error-watching effect.
-  function retry(): Promise<RunResult> {
-    return runCovered(() => runUrl(lastUrl, { retry: true }), lastUrl);
   }
 
   function backToSearch() {
     dismiss();
     setUrl(""); // "new search" starts from a clean field
-    go(-1, "/", { replace: true });
+    void go(-1, "/", { replace: true });
   }
 
+  // "Paste page" from the transition screen: replace it with the paste fallback
+  // (so Back from paste lands home, not the transition screen), clearing the error
+  // under cover so the paste form opens fresh.
   function openPaste() {
-    dismiss();
-    go(1, "/paste");
+    void go(1, "/paste", { replace: true }, dismiss);
   }
 
   // Paste fallback from the recipe route's ErrorBoundary (a failed cold deep-link):
   // unlike openPaste, `lastUrl` isn't set yet on that path — the loader ran outside
   // this hook — so seed it from the failed URL the boundary read off the route.
-  // recipe (2) → paste (1) is a BACK move in the filmstrip, hence RTL.
   function openPasteFor(url: string) {
     setLastUrl(url);
-    go(-1, "/paste");
+    void go(-1, "/paste", { replace: true });
   }
 
-  // Dismissing the error (fly-away, "Not now", Escape) or picking "Edit link"
-  // both land the user back at the URL field — the logical next step once the
-  // widget is gone (APG: restore focus to an element that continues the workflow).
+  // "Edit link": return home with the failed URL pre-filled so the user can fix it,
+  // focus restored to the field. The error is left in state (invisible on Home,
+  // and the next submit clears it) rather than cleared here — clearing it would
+  // blank the transition screen before the home swap commits under the view
+  // transition, flashing an empty frame.
+  function editLink() {
+    setUrl(lastUrl);
+    refocusField.current = true;
+    void go(-1, "/", { replace: true });
+  }
+
+  // "Not now" / Escape: abandon the failure and return home, focus restored to the
+  // URL field (the workflow's next step). Same reason as editLink for not clearing
+  // the error here.
   function dismissError() {
-    dismiss();
-    urlFieldRef.current?.focus();
+    refocusField.current = true;
+    void go(-1, "/", { replace: true });
   }
 
   return {
     extract,
-    errorSurfaced,
     url,
     setUrl,
     lastUrl,
@@ -236,6 +226,7 @@ export function useExtractionFlow() {
     backToSearch,
     openPaste,
     openPasteFor,
+    editLink,
     dismissError,
   };
 }

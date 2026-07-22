@@ -80,6 +80,7 @@
   --color-danger: #cb4a3b;
   --color-danger-bg: #fbf0ee;
   --color-danger-border: #eac7c0;
+  --plate: #ffffff; /* the leaf porthole; also the raster art's light ground */
   --shadow: 0 24px 60px -34px rgba(4, 120, 87, 0.45);
   --shadow-soft: 0 14px 34px -22px rgba(4, 120, 87, 0.4);
 
@@ -120,6 +121,7 @@
     --color-danger: #f0796a;
     --color-danger-bg: #231512;
     --color-danger-border: #4a2620;
+    --plate: #f6f2e8; /* raster art can't retheme — keeps a cream ground in dark */
     --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
     --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
   }
@@ -138,6 +140,7 @@
   --color-danger: #f0796a;
   --color-danger-bg: #231512;
   --color-danger-border: #4a2620;
+  --plate: #f6f2e8; /* raster art can't retheme — keeps a cream ground in dark */
   --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
   --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
 }

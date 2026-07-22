@@ -9,10 +9,9 @@ import { settle } from "@/test/still";
 
 import { ErrorWindow } from "./ErrorWindow";
 
-// The window is position:fixed and centered, so there's nothing useful in its
-// wrapper's box — target the dialog directly. Argos needs a CSS selector (not
-// a locator): `[role=alertdialog]` is the component's own a11y contract.
-const DIALOG = '[role="alertdialog"]';
+// Target the failure panel directly (Argos needs a CSS selector, not a locator).
+// `[data-error-panel]` is the panel's stable hook, independent of its a11y role.
+const DIALOG = "[data-error-panel]";
 
 function mount(
   code: ErrorCode,

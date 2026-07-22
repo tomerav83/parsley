@@ -5,6 +5,11 @@ import "./index.css";
 import "./print.css";
 import { router } from "./app/router/router.tsx";
 import { LiquidTransition } from "./app/LiquidTransition/LiquidTransition.tsx";
+import { ignoreSkippedViewTransitions } from "./lib/viewTransitionGuard.ts";
+
+// The submit flow chains view-transition navigations (home → /extract → recipe);
+// a superseded one rejects benignly — keep it out of the console.
+ignoreSkippedViewTransitions();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

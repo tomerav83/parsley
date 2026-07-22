@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { ExtractError } from "@/lib/api";
 import type { RunResult } from "@/features/extract/recipeExtractor.ts";
@@ -8,10 +8,8 @@ import {
   RETRY_STUCK,
   reportIssueUrl,
 } from "@/features/extract/errorInfo";
-import {
-  LeafCharacter,
-  type LeafMood,
-} from "@/features/extract/LeafCharacter/LeafCharacter.tsx";
+import { LeafOrb } from "@/features/extract/LeafOrb/LeafOrb.tsx";
+import type { LeafMood } from "@/features/extract/LeafCharacter/LeafCharacter.tsx";
 import { RetryIcon, PasteIcon, EditIcon, GithubIcon } from "./Icons";
 import styles from "./ErrorWindow.module.css";
 import btn from "@/components/Button.module.css";
@@ -41,11 +39,16 @@ interface Action {
 function ActionButton({
   action,
   variant,
+  className: extra,
 }: {
   action: Action;
   variant: "primary" | "ghost";
+  className?: string;
 }) {
-  const className = `${btn.btn} ${btn.compact} ${btn[variant]}`;
+  const className = `${btn.btn} ${btn.compact} ${btn[variant]}${extra ? ` ${extra}` : ""}`;
+  // The primary is where focus lands when the panel appears (see the effect
+  // below) — tagged so focus never depends on DOM position.
+  const autofocus = variant === "primary" ? "" : undefined;
   const inner = (
     <>
       {action.icon}
@@ -61,6 +64,7 @@ function ActionButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={action.onClick}
+      data-autofocus={autofocus}
     >
       {inner}
     </a>
@@ -70,29 +74,32 @@ function ActionButton({
       className={className}
       onClick={action.onClick}
       disabled={action.disabled}
+      data-autofocus={autofocus}
     >
       {inner}
     </button>
   );
 }
 
-// The error window: an extraction failure lands as a centered window with the
-// leaf mascot acting out the state (character redesign — replaces the corner
-// FloatingError widget). The mood escalates with the recovery journey:
-// hmm (fresh failure) → weird (the retry failed too) → flat (a paste failed;
-// terminal), with over reserved for rate limiting.
+// The failure panel: the leaf mascot acting out the state, over the cause + fix
+// copy and the recovery actions. It's the error half of the transition screen
+// (ExtractScreen) — a failure morphs the working porthole into this in place, so
+// the error sits exactly where the leaf already was, never over Home. The mood
+// escalates with the recovery journey: hmm (fresh failure) → weird (the retry
+// failed too) → flat (a paste failed; terminal), with over reserved for rate
+// limiting.
 //
-// Action layout (unchanged from the widget): one full-width primary — the
-// likeliest fix, picked by intent retry > paste > edit — then any remaining
-// actions share a secondary row. Reporting is always subordinate except in the
-// report-only collapse, where it's all that's left.
+// Layout: an unboxed centered column on the transition screen's own ground (no
+// card) — orb, badge, cause, fix, then the actions stacked by importance: one
+// prominent primary (the likeliest fix, picked by intent retry > paste > edit),
+// any secondaries in a quiet centered row beneath it, and "Not now" as a subtle
+// text link at the foot. In the report-only collapse the primary is Report.
 //
-// A11y: the window is a `role="alertdialog"` named by its title and described
-// by its hint. It takes focus on its primary action when it appears — it now
-// IS the main window, not a corner widget — which also makes the name and
-// description announce; no separate live region needed. Escape (scoped to the
-// window, it only fires while focus is inside) and "Not now" both dismiss;
-// focus restoration afterwards is the parent's job, in onDismiss.
+// A11y: the panel is a `role="alert"` — appearing after the work orb (a state
+// change, not a route change), it announces itself, and it moves focus to its
+// primary action so the name/hint are read and recovery is one keypress away.
+// Escape (scoped to the panel) and "Not now" both dismiss; focus restoration
+// afterwards is the parent's job, in onDismiss.
 //
 // Retry flow: "Try again" calls onRetry (which re-runs the extract WITHOUT
 // clearing `error`, so this component stays mounted) and folds a failure into
@@ -109,11 +116,7 @@ export function ErrorWindow({
 }: ErrorWindowProps) {
   const [retrying, setRetrying] = useState(false);
   const [retryFailed, setRetryFailed] = useState(false);
-  const windowRef = useRef<HTMLDivElement>(null);
-
-  // Stable ids tying the dialog to its title/hint (aria-labelledby/-describedby).
-  const titleId = useId();
-  const hintId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const info = errorInfo(error.code);
   // Report-only collapse: a terminal paste is dead from the start; otherwise a
@@ -131,21 +134,15 @@ export function ErrorWindow({
         ? "weird"
         : "hmm";
 
-  const badge = terminal
-    ? `paste failed · ${error.code}`
-    : error.code === "rate_limited"
-      ? "rate limited · slow down"
-      : retryFailed
-        ? `retry failed · ${error.code} ×2`
-        : `extraction failed · ${error.code}`;
-
-  // Focus the first action when the window appears, and again when a retry
+  // Focus the primary action when the panel appears, and again when a retry
   // resolves (the retry button disables mid-flight, dropping focus to <body>).
   useEffect(() => {
     if (!retrying) {
-      windowRef.current
-        ?.querySelector<HTMLElement>("button:not([disabled]), a[href]")
-        ?.focus();
+      const scope = panelRef.current;
+      (
+        scope?.querySelector<HTMLElement>("[data-autofocus]") ??
+        scope?.querySelector<HTMLElement>("button:not([disabled]), a[href]")
+      )?.focus();
     }
   }, [retrying]);
 
@@ -198,48 +195,56 @@ export function ErrorWindow({
   ].filter(Boolean) as Action[];
 
   return (
+    // presentation wrapper carries the Escape handler (it only catches events
+    // bubbling from the real controls, and keeps the key listener off the
+    // non-interactive alert). display:contents, so the panel centres as before.
     <div
-      className={styles.overlay}
-      // presentation: the overlay is a positioning wrapper; the handler below
-      // only catches events bubbling from the real controls (satisfies jsx-a11y).
+      className={styles.keys}
       role="presentation"
       // Escape dismisses — bound here so it only fires while focus is inside
-      // the window, never hijacking Escape page-wide.
+      // the panel, never hijacking Escape page-wide.
       onKeyDown={(e) => e.key === "Escape" && onDismiss()}
     >
       <div
-        ref={windowRef}
-        className={styles.window}
-        role="alertdialog"
-        aria-labelledby={titleId}
-        aria-describedby={hintId}
+        ref={panelRef}
+        className={styles.figure}
+        role="alert"
         data-mood={mood}
+        data-error-panel=""
       >
-        <div className={styles.charbox}>
-          <LeafCharacter mood={mood} className={styles.char} />
-        </div>
-        <span
-          className={`${styles.badge}${mood === "over" ? ` ${styles.warn}` : ""}`}
-        >
-          {badge}
-        </span>
-        <h2 id={titleId} className={styles.title}>
+        <LeafOrb mood={mood} state="error" className={styles.orb} />
+        <h2 className={styles.title}>
           {copy.title}
+          {/* the second-failure marker the old badge carried, folded into the
+              title as a subtle count */}
+          {retryFailed && !terminal && (
+            <span className={styles.retryCount}>×2</span>
+          )}
         </h2>
-        <p id={hintId} className={styles.hint}>
-          {copy.hint}
-        </p>
+        <p className={styles.hint}>{copy.hint}</p>
 
+        {/* Actions stacked by importance; focus targets the primary via
+            [data-autofocus], which is always rendered first. */}
         <div className={styles.actions}>
           {failed ? (
             // Report-only: a terminal paste, or a second failed retry with no
             // fallback left.
-            <ActionButton action={reportAction} variant="primary" />
+            <ActionButton
+              action={reportAction}
+              variant="primary"
+              className={styles.wide}
+            />
           ) : (
             <>
-              {primary && <ActionButton action={primary} variant="primary" />}
+              {primary && (
+                <ActionButton
+                  action={primary}
+                  variant="primary"
+                  className={styles.wide}
+                />
+              )}
               {secondary.length > 0 && (
-                <div className={btn.row}>
+                <div className={styles.secondary}>
                   {secondary.map((a) => (
                     <ActionButton key={a.key} action={a} variant="ghost" />
                   ))}
@@ -247,11 +252,10 @@ export function ErrorWindow({
               )}
             </>
           )}
+          <button type="button" className={styles.dismiss} onClick={onDismiss}>
+            Not now
+          </button>
         </div>
-
-        <button type="button" className={styles.dismiss} onClick={onDismiss}>
-          Not now
-        </button>
       </div>
     </div>
   );

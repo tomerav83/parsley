@@ -1,18 +1,12 @@
 // The overlay + module controller in real Chromium: registration, the
-// under-cover swap contract, input swallowing, and the deep-in-work mascot
-// showing only while an extraction is actually pending. Timing here is real
-// (a full wave is ~1.6s), so assertions use generous waitFor windows.
+// under-cover swap contract, and input swallowing. Timing here is real (a full
+// wave is ~1.6s), so assertions use generous waitFor windows.
 import { render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FULL } from "./celPlayer.ts";
 import { LiquidTransition } from "./LiquidTransition.tsx";
-import {
-  liquidAvailable,
-  wavePass,
-  waveExtract,
-  waveReveal,
-} from "./liquidController.ts";
+import { liquidAvailable, wavePass } from "./liquidController.ts";
 
 const overlay = () =>
   document.querySelector<HTMLDivElement>('div[aria-hidden="true"]')!;
@@ -21,8 +15,6 @@ const emeraldD = () =>
     .querySelector("svg")!
     .querySelectorAll("path")[1]!
     .getAttribute("d") ?? "";
-const workChar = () =>
-  overlay().querySelector<HTMLElement>("[data-whirl-char]")!;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -34,10 +26,6 @@ describe("LiquidTransition", () => {
     const swap = vi.fn();
     await wavePass(1, swap); // no overlay: swap still runs, nothing hangs
     expect(swap).toHaveBeenCalledOnce();
-    expect(await waveExtract(async () => "direct")).toBe("direct");
-    const revealSwap = vi.fn();
-    await waveReveal(1, revealSwap);
-    expect(revealSwap).toHaveBeenCalledOnce();
 
     const { unmount } = render(<LiquidTransition />);
     expect(liquidAvailable()).toBe(true);
@@ -71,7 +59,7 @@ describe("LiquidTransition", () => {
 
     // RTL mirrors the wave svg (set imperatively, visible at once)
     expect(overlay().querySelector("svg")!.style.transform).toBe("scaleX(-1)");
-    // data-active lands with React's commit, not synchronously
+    // input is swallowed while the wave covers the screen
     await vi.waitFor(() =>
       expect(getComputedStyle(overlay()).pointerEvents).toBe("auto"),
     );
@@ -85,52 +73,5 @@ describe("LiquidTransition", () => {
       expect(overlay().hasAttribute("data-stage")).toBe(false);
       expect(getComputedStyle(overlay()).pointerEvents).toBe("none");
     });
-  }, 10_000);
-
-  it("an instantly-settling task still shows the working-mascot beat", async () => {
-    render(<LiquidTransition />);
-    const covered = waveExtract(() => Promise.resolve("fast"));
-    // even though the task settled before cover, the mascot must appear
-    await vi.waitFor(
-      () => expect(workChar().style.visibility).toBe("visible"),
-      { timeout: 5000 },
-    );
-    expect(await covered).toBe("fast");
-    await waveReveal(-1);
-  }, 10_000);
-
-  it("a throwing task drains back before rethrowing — never left covered", async () => {
-    render(<LiquidTransition />);
-    await expect(
-      waveExtract(() => Promise.reject(new Error("boom"))),
-    ).rejects.toThrow("boom");
-    await vi.waitFor(
-      () => expect(overlay().hasAttribute("data-stage")).toBe(false),
-      { timeout: 5000 },
-    );
-  }, 10_000);
-
-  it("waveExtract shows the mascot only while the task pends, then reveals on demand", async () => {
-    render(<LiquidTransition />);
-    let resolveTask!: (v: string) => void;
-    const task = new Promise<string>((r) => (resolveTask = r));
-
-    const covered = waveExtract(() => task);
-
-    // once covered and still pending, the working mascot is visible
-    await vi.waitFor(
-      () => expect(workChar().style.visibility).toBe("visible"),
-      { timeout: 5000 },
-    );
-
-    resolveTask("ok");
-    expect(await covered).toBe("ok");
-
-    const swap = vi.fn(() => expect(emeraldD()).toBe(FULL));
-    await waveReveal(1, swap);
-    expect(swap).toHaveBeenCalledOnce();
-    await vi.waitFor(() =>
-      expect(overlay().hasAttribute("data-stage")).toBe(false),
-    );
   }, 10_000);
 });

@@ -31,46 +31,16 @@ export function liquidAvailable(): boolean {
   );
 }
 
-/** Wave-only pass-through (no whirl): cover, swap under full cover, reveal. */
+/**
+ * Wave-only pass-through: cover in `dir`, swap the route under full cover, reveal.
+ * The one navigation primitive the app uses — every screen change (submit,
+ * landing, paste, back) rides one. The extraction itself no longer runs under
+ * cover: the transition screen (ExtractScreen) shows the work orb while it pends,
+ * so this is a plain passage with no whirl hold.
+ */
 export async function wavePass(dir: Dir, swap: () => void): Promise<void> {
   const c = controller;
   if (!c) return void swap();
   await c.begin(dir);
-  await c.reveal(dir, swap);
-}
-
-// The shortest hold once covered: ~two whirl pose cycles. An instantly
-// settling task (a lightning-fast failure, a cached response) would otherwise
-// release at cover and skip the whirlpool entirely — the run must still read
-// as "it tried": cover → whirl → outcome.
-const MIN_WHIRL_MS = 700;
-
-/**
- * Extraction cover: the surge starts WITH the task; the whirlpool cycles
- * while the task pends, and for at least the minimum beat. Resolves under
- * full cover with the task's result — follow with waveReveal to land or
- * drain.
- */
-export async function waveExtract<T>(task: () => Promise<T>): Promise<T> {
-  const c = controller;
-  if (!c) return task();
-  const whirled = c
-    .begin(1)
-    .then(() => new Promise<void>((r) => setTimeout(r, MIN_WHIRL_MS)));
-  try {
-    const [result] = await Promise.all([task(), whirled]);
-    return result;
-  } catch (err) {
-    // never leave the screen covered: drain back, then let the caller see it
-    await whirled;
-    await c.reveal(-1);
-    throw err;
-  }
-}
-
-/** Reveal from full cover: optional swap runs under cover, then the wave exits. */
-export async function waveReveal(dir: Dir, swap?: () => void): Promise<void> {
-  const c = controller;
-  if (!c) return void swap?.();
   await c.reveal(dir, swap);
 }

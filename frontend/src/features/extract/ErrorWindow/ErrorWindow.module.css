@@ -1,33 +1,25 @@
-/* The centered error window: the leaf mascot above a mono state badge, the
-   cause + fix copy, and the recovery actions. Replaces the corner widget —
-   this is the main event when an extraction fails, so it takes the center of
-   the viewport (see ErrorWindow.tsx for the a11y contract). */
+/* The failure figure: the leaf in its porthole (LeafOrb) over a mono state
+   badge, the cause + fix copy, and the recovery actions — an unboxed centred
+   column on the transition screen's own ground, matching the working state (no
+   card, border, or footer). The porthole is the same element the wait shows, so
+   a failure lands where the leaf already was (see ErrorWindow.tsx). */
 
-/* Positioning wrapper only: full-viewport grid that centers the window and
-   lets clicks around it fall through to the page. */
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  pointer-events: none;
+/* keydown-catcher wrapper: no box of its own, so the figure centres directly in
+   ExtractScreen's flex. */
+.keys {
+  display: contents;
 }
 
-.window {
-  pointer-events: auto;
-  width: min(430px, 94vw);
-  max-height: calc(100vh - 32px);
-  overflow-y: auto;
+.figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  background: var(--color-bg);
-  border: 2px solid var(--color-border);
-  box-shadow: var(--shadow);
-  padding: 4px 24px 22px;
-  animation: window-in 0.38s var(--curve) both;
+  gap: 13px;
+  width: min(440px, 92vw);
+  animation: figure-in 0.38s var(--curve) both;
 }
-@keyframes window-in {
+@keyframes figure-in {
   from {
     opacity: 0;
     transform: translateY(14px) scale(0.98);
@@ -38,72 +30,77 @@
   }
 }
 
-.charbox {
-  display: grid;
-  place-items: center;
-  margin: 4px 0 0;
+.orb {
+  --d: 232px;
+  margin-bottom: 2px;
 }
-.char {
-  width: 240px;
-  max-width: 100%;
-  height: auto;
-}
-/* Short viewports (landscape phones): the copy and actions matter more than
-   a big mascot. */
+/* Short viewports (landscape phones): the copy and actions matter more than a
+   big porthole. */
 @media (max-height: 640px) {
-  .char {
-    width: 170px;
+  .orb {
+    --d: 168px;
   }
-}
-
-.badge {
-  display: inline-block;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-danger);
-  background: var(--color-danger-bg);
-  border: 1.5px solid currentColor;
-  padding: 4px 10px;
-  margin-bottom: 13px;
-}
-/* rate-limited is a "wait", not a failure — amber, not danger */
-.badge.warn {
-  color: var(--color-accent);
-  background: transparent;
 }
 
 .title {
   font-weight: 800;
   letter-spacing: -0.01em;
-  font-size: 20px;
+  font-size: 21px;
   line-height: 1.2;
-  margin-bottom: 7px;
+  margin: 0;
   text-wrap: balance;
+}
+/* the "tried twice" count trailing the title — a subtle mono marker, not part
+   of the sentence */
+.retryCount {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 0.66em;
+  font-weight: 700;
+  color: var(--color-danger);
+  vertical-align: 0.12em;
 }
 .hint {
   font-size: 14px;
   line-height: 1.55;
   color: var(--color-text-muted);
   max-width: 36ch;
-  margin: 0 auto 18px;
+  margin: 0;
   text-wrap: pretty;
 }
 
+/* Actions, stacked by importance: prominent primary, quiet secondary row, then
+   the subtle dismiss link. */
 .actions {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  margin-top: 5px;
+}
+
+/* the prominent primary — a wide, comfortable CTA, not a cramped chip */
+.wide {
+  width: min(300px, 100%);
+  padding-top: 12px;
+  padding-bottom: 12px;
+  font-size: 14px;
+  border-radius: 11px;
+}
+
+/* the lesser fixes — a centred row of ghost buttons under the primary */
+.secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 9px;
 }
 
-/* the quiet "none of these" escape hatch — subordinate to the real actions */
+/* the quiet "none of these" escape hatch — a subtle text link at the foot */
 .dismiss {
-  display: block;
-  width: 100%;
-  margin-top: 12px;
-  padding: 7px 8px;
+  margin-top: 3px;
+  padding: 7px 12px;
   background: none;
   border: 0;
   font-family: var(--mono);
@@ -111,7 +108,7 @@
   letter-spacing: 0.02em;
   color: var(--color-text-muted);
   cursor: pointer;
-  border-radius: 7px;
+  border-radius: 8px;
   transition:
     color 0.15s,
     background 0.15s;
@@ -122,7 +119,7 @@
 }
 
 @media print {
-  .overlay {
+  .figure {
     display: none !important;
   }
 }

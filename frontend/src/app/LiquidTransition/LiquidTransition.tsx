@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { LeafCharacter } from "@/features/extract/LeafCharacter/LeafCharacter.tsx";
 import { createCelPlayer, type LiquidFrame } from "./celPlayer.ts";
 import { registerLiquid, type Dir } from "./liquidController.ts";
 import styles from "./LiquidTransition.module.css";
@@ -16,7 +15,6 @@ export function LiquidTransition() {
   const waveRef = useRef<SVGSVGElement>(null);
   const emRef = useRef<SVGPathElement>(null);
   const amRef = useRef<SVGPathElement>(null);
-  const charRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let raf = 0;
@@ -25,18 +23,11 @@ export function LiquidTransition() {
     let finishedResolve: (() => void) | null = null;
 
     const player = createCelPlayer({
-      onFrame({ em, emDx, am, amDx, whirlPose }: LiquidFrame) {
+      onFrame({ em, emDx, am, amDx }: LiquidFrame) {
         emRef.current?.setAttribute("d", em);
         emRef.current?.setAttribute("transform", `translate(${emDx} 0)`);
         amRef.current?.setAttribute("d", am);
         amRef.current?.setAttribute("transform", `translate(${amDx} 0)`);
-        // The old whirlpool cels became the deep-in-work mascot (character
-        // redesign): it appears whenever the player is in its whirl hold —
-        // whirlPose still cycles in celPlayer, but here it's just "working".
-        if (charRef.current) {
-          charRef.current.style.visibility =
-            whirlPose !== null ? "visible" : "hidden";
-        }
       },
       onCovered() {
         coveredResolve?.();
@@ -115,17 +106,6 @@ export function LiquidTransition() {
         <path ref={amRef} className={styles.amber} fillRule="evenodd" d="" />
         <path ref={emRef} className={styles.emerald} fillRule="evenodd" d="" />
       </svg>
-      {/* The deep-in-work mascot, on a page-bg chip so it reads on the emerald
-          cover in both themes (the same "punched background" trick the foam
-          used). Deliberately outside waveRef so the RTL mirror never flips it. */}
-      <div
-        ref={charRef}
-        className={styles.whirlChar}
-        style={{ visibility: "hidden" }}
-        data-whirl-char=""
-      >
-        <LeafCharacter mood="work" />
-      </div>
     </div>
   );
 }

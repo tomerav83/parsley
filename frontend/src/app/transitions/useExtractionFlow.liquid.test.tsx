@@ -1,8 +1,8 @@
-// useExtractionFlow's liquid-wave branches, with a real mounted overlay:
-// every navigation entry point covered by a wave — forward landings, failure
-// drains, wave-only passes — asserting the route swap happens under full
-// cover and the overlay always clears. The player's frame-level behavior is
-// celPlayer.test.ts; this file is about the orchestration.
+// useExtractionFlow's liquid-wave branches, with a real mounted overlay: every
+// navigation entry point covered by a wave — the passage to the transition
+// screen, the landing on the recipe, the paste passes — asserting the route
+// swap happens under full cover and the overlay always clears. The player's
+// frame-level behavior is celPlayer.test.ts; this file is about the orchestration.
 //
 // Waves run at real speed (~1.6s each), so assertions use generous timeouts.
 import { render, screen, waitFor } from "@testing-library/react";
@@ -16,7 +16,7 @@ import { useExtractionFlow } from "./useExtractionFlow.ts";
 
 let nextResult: RunResult = "success";
 // mirrors the real extractor: a failing run sets error state the moment the
-// request settles — which is what the surfacing gate must hold back
+// request settles — which the transition screen reads to morph in place
 let mockError: { code: string; message: string } | null = null;
 const run = async () => {
   if (nextResult === "error") mockError = { code: "unknown", message: "boom" };
@@ -24,10 +24,6 @@ const run = async () => {
 };
 const runUrl = vi.fn(run);
 const runPaste = vi.fn(run);
-// whether the wave was still on screen when retry()'s promise resolved — the
-// floating error folds the outcome into its button state at that moment, so
-// it must land before the drain uncovers the widget
-let retrySettledUnderWave: boolean | null = null;
 
 vi.mock("@/features/extract/recipeExtractor.ts", () => ({
   useRecipeExtractor: () => ({
@@ -52,19 +48,10 @@ function Layout() {
       <button onClick={() => flow.setUrl(URL)}>seed</button>
       <button onClick={() => void flow.submitUrl()}>submit</button>
       <button onClick={() => void flow.submitPaste("<html/>")}>paste</button>
-      <button
-        onClick={() =>
-          void flow.retry().then(() => {
-            retrySettledUnderWave = overlay().hasAttribute("data-stage");
-          })
-        }
-      >
-        retry
-      </button>
+      <button onClick={() => void flow.retry()}>retry</button>
       <button onClick={() => flow.backToSearch()}>back</button>
       <button onClick={() => flow.openPaste()}>open-paste</button>
       <button onClick={() => flow.openPasteFor(URL)}>open-paste-for</button>
-      {flow.extract.error !== null && flow.errorSurfaced && <p>surfaced</p>}
       <Outlet />
     </div>
   );
@@ -81,6 +68,7 @@ function renderAt(initialEntries: string[]) {
         Component: Layout,
         children: [
           { index: true, Component: () => <p>home-screen</p> },
+          { path: "extract", Component: () => <p>extract-screen</p> },
           { path: "paste", Component: () => <p>paste-screen</p> },
           { path: "recipe", Component: () => <p>recipe-screen</p> },
         ],
@@ -104,7 +92,6 @@ const settled = () =>
 
 afterEach(() => {
   vi.clearAllMocks();
-  retrySettledUnderWave = null;
   mockError = null;
 });
 
@@ -116,106 +103,94 @@ describe("useExtractionFlow liquid waves", () => {
     expect(overlay().hasAttribute("data-stage")).toBe(false);
   });
 
-  it("lands a successful extraction on the recipe under full cover", async () => {
+  it("waves to the transition screen, then lands the recipe under full cover", async () => {
     nextResult = "success";
-    renderAt(["/"]);
+    const router = renderAt(["/"]);
     await userEvent.click(screen.getByRole("button", { name: "seed" }));
     await userEvent.click(screen.getByRole("button", { name: "submit" }));
 
-    // the swap happens while the wave still covers the screen
-    await screen.findByText("recipe-screen", undefined, { timeout: 5000 });
+    // the recipe swap happens while the wave still covers the screen
+    await screen.findByText("recipe-screen", undefined, { timeout: 8000 });
     expect(overlay().hasAttribute("data-stage")).toBe(true);
     expect(runUrl).toHaveBeenCalledWith(URL);
 
     await settled();
-    expect(screen.getByText("recipe-screen")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/recipe");
   }, 15_000);
 
-  it("drains back on failure and stays on home", async () => {
+  it("a failure stays on the transition screen (no recipe, no drain home)", async () => {
     nextResult = "error";
-    renderAt(["/"]);
+    const router = renderAt(["/"]);
     await userEvent.click(screen.getByRole("button", { name: "seed" }));
     await userEvent.click(screen.getByRole("button", { name: "submit" }));
 
-    await waitFor(
-      () => expect(overlay().hasAttribute("data-stage")).toBe(true),
-      { timeout: 3000 },
-    );
+    await screen.findByText("extract-screen", undefined, { timeout: 8000 });
     await settled();
-    expect(screen.getByText("home-screen")).toBeInTheDocument();
+    // stays put — the transition screen holds the failure in place
+    expect(router.state.location.pathname).toBe("/extract");
     expect(screen.queryByText("recipe-screen")).not.toBeInTheDocument();
+    expect(screen.queryByText("home-screen")).not.toBeInTheDocument();
   }, 15_000);
 
-  it("a fresh failure surfaces only under the wave, never beside it", async () => {
-    nextResult = "error"; // the mock fails instantly — well before cover
-    renderAt(["/"]);
+  it("history keeps the transition screen out of the back stack (submit is the only push)", async () => {
+    nextResult = "success";
+    const router = renderAt(["/"]);
     await userEvent.click(screen.getByRole("button", { name: "seed" }));
     await userEvent.click(screen.getByRole("button", { name: "submit" }));
-
-    // the wave is up and the request has already failed, yet nothing surfaces
-    await waitFor(
-      () => expect(overlay().hasAttribute("data-stage")).toBe(true),
-      { timeout: 3000 },
-    );
-    expect(screen.queryByText("surfaced")).not.toBeInTheDocument();
-
-    // it surfaces while the wave still covers the screen (mount-under-cover)
-    await screen.findByText("surfaced", undefined, { timeout: 6000 });
-    expect(overlay().hasAttribute("data-stage")).toBe(true);
-
+    await screen.findByText("recipe-screen", undefined, { timeout: 8000 });
     await settled();
-    expect(screen.getByText("surfaced")).toBeInTheDocument();
-  }, 15_000);
 
-  it("retry follows the same covered run, settling before the drain uncovers it", async () => {
+    // Back from the recipe returns to home, never to /extract (it was replaced).
+    void router.navigate(-1);
+    await screen.findByText("home-screen", undefined, { timeout: 5000 });
+    await settled();
+    expect(router.state.location.pathname).toBe("/");
+  }, 20_000);
+
+  it("retry lands the recipe on success", async () => {
     nextResult = "success";
-    renderAt(["/"]);
-    await userEvent.click(screen.getByRole("button", { name: "seed" }));
+    const router = renderAt(["/extract"]);
     await userEvent.click(screen.getByRole("button", { name: "retry" }));
     await screen.findByText("recipe-screen", undefined, { timeout: 5000 });
     await settled();
-    // the widget's spinner state must resolve while the wave still covers it
-    expect(retrySettledUnderWave).toBe(true);
+    expect(router.state.location.pathname).toBe("/recipe");
   }, 15_000);
 
-  it("a failed retry's outcome also lands before the wave uncovers the widget", async () => {
+  it("a failed retry stays on the transition screen", async () => {
     nextResult = "error";
-    renderAt(["/"]);
-    await userEvent.click(screen.getByRole("button", { name: "seed" }));
+    const router = renderAt(["/extract"]);
     await userEvent.click(screen.getByRole("button", { name: "retry" }));
-    await waitFor(() => expect(retrySettledUnderWave).not.toBeNull(), {
-      timeout: 5000,
-    });
-    expect(retrySettledUnderWave).toBe(true);
+    // no navigation on failure — give any (wrong) wave a window to fire
+    await new Promise((resolve) => setTimeout(resolve, 500));
     await settled();
-    expect(screen.getByText("home-screen")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/extract");
+    expect(runUrl).toHaveBeenCalledWith("", { retry: true });
   }, 15_000);
 
-  it("paste success lands on the recipe; paste failure returns home", async () => {
+  it("paste success lands on the recipe; paste failure stays on the paste screen", async () => {
     nextResult = "success";
-    renderAt(["/paste"]);
+    const okRouter = renderAt(["/paste"]);
     await userEvent.click(screen.getByRole("button", { name: "paste" }));
     await screen.findByText("recipe-screen", undefined, { timeout: 5000 });
     expect(runPaste).toHaveBeenCalled();
     await settled();
+    expect(okRouter.state.location.pathname).toBe("/recipe");
   }, 15_000);
 
-  it("paste failure drains home (the terminal-error surface)", async () => {
+  it("paste failure returns to the transition screen (terminal, report-only)", async () => {
     nextResult = "error";
-    renderAt(["/paste"]);
+    const router = renderAt(["/paste"]);
     await userEvent.click(screen.getByRole("button", { name: "paste" }));
-    await screen.findByText("home-screen", undefined, { timeout: 5000 });
+    await screen.findByText("extract-screen", undefined, { timeout: 8000 });
     await settled();
+    expect(router.state.location.pathname).toBe("/extract");
   }, 15_000);
 
   it("an aborted paste reveals the paste screen it never left", async () => {
     nextResult = "aborted";
     renderAt(["/paste"]);
     await userEvent.click(screen.getByRole("button", { name: "paste" }));
-    await waitFor(
-      () => expect(overlay().hasAttribute("data-stage")).toBe(true),
-      { timeout: 3000 },
-    );
+    await new Promise((resolve) => setTimeout(resolve, 500));
     await settled();
     expect(screen.getByText("paste-screen")).toBeInTheDocument();
   }, 15_000);

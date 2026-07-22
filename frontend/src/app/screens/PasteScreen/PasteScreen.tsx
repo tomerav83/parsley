@@ -13,7 +13,6 @@ export function PasteScreen() {
       <div className={styles.pasteInner}>
         <PasteHtmlForm
           url={lastUrl}
-          error={extract.error}
           onSubmit={submitPaste}
           onCancel={backToSearch}
           loading={extract.loading}

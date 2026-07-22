@@ -21,6 +21,7 @@ import { ExtractError, type Recipe } from "@/lib/api.ts";
 import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import App from "./App.tsx";
 import { HomeScreen } from "./screens/HomeScreen/HomeScreen.tsx";
+import { ExtractScreen } from "./screens/ExtractScreen/ExtractScreen.tsx";
 import { PasteScreen } from "./screens/PasteScreen/PasteScreen.tsx";
 
 vi.mock("@/lib/api.ts", async (importOriginal) => {
@@ -71,6 +72,7 @@ function renderApp() {
         Component: App,
         children: [
           { index: true, Component: HomeScreen },
+          { path: "extract", Component: ExtractScreen },
           { path: "paste", Component: PasteScreen },
           { path: "recipe", Component: StubRecipeScreen },
         ],
@@ -120,7 +122,7 @@ describe("App — submit outcome drives navigation", () => {
     expect(cached[RECIPE.source_url]).toMatchObject({ name: "Toast" });
   });
 
-  it("does not navigate when the submit fails, and surfaces the error window", async () => {
+  it("holds the failure on the transition screen, not over home, and doesn't reach the recipe", async () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("fetch_failed", "no answer"),
     );
@@ -128,11 +130,10 @@ describe("App — submit outcome drives navigation", () => {
 
     await submitUrl(RECIPE.source_url);
 
-    // Assert on the router's own location, not just DOM presence — a
-    // navigation that fires and is then raced away by a later assertion would
-    // otherwise slip through a purely DOM-timing-based check.
-    await screen.findByRole("alertdialog");
-    expect(router.state.location.pathname).toBe("/");
+    // The failure morphs the transition screen in place — the panel is its
+    // content, not an overlay, so we stay on /extract (never drain home).
+    await screen.findByRole("alert");
+    expect(router.state.location.pathname).toBe("/extract");
     expect(screen.queryByTestId("recipe-url")).toBeNull();
     expect(sessionStorage.getItem("parsley:recipes")).toBeNull();
   });
@@ -144,20 +145,21 @@ describe("App — submit outcome drives navigation", () => {
 });
 
 describe("App — error recovery wiring", () => {
-  it("dismissing the error returns focus to the URL field", async () => {
+  it("dismissing the error returns home with focus on the URL field", async () => {
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("network", "down"),
     );
-    renderApp();
-    const input = screen.getByRole("textbox", { name: /recipe url/i });
+    const router = renderApp();
     await submitUrl(RECIPE.source_url);
 
-    // the window opens focused, so Escape lands inside it
-    const dialog = await screen.findByRole("alertdialog");
+    // the panel opens focused, so Escape lands inside it
+    const panel = await screen.findByRole("alert");
     await userEvent.keyboard("{Escape}");
-    await vi.waitFor(() => expect(dialog).not.toBeInTheDocument());
+    await vi.waitFor(() => expect(panel).not.toBeInTheDocument());
 
-    expect(input).toHaveFocus();
+    // back home (the transition screen was left behind) with the field refocused
+    expect(router.state.location.pathname).toBe("/");
+    expect(screen.getByRole("textbox", { name: /recipe url/i })).toHaveFocus();
   });
 
   it("retry re-submits the last URL and navigates to /recipe on a successful retry", async () => {
@@ -179,12 +181,12 @@ describe("App — error recovery wiring", () => {
     );
   });
 
-  it("a failed paste returns home", async () => {
+  it("a failed paste returns to the transition screen as the terminal, report-only state", async () => {
     // site_blocked makes paste the primary (focused) action.
     mockedExtractRecipe.mockRejectedValueOnce(
       new ExtractError("site_blocked", "shut the door"),
     );
-    renderApp();
+    const router = renderApp();
     await submitUrl(RECIPE.source_url);
 
     await userEvent.click(
@@ -202,7 +204,14 @@ describe("App — error recovery wiring", () => {
       screen.getByRole("button", { name: /extract from html/i }),
     );
 
-    await screen.findByRole("textbox", { name: /recipe url/i }); // back home
+    // A failed paste is the end of the road: back on the transition screen, the
+    // flat leaf, report-only.
+    const panel = await screen.findByRole("alert");
+    expect(router.state.location.pathname).toBe("/extract");
+    expect(panel).toHaveAttribute("data-mood", "flat");
+    expect(
+      screen.getByRole("link", { name: /report on github/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId("recipe-url")).toBeNull();
   });
 });
