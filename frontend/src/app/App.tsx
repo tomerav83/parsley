@@ -1,12 +1,12 @@
 import { useLayoutEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router";
-import { useExtractionFlow } from "./useExtractionFlow.ts";
+import { useExtractionFlow } from "@/app/transitions/useExtractionFlow.ts";
 import { errorInfo } from "@/features/extract/errorInfo";
 import { FloatingError } from "@/features/extract/FloatingError/FloatingError";
 import { Background } from "@/components/Background/Background.tsx";
 import { ThemeToggle } from "@/components/ThemeToggle/ThemeToggle";
 import styles from "./App.module.css";
-import "./transitions.css";
+import "@/app/transitions/transitions.css";
 
 // Filmstrip order of the screens: a forward move (higher index) slides in from
 // the right, a back move returns to the right. Drives the data-slide attribute
@@ -42,7 +42,9 @@ function App() {
     }
   }, [location.pathname, location.key]);
 
-  const showError = flow.extract.error !== null && onHome;
+  // errorSurfaced holds a fresh failure back until its wave has covered the
+  // screen, so the mascot springs in beneath the wave instead of beside it.
+  const showError = flow.extract.error !== null && onHome && flow.errorSurfaced;
 
   return (
     <div className={styles.app}>
@@ -65,7 +67,7 @@ function App() {
       {/* Extraction failures on the search flow surface here, as a floating
           mascot fixed to the viewport corner. The paste screen keeps its own
           inline error so the pasted HTML isn't lost. */}
-      {flow.extract.error && onHome && (
+      {flow.extract.error && showError && (
         <FloatingError
           error={flow.extract.error}
           sourceUrl={flow.lastUrl}
