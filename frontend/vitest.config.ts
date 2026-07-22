@@ -49,6 +49,7 @@ export default defineConfig({
         "src/**/*.vrt.*",
         "src/test/**",
         "src/main.tsx", // bootstrap/mount — no branching logic to cover
+        "src/app/router/router.tsx", // declarative route table, wired only by main.tsx — no logic to cover
         "src/**/*.d.ts",
       ],
       // json-summary + json are read by the CI PR-comment action (Phase 5 G2):
@@ -68,10 +69,10 @@ export default defineConfig({
         // just run `npm run test:coverage` and let it update the file. Measured
         // 57.27/45.16/48.93/55.53 before Phase 5's G4 tests landed; these
         // reflect that work. See REDESIGN.md Phase 5.
-        lines: 97.81,
-        branches: 89.69,
-        functions: 95.31,
-        statements: 96.94,
+        lines: 98.41,
+        branches: 89.87,
+        functions: 97.23,
+        statements: 97.03,
       },
     },
     projects: [
