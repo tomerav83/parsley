@@ -1,26 +1,11 @@
 import type { Recipe } from "@/lib/api";
 import { TimingRow } from "@/features/recipe/TimingRow/TimingRow";
 import { RecipeSections } from "@/features/recipe/RecipeSections/RecipeSections";
+import { byline } from "@/features/recipe/byline";
 import styles from "./RecipeCard.module.css";
 
 interface RecipeCardProps {
   recipe: Recipe;
-}
-
-// Collapse "Dine & Dish", "Dine and Dish", "dine  dish" to one canonical form so
-// author and site_name that are really the same name get deduped, not printed twice.
-function canonical(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function byline({ author, site_name }: Recipe): string {
-  if (author && site_name && canonical(author) === canonical(site_name))
-    return author;
-  return [author, site_name].filter(Boolean).join(" — ");
 }
 
 // The image URL comes from scraped/pasted page markup, so treat it as untrusted:

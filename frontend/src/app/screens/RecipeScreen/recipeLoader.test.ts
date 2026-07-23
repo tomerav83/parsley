@@ -9,12 +9,16 @@ import { RouterContextProvider } from "react-router";
 import { recipeLoader } from "./recipeLoader.ts";
 
 vi.mock("@/lib/api.ts", () => ({ extractRecipe: vi.fn() }));
-vi.mock("@/lib/recipeCache.ts", () => ({ readCachedRecipe: vi.fn() }));
+vi.mock("@/lib/recipeCache.ts", () => ({
+  readCachedRecipe: vi.fn(),
+  cacheRecipe: vi.fn(),
+}));
 
 const { extractRecipe } = await import("@/lib/api.ts");
-const { readCachedRecipe } = await import("@/lib/recipeCache.ts");
+const { readCachedRecipe, cacheRecipe } = await import("@/lib/recipeCache.ts");
 const mockedExtract = vi.mocked(extractRecipe);
 const mockedRead = vi.mocked(readCachedRecipe);
+const mockedCache = vi.mocked(cacheRecipe);
 
 afterEach(() => vi.clearAllMocks());
 
@@ -59,6 +63,7 @@ describe("recipeLoader", () => {
       "https://x.com/toast",
       a.request.signal,
     );
+    expect(mockedCache).toHaveBeenCalledWith("https://x.com/toast", RECIPE);
   });
 
   it("lets an extract failure propagate to the route ErrorBoundary", async () => {

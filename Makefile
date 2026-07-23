@@ -24,7 +24,7 @@ docker-config:
 
 # Printed after a (re)start so the app is one click away — skipped when only the
 # backend was targeted (S=backend). Most terminals linkify the http:// URL.
-FE_URL = $(if $(filter backend,$(S)),,printf '\n🌐 Frontend ready → http://localhost:5173\n')
+FE_URL = $(if $(filter backend,$(S)),,printf '\n🌐 Frontend ready → http://localhost:5173\n🧪 QA (same-origin) → http://localhost:8080\n')
 
 start: docker-config
 	docker compose up -d --build $(S)

@@ -22,6 +22,11 @@ export function PasteHtmlForm({
   loading,
 }: PasteHtmlFormProps) {
   const [html, setHtml] = useState("");
+  // Defense in depth: the URL reaching this screen is http(s) in practice (only
+  // backend-validated URLs get to the states that open the paste fallback), but
+  // guard the href anyway so a non-http(s) value can never render as a
+  // javascript: link — mirrors RecipeCard.safeImage.
+  const safeHref = /^https?:\/\//i.test(url) ? url : undefined;
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -41,7 +46,7 @@ export function PasteHtmlForm({
         </h1>
         <p className={styles.help}>
           On{" "}
-          <a href={url} target="_blank" rel="noreferrer noopener">
+          <a href={safeHref} target="_blank" rel="noreferrer noopener">
             the recipe page
           </a>{" "}
           press <kbd>Ctrl</kbd>+<kbd>U</kbd> to view source, then{" "}

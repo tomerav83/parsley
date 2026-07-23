@@ -2,8 +2,10 @@
 # backend with uvicorn --reload and the frontend with Vite HMR, both in containers
 # with the source live-mounted. Edit files on the host, see changes immediately.
 #
-# This is for DEV. Production is Vercel (see DEPLOY.md); single-container
-# self-hosting is the top-level Dockerfile.
+# This is for DEV. Production is Vercel (see DEPLOY.md). The `proxy` service
+# mirrors Vercel's same-origin rewrite routing (vercel.json) for local QA:
+# http://localhost:8080 routes /api/* to the backend and everything else to the
+# frontend, the same shape as prod — no CORS involved either way.
 services:
   backend:
     build:
@@ -11,10 +13,6 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./backend:/app # live source for --reload
-    environment:
-      # The browser reaches the API same-origin through the Vite proxy, so CORS
-      # isn't strictly needed here; set for parity and direct /docs access.
-      CORS_ORIGINS: http://localhost:5173
     ports:
       - "8000:8000"
 
@@ -33,3 +31,13 @@ services:
       - "5173:5173"
     depends_on:
       - backend
+
+  proxy:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+      - frontend

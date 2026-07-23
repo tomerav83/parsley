@@ -7,6 +7,7 @@ import {
   type TouchEvent,
 } from "react";
 import { flushSync } from "react-dom";
+import { stepTimer } from "@/features/recipe/timers";
 import styles from "./MethodSteps.module.css";
 
 interface MethodStepsProps {
@@ -14,18 +15,6 @@ interface MethodStepsProps {
   /** Current step (controlled — the parent owns it so the mobile segment can label it). */
   index: number;
   onIndex: (index: number) => void;
-}
-
-// Pull a cooking duration out of a step ("Roast 18–20 minutes…") so it can be
-// surfaced as an amber timer chip. Conservative on purpose: only a number (or a
-// range) directly followed by a time unit counts, so stray digits like "220°C"
-// or "3 tbsp" never masquerade as timers.
-const TIMER_RE =
-  /\b\d+(?:[–-]\d+)?\s?(?:seconds?|secs?|minutes?|mins?|hours?|hrs?)\b/i;
-
-function timerOf(step: string): string | null {
-  const m = step.match(TIMER_RE);
-  return m ? m[0].replace(/\s+/g, " ") : null;
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -219,7 +208,7 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
           step that comes into view. */}
       <ol className={styles.stage} aria-live="polite">
         {steps.map((s, i) => {
-          const timer = timerOf(s);
+          const timer = stepTimer(s);
           const active = i === clamped;
           const tappable = active && overflows;
           return (

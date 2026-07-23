@@ -1,79 +1,39 @@
-import os
-from collections.abc import Awaitable, Callable
 from typing import Annotated
 
-import anyio
-from fastapi import Depends, FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 
-from app.extractor import RecipeNotFoundError, extract_recipe
-from app.fetch import FetchError, fetch_page
-from app.models import ErrorResponse, ExtractHtmlRequest, ExtractRequest, Recipe
+from app.models import AppError, ErrorResponse, ExtractHtmlRequest, ExtractRequest, Recipe
+from app.rate_limit import limiter
+from app.services import ExtractionService
 
-FetchPage = Callable[[str], Awaitable[str]]
-
-
-def get_fetch_page() -> FetchPage:
-    """Injectable page fetcher — overridden in tests via app.dependency_overrides."""
-    return fetch_page
+_extraction_service = ExtractionService()
 
 
-# Rate limiting is disabled under load testing (LOADTEST_DISABLE_RATE_LIMIT):
-# slowapi's 10/min would 429 the test within seconds and measure the limiter
-# instead of the app. Off means normal enforcement — see LOADTEST.md.
-limiter = Limiter(
-    key_func=get_remote_address,
-    enabled=not os.environ.get("LOADTEST_DISABLE_RATE_LIMIT"),
-)
+def get_extraction_service() -> ExtractionService:
+    """Injectable extraction service — overridden in tests via app.dependency_overrides."""
+    return _extraction_service
+
 
 app = FastAPI(title="Parsley", description="Extract clean recipes from noisy recipe pages")
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
-# Cross-origin access is enabled by setting CORS_ORIGINS to the frontend origin(s),
-# comma-separated. Not needed in the default deploys — on Vercel the SPA and API
-# share one origin (a rewrite routes /api to the backend service), and in dev the
-# browser reaches the API through the Vite proxy — so it stays unset unless the
-# frontend is served from a different origin than this API.
-cors_origins = [o for o in os.environ.get("CORS_ORIGINS", "").split(",") if o]
-if cors_origins:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
-    )
-
-# HTTP status per error type: client-fixable problems are 4xx, upstream
-# fetch problems are 502 (we act as a gateway to the recipe site).
-_ERROR_STATUS = {
-    "invalid_url": 400,
-    "blocked_url": 400,
-    "no_recipe": 422,
-    "site_blocked": 502,
-    "fetch_failed": 502,
-}
 
 
-def _error_response(code: str, message: str) -> JSONResponse:
-    status = _ERROR_STATUS[code]
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
+    return _rate_limit_exceeded_handler(request, exc)
+
+
+@app.exception_handler(AppError)
+async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
     return JSONResponse(
-        status_code=status, content=ErrorResponse(code=code, message=message).model_dump()
+        status_code=exc.status,
+        content=ErrorResponse(code=exc.code, message=exc.detail or str(exc)).model_dump(
+            mode="json"
+        ),
     )
-
-
-@app.exception_handler(FetchError)
-async def fetch_error_handler(_request: Request, exc: FetchError) -> JSONResponse:
-    return _error_response(exc.code, str(exc))
-
-
-@app.exception_handler(RecipeNotFoundError)
-async def no_recipe_handler(_request: Request, exc: RecipeNotFoundError) -> JSONResponse:
-    return _error_response("no_recipe", "No recipe found on that page")
 
 
 @app.get("/api/health")
@@ -94,13 +54,9 @@ def health() -> dict[str, str]:
 async def extract(
     request: Request,
     payload: ExtractRequest,
-    fetch: Annotated[FetchPage, Depends(get_fetch_page)],
+    service: Annotated[ExtractionService, Depends(get_extraction_service)],
 ) -> Recipe:
-    url = str(payload.url)
-    html = await fetch(url)
-    # extract_recipe is CPU-bound (lxml + BeautifulSoup); run it off the event
-    # loop so one slow parse can't stall other requests sharing this instance.
-    return await anyio.to_thread.run_sync(extract_recipe, html, url)
+    return await service.from_url(str(payload.url))
 
 
 @app.post(
@@ -111,10 +67,9 @@ async def extract(
     },
 )
 @limiter.limit("10/minute")
-def extract_html(request: Request, payload: ExtractHtmlRequest) -> Recipe:
-    """Extract from user-pasted page source — the fallback for sites that block
-    server-side fetching at the IP level. No network fetch, so no SSRF surface.
-
-    A plain `def`, not `async` — FastAPI runs it in a threadpool, keeping the
-    CPU-bound parse off the event loop (there's no I/O here to await anyway)."""
-    return extract_recipe(payload.html, str(payload.url))
+async def extract_html(
+    request: Request,
+    payload: ExtractHtmlRequest,
+    service: Annotated[ExtractionService, Depends(get_extraction_service)],
+) -> Recipe:
+    return await service.from_html(payload.html, str(payload.url))

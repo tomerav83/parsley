@@ -13,8 +13,10 @@ beautifulsoup4==4.15.0
     # via
     #   mf2py
     #   recipe-scrapers
-brotli==1.2.0
-    # via parsley-backend
+brotli==1.2.0 ; platform_python_implementation == 'CPython'
+    # via httpx
+brotlicffi==1.2.0.1 ; platform_python_implementation != 'CPython'
+    # via httpx
 certifi==2026.6.17
     # via
     #   curl-cffi
@@ -22,7 +24,9 @@ certifi==2026.6.17
     #   httpx
     #   requests
 cffi==2.1.0
-    # via curl-cffi
+    # via
+    #   brotlicffi
+    #   curl-cffi
 charset-normalizer==3.4.8
     # via requests
 click==8.4.2
@@ -150,4 +154,4 @@ websockets==16.0
 wrapt==2.2.2
     # via deprecated
 zstandard==0.25.0
-    # via parsley-backend
+    # via httpx

@@ -76,11 +76,10 @@ describe("celPlayer sequence", () => {
     expect(h.frames[atCover]!.am).toBe(FULL);
   });
 
-  it("immediate release stays wave-only: no whirl, and a full-cover buffer for the swap", () => {
+  it("immediate release: a full-cover buffer for the swap before reveal", () => {
     const h = harness();
     runToEnd(h, 0);
 
-    expect(h.frames.some((f) => f.whirlPose !== null)).toBe(false);
     expect(h.finishedCount()).toBe(1);
 
     // between reaching full cover and the first reveal frame there are at
@@ -92,33 +91,11 @@ describe("celPlayer sequence", () => {
     expect(firstOpen - firstFull).toBeGreaterThanOrEqual(2);
   });
 
-  it("whirl cycles through poses only while held, never during enter or exit", () => {
-    const h = harness();
-    h.begin();
-    h.advance(60); // enter (17 frames) + a good hold
-    const held = h.frames.filter((f) => f.whirlPose !== null);
-    expect(held.length).toBeGreaterThan(10);
-    expect(new Set(held.map((f) => f.whirlPose)).size).toBeGreaterThan(1);
-    // whirl only appears on full-cover frames
-    expect(held.every((f) => f.em === FULL && f.am === FULL)).toBe(true);
-
-    const before = h.frames.length;
-    h.player.release();
-    h.advance(60);
-    const after = h.frames.slice(before);
-    expect(
-      after.filter((f) => f.whirlPose !== null).length,
-    ).toBeLessThanOrEqual(1);
-    expect(h.finishedCount()).toBe(1);
-  });
-
   it("amber trails the reveal, then both layers empty and the player stops", () => {
     const h = harness();
     runToEnd(h, 10);
 
-    const firstOpenIdx = h.frames.findIndex(
-      (f, i) => i > 17 && f.em !== FULL && f.whirlPose === null,
-    );
+    const firstOpenIdx = h.frames.findIndex((f, i) => i > 17 && f.em !== FULL);
     // emerald has started opening while amber still fully covers (trailing band)
     expect(h.frames[firstOpenIdx]!.am).toBe(FULL);
 

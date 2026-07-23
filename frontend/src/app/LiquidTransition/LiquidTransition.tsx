@@ -55,6 +55,7 @@ export function LiquidTransition() {
         // a begin while active would corrupt the sequence; input is swallowed
         // while covered, so this only defends programmatic races
         if (player.phase !== "idle") player.stop();
+        cancelAnimationFrame(raf); // don't leave a prior run's pump loop ticking
         setStage("cover");
         mirror(dir);
         return new Promise<void>((resolve) => {

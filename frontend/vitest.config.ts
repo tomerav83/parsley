@@ -66,13 +66,16 @@ export default defineConfig({
         // https://vitest.dev/config/coverage (thresholds.autoUpdate)
         autoUpdate: true,
         // Rewritten by `autoUpdate` as coverage rises — don't hand-edit these,
-        // just run `npm run test:coverage` and let it update the file. Measured
-        // 57.27/45.16/48.93/55.53 before Phase 5's G4 tests landed; these
-        // reflect that work. See REDESIGN.md Phase 5.
-        lines: 98.41,
-        branches: 89.87,
-        functions: 97.23,
-        statements: 97.03,
+        // just run `npm run test:coverage` and let it update the file. The one
+        // legitimate hand-edit is rebasing DOWN after deleting covered code
+        // (autoUpdate only raises; a smaller pool shifts the % without any
+        // line losing its test). Measured 57.27/45.16/48.93/55.53 before
+        // Phase 5's G4 tests landed; these reflect that work. See REDESIGN.md
+        // Phase 5.
+        lines: 98.67,
+        branches: 90.58,
+        functions: 97.76,
+        statements: 97.47,
       },
     },
     projects: [

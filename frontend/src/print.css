@@ -10,7 +10,6 @@
   :root[data-theme="dark"],
   :root[data-theme="light"] {
     --color-brand: #059669;
-    --color-brand-strong: #047857;
     --color-accent: #8a4a08; /* a touch darker than screen amber for ink contrast */
     --color-bg: #ffffff;
     --color-text: #141c17;

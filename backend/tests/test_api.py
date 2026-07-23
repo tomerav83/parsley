@@ -8,7 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.fetch import FetchError, SiteBlockedError
-from app.main import app, get_fetch_page, limiter
+from app.main import app, get_extraction_service
+from app.rate_limit import limiter
+from app.services import ExtractionService
 
 FIXTURES = Path(__file__).parent / "fixtures"
 URL = "https://example.com/recipe"
@@ -25,13 +27,17 @@ def clean_app_state() -> Iterator[None]:
 
 
 def override_fetch(*, html: str | None = None, error: Exception | None = None) -> None:
+    """Swap the service's fetcher for a stub (fixture HTML or a raised error) while
+    keeping the real extractor — so a route test exercises real extraction over
+    canned bytes, no network."""
+
     async def fake_fetch(url: str) -> str:
         if error is not None:
             raise error
         assert html is not None
         return html
 
-    app.dependency_overrides[get_fetch_page] = lambda: fake_fetch
+    app.dependency_overrides[get_extraction_service] = lambda: ExtractionService(fetch=fake_fetch)
 
 
 def test_extract_returns_recipe() -> None:
@@ -105,3 +111,16 @@ def test_rate_limit_returns_429() -> None:
 
     assert all(r.status_code == 200 for r in responses[:10])
     assert responses[10].status_code == 429
+
+
+def test_rate_limit_keys_on_forwarded_client_ip() -> None:
+    """Behind the Vercel proxy the direct peer is the proxy itself, so buckets
+    must partition on x-forwarded-for — one busy user must not 429 the rest."""
+    override_fetch(html=(FIXTURES / "toplevel_string_instructions" / "page.html").read_text())
+    alice = {"x-forwarded-for": "203.0.113.1"}
+    bob = {"x-forwarded-for": "203.0.113.2"}
+
+    for _ in range(10):
+        assert client.post("/api/extract", json={"url": URL}, headers=alice).status_code == 200
+    assert client.post("/api/extract", json={"url": URL}, headers=alice).status_code == 429
+    assert client.post("/api/extract", json={"url": URL}, headers=bob).status_code == 200

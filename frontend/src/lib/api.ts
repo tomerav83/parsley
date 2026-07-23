@@ -27,17 +27,21 @@ export const recipeSchema = z.object({
 // validator and the type can never drift apart.
 export type Recipe = z.infer<typeof recipeSchema>;
 
-// Error codes the backend can return (app/main.py). "rate_limited" and
-// "network" are surfaced by the client for cases the backend can't name.
-export type ErrorCode =
-  | "invalid_url"
-  | "blocked_url"
-  | "no_recipe"
-  | "site_blocked"
-  | "fetch_failed"
-  | "rate_limited"
-  | "network"
-  | "unknown";
+// The error codes the UI handles. The backend-originated ones are pinned to the
+// server's taxonomy via contract.json (enforced by contract.test.ts); the last
+// three are client-surfaced cases the backend never names. Kept as a runtime
+// array so the contract test can enumerate it and the type derives from it.
+export const ERROR_CODES = [
+  "invalid_url",
+  "blocked_url",
+  "no_recipe",
+  "site_blocked",
+  "fetch_failed",
+  "rate_limited",
+  "network",
+  "unknown",
+] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export class ExtractError extends Error {
   code: ErrorCode;

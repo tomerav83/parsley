@@ -61,18 +61,6 @@
   border-color: var(--color-brand);
 }
 
-/* secondary row: the lesser actions share one line under the primary */
-.row {
-  display: flex;
-  gap: 9px;
-}
-.row .btn {
-  flex: 1 1 0;
-  min-width: 0;
-  padding-left: 8px;
-  padding-right: 8px;
-}
-
 /* inline spinner (inherits the button's text colour) */
 .spin {
   width: 12px;

@@ -35,8 +35,7 @@ export function liquidAvailable(): boolean {
  * Wave-only pass-through: cover in `dir`, swap the route under full cover, reveal.
  * The one navigation primitive the app uses — every screen change (submit,
  * landing, paste, back) rides one. The extraction itself no longer runs under
- * cover: the transition screen (ExtractScreen) shows the work orb while it pends,
- * so this is a plain passage with no whirl hold.
+ * cover: the transition screen (ExtractScreen) shows the work orb while it pends.
  */
 export async function wavePass(dir: Dir, swap: () => void): Promise<void> {
   const c = controller;

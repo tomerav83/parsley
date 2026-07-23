@@ -1,21 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  useBlocker,
-  useLocation,
-  useNavigate,
-  useNavigationType,
-} from "react-router";
-import {
   useRecipeExtractor,
   type RunResult,
 } from "@/features/extract/recipeExtractor.ts";
-import {
-  liquidAvailable,
-  wavePass,
-  type Dir,
-} from "../LiquidTransition/liquidController.ts";
+import { EXTRACT_PATH } from "./screens.ts";
+import { useRouteChoreography } from "./useRouteChoreography.ts";
 
-export const EXTRACT_PATH = "/extract";
+// Re-exported so consumers that imported these from here before the transition
+// metadata moved into ./screens.ts (App, mainly) keep working unchanged.
+export { EXTRACT_PATH, screenOrder } from "./screens.ts";
 
 // Fast sites resolve before the mascot registers. Hold the work screen for a
 // beat so the character is actually seen — a deliberate floor, not a stall.
@@ -26,19 +19,11 @@ function recipePath(url: string): string {
   return `/recipe?${new URLSearchParams({ url })}`;
 }
 
-// Filmstrip order of the screens (mirrors App's orderOf): higher = further
-// forward, so a POP to a lower index is a back move and drains RTL. The transition
-// screen and the paste fallback both sit one step in from home.
-function screenOrder(pathname: string): number {
-  if (pathname.startsWith("/recipe")) return 2;
-  if (pathname.startsWith("/paste")) return 1;
-  if (pathname.startsWith(EXTRACT_PATH)) return 1;
-  return 0;
-}
-
 // The Home-side extraction journey, packaged as one hook so App renders chrome:
 // submit → move to the transition screen → land the recipe or show the failure
-// in that same screen; plus retry and the paste fallback.
+// in that same screen; plus retry and the paste fallback. The wave-navigation
+// choreography — the `go` primitive and blocking the browser's back/forward onto
+// the wave — lives in useRouteChoreography; this hook is the journey on top of it.
 //
 // History model: home is pushed onto; every screen after it (transition, paste,
 // recipe) REPLACES the one before, so history stays [home, current] and Back from
@@ -47,9 +32,7 @@ function screenOrder(pathname: string): number {
 // landing bounces itself home (see ExtractScreen).
 export function useExtractionFlow() {
   const extract = useRecipeExtractor();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const navigationType = useNavigationType();
+  const { location, navigationType, go } = useRouteChoreography();
   const [url, setUrl] = useState("");
   // The URL of the most recent request — the key retry and the paste fallback
   // re-address. The extractor caches each successful recipe by it (so the recipe
@@ -81,56 +64,6 @@ export function useExtractionFlow() {
       urlFieldRef.current?.focus();
     }
   }, [location.pathname]);
-
-  // Browser back/forward is a POP: it swaps the route without touching go(), so on
-  // its own it skips the wave. Block the POP, play the wave, and let proceed()
-  // commit the swap under full cover — the same cover→reveal the in-app buttons
-  // get. Scoped to POP, real screen changes only, and only when the overlay is
-  // live: reduced motion and tests fall through to the browser's plain back/forward.
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation, historyAction }) =>
-      historyAction === "POP" &&
-      liquidAvailable() &&
-      currentLocation.pathname !== nextLocation.pathname,
-  );
-  const popWaving = useRef(false);
-  useEffect(() => {
-    if (blocker.state !== "blocked") {
-      popWaving.current = false;
-      return;
-    }
-    if (popWaving.current) return; // one wave per blocked POP
-    popWaving.current = true;
-    const dir: Dir =
-      screenOrder(blocker.location.pathname) < screenOrder(location.pathname)
-        ? -1
-        : 1;
-    void wavePass(dir, () => blocker.proceed());
-  }, [blocker, location.pathname]);
-
-  // Liquid-wave navigation (approved v5.1 design) with the view-transition slide
-  // as the fallback. liquidAvailable() is false when the overlay isn't mounted
-  // (tests mount App without it) or the user prefers reduced motion — both keep
-  // the pre-wave behavior exactly. `afterSwap` runs under full cover alongside the
-  // route commit (used to clear error state as we leave the transition screen, so
-  // it never flashes its stray-landing guard on the way out). The returned promise
-  // resolves once the wave has fully revealed.
-  function go(
-    dir: Dir,
-    to: string,
-    opts?: { replace?: boolean },
-    afterSwap?: () => void,
-  ): Promise<void> {
-    if (!liquidAvailable()) {
-      navigate(to, { ...opts, viewTransition: true });
-      afterSwap?.();
-      return Promise.resolve();
-    }
-    return wavePass(dir, () => {
-      navigate(to, opts);
-      afterSwap?.();
-    });
-  }
 
   // Submit from Home: move to the transition screen (work orb shows while the
   // request pends), then land the recipe on success. A failure needs no

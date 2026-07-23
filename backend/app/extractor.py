@@ -1,16 +1,24 @@
 """Extract a normalized Recipe from a page's HTML."""
 
-from lxml import etree
 from lxml import html as lxml_html
+from lxml.etree import ParserError
 from recipe_scrapers import scrape_html
 from recipe_scrapers._exceptions import RecipeScrapersExceptions
 
-from app.models import Recipe
+from app.models import AppError, ErrorCode, Recipe
 from app.normalize import clean_lines, clean_text, safe
 
 
-class RecipeNotFoundError(Exception):
-    """The page has no usable schema.org/Recipe markup."""
+class RecipeNotFoundError(AppError):
+    """The page has no usable schema.org/Recipe markup.
+
+    `detail` shows a fixed friendly message; the internal str(exc) passed at the
+    raise sites stays for logging/chaining, not the client.
+    """
+
+    code = ErrorCode.NO_RECIPE
+    status = 422
+    detail = "No recipe found on that page"
 
 
 def _reduce_html(page_html: str) -> str | None:
@@ -30,17 +38,17 @@ def _reduce_html(page_html: str) -> str | None:
     """
     try:
         root = lxml_html.fromstring(page_html)
-    except (ValueError, etree.ParserError):
+    except (ValueError, ParserError):
         return None
     scripts = [
-        lxml_html.tostring(s, encoding="unicode")
+        lxml_html.tostring(s, encoding=str)
         for s in root.iter("script")
         if (s.get("type") or "").strip().lower() == "application/ld+json"
     ]
     if not scripts:
         return None
     head = root.find("head")
-    head_html = lxml_html.tostring(head, encoding="unicode") if head is not None else ""
+    head_html = lxml_html.tostring(head, encoding=str) if head is not None else ""
     return f"<html>{head_html}{''.join(scripts)}</html>"
 
 
