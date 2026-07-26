@@ -4,6 +4,20 @@ How the pieces actually work. [architecture.md](architecture.md) covers the shap
 this covers the mechanics. Why any of it is this way is in
 [decisions.md](decisions.md).
 
+Four terms recur below, all from the UI:
+
+- **the transition screen** — `/extract`, where a submit lands. It holds the
+  screen while the request is pending, and becomes the failure panel in place if
+  the request fails.
+- **the mascot** — the parsley leaf character (`LeafCharacter`), drawn as a CSS
+  cut-out puppet. It works at a laptop while extracting and changes pose as a
+  failure escalates. Decorative and `aria-hidden` throughout.
+- **the orb** — the porthole the mascot sits in (`LeafOrb`), which is also the
+  frame the failure panel morphs out of.
+- **the wave** — the liquid overlay that covers the screen during a navigation,
+  swaps the route underneath, then reveals. Every navigation goes through it;
+  reduced-motion and tests fall back to a plain view-transition slide.
+
 ## Extraction
 
 `extract_recipe(html, url)` in `backend/app/extractor.py`:

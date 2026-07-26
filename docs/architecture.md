@@ -21,13 +21,29 @@ on `:8080`, the Vite dev server on `:5173`. There is no API base URL, no CORS,
 and no environment variable the app needs to run
 ([decision 4](decisions.md#4--same-origin-relative-api-no-cors)).
 
+## Repository layout
+
+| Path | What lives there |
+|---|---|
+| `backend/` | The FastAPI service, its tests and HTML fixtures |
+| `frontend/` | The Vite SPA, its tests and self-hosted fonts |
+| `docs/` | This documentation |
+| `loadtest/` | k6 scripts and the mock upstream they run against |
+| `scripts/` | One helper: the Docker credential-config workaround |
+| `contract.json` | The API contract, asserted from both sides |
+| `vercel.json` · `nginx.conf` | Production routing, and its local mirror |
+| `docker-compose.yml` | The dev stack; `.loadtest.yml` is the prod-like harness |
+| `Makefile` | Every command in this repo |
+
 ## Request path
 
 A submit from the home screen:
 
-1. **SPA** — `useExtractionFlow.submitUrl` starts the request and navigates to the
-   transition screen. `recipeExtractor` aborts any in-flight request first, so a
-   superseded submit can never land later.
+1. **SPA** — `useExtractionFlow.submitUrl` starts the request and navigates to
+   `/extract`, the *transition screen*: a holding screen that shows a working
+   mascot while the request is pending and becomes the failure panel if it fails.
+   `recipeExtractor` aborts any in-flight request first, so a superseded submit
+   can never land later.
 2. **`lib/api.ts`** — `POST /api/extract` with `{ url }`, same-origin.
 3. **Route** (`main.py`) — pydantic validates the body, slowapi applies the
    per-IP cap, and the handler delegates to `ExtractionService`.
@@ -151,3 +167,21 @@ the client's own view of a failure.
 | Upstream | real recipe sites | real recipe sites | real | mock, ~500 ms latency |
 
 Details in [deploy.md](deploy.md) and [load-testing.md](load-testing.md).
+
+## Where to start reading
+
+The whole backend is eight short files; read them in request order —
+`main.py` → `services.py` → `fetch.py` → `extractor.py`. That is the entire
+server.
+
+On the frontend, four files carry most of the design:
+
+| File | Why it's worth reading first |
+|---|---|
+| `app/transitions/useExtractionFlow.ts` | The whole user journey in one hook: submit, retry, paste, dismiss |
+| `features/extract/recipeExtractor.ts` | Request lifecycle and the abort-on-supersede rule |
+| `app/router/router.tsx` | The four screens, what's eager, what's code-split |
+| `lib/api.ts` | The typed boundary: schema, error codes, `ExtractError` |
+
+Comments in this codebase explain *why*, not what — the surprising ones usually
+mark a decision recorded in [decisions.md](decisions.md).

@@ -6,6 +6,40 @@ rejected, what it costs, and the trigger that would reopen it. Newest last.
 Where a decision is load-bearing in the code, the comment there points back at
 its number here.
 
+**Product and extraction** — [1 schema.org JSON-LD](#1--extract-from-schemaorgrecipe-json-ld-not-per-site-scrapers)
+· [2 stateless](#2--stateless-v1--no-database-no-accounts)
+· [3 paste fallback](#3--paste-html-fallback-for-sites-that-block-server-side-fetching)
+· [9 reduce before parse](#9--reduce-the-page-to-head--json-ld-before-parsing)
+· [11 curl_cffi](#11--curl_cffi-chrome-impersonation-on-a-bot-block)
+
+**API and backend** — [4 same-origin](#4--same-origin-relative-api-no-cors)
+· [5 one Vercel project](#5--one-vercel-project-with-two-services)
+· [6 contract.json](#6--contractjson-at-the-root-asserted-from-both-sides)
+· [7 typed errors](#7--errors-carry-their-own-status-one-handler-renders-them)
+· [8 SSRF guard](#8--ssrf-guard-resolves-dns-first-the-rebinding-gap-is-accepted)
+· [10 off the event loop](#10--cpu-bound-work-runs-off-the-event-loop)
+· [12 rate limiting](#12--rate-limiting-is-best-effort-by-design--for-now)
+· [13 one config file](#13--environment-variables-are-read-in-exactly-one-file)
+
+**Frontend** — [14 no TanStack Query](#14--hand-rolled-extraction-data-layer-not-tanstack-query)
+· [15 router data mode](#15--react-router-data-mode-the-recipe-route-uses-a-loader)
+· [16 failures on the transition screen](#16--failures-surface-on-the-transition-screen)
+· [17 session cache](#17--sessionstorage-recipe-cache-ten-entry-lru)
+· [18 validate at the boundary](#18--validate-api-responses-at-the-network-boundary)
+· [19 own ingredient splitter](#19--own-ingredient-splitter-instead-of-npm-parse-ingredient)
+· [20 no barrels](#20--one-folder-per-component-no-barrel-files)
+· [21 recipe view code-split](#21--the-recipe-view-stays-off-the-first-paint-enforced-by-lint)
+· [22 wave choreography](#22--liquid-wave-choreography-with-the-view-transition-as-fallback)
+
+**Testing, CI and operations** — [23 two test environments](#23--two-test-environments-split-by-what-they-need)
+· [24 Argos VRT](#24--visual-regression-through-argos-no-baselines-in-git)
+· [25 coverage ratchet](#25--coverage-thresholds-ratchet-themselves)
+· [26 step-level CI skips](#26--ci-skips-are-step-level-if-never-workflow-paths)
+· [27 local load testing](#27--load-testing-runs-locally-against-a-prod-like-container)
+· [28 k6](#28--k6-and-its-thresholds-are-the-gate)
+· [29 trend-based baseline](#29--the-nightly-baseline-compares-trend-not-absolute-numbers)
+· [30 Compose dev stack](#30--docker-compose-for-dev-with-a-proxy-that-mirrors-production-routing)
+
 ---
 
 ## 1 · Extract from `schema.org/Recipe` JSON-LD, not per-site scrapers
