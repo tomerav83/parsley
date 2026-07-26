@@ -2,7 +2,7 @@
 # backend with uvicorn --reload and the frontend with Vite HMR, both in containers
 # with the source live-mounted. Edit files on the host, see changes immediately.
 #
-# This is for DEV. Production is Vercel (see DEPLOY.md). The `proxy` service
+# This is for DEV. Production is Vercel (see docs/deploy.md). The `proxy` service
 # mirrors Vercel's same-origin rewrite routing (vercel.json) for local QA:
 # http://localhost:8080 routes /api/* to the backend and everything else to the
 # frontend, the same shape as prod — no CORS involved either way.

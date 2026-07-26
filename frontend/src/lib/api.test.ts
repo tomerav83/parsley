@@ -67,7 +67,7 @@ describe("recipeSchema", () => {
   });
 });
 
-// --- the client itself: request shape + error mapping (REDESIGN E6a) --------
+// --- the client itself: request shape + error mapping --------
 // `fetch` is stubbed rather than a real server: every branch under test is the
 // client's own translation of a Response (or a thrown fetch) into an ExtractError,
 // so a handcrafted Response exercises it exactly and deterministically.

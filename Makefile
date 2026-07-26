@@ -6,7 +6,7 @@
 # config. Under WSL, Docker Desktop's `desktop.exe` credential helper can't exec
 # in BuildKit and breaks all pulls; this sidesteps it and self-heals if Docker
 # Desktop re-adds it. Scoped to make — your direct `docker` commands are untouched.
-# See scripts/docker-config.py and DEPLOY.md.
+# See scripts/docker-config.py and docs/deploy.md.
 export DOCKER_CONFIG := $(abspath .docker)
 
 docker-config:
@@ -63,7 +63,7 @@ test:
 build:
 	cd frontend && npm run build
 
-# Prod-like load-testing harness (docker-compose.loadtest.yml, LOADTEST.md). k6
+# Prod-like load-testing harness (docker-compose.loadtest.yml, docs/load-testing.md). k6
 # runs on the compose network with SLO thresholds that exit non-zero on breach,
 # so a run is its own CI gate. `run` starts the backend + mock upstream and leaves
 # them up; `loadtest-down` tears them back down.

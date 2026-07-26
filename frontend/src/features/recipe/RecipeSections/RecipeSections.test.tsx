@@ -35,7 +35,7 @@ describe("RecipeSections (mobile)", () => {
     expect(ing).toHaveAttribute("aria-pressed", "false");
   });
 
-  it("keeps the inactive pane's controls out of the a11y tree and unfocusable (A3)", async () => {
+  it("keeps the inactive pane's controls out of the a11y tree and unfocusable", async () => {
     render(<RecipeSections ingredients={INGREDIENTS} steps={STEPS} />);
 
     // The blocker this replaced: the off-pane content stayed focusable while

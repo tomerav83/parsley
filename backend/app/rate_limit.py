@@ -19,7 +19,7 @@ def _client_ip(request: Request) -> str:
 
 # Rate limiting is disabled under load testing (LOADTEST_DISABLE_RATE_LIMIT):
 # slowapi's 10/min would 429 the test within seconds and measure the limiter
-# instead of the app. Off means normal enforcement — see LOADTEST.md.
+# instead of the app. Off means normal enforcement — see docs/load-testing.md.
 #
 # Storage defaults to in-memory, which on a horizontally-scaled / serverless
 # deploy (Vercel) is PER INSTANCE and resets on cold start — so the effective

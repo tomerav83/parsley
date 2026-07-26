@@ -16,7 +16,7 @@ function App() {
   const flow = useExtractionFlow();
   const location = useLocation();
 
-  // Direction stamp + focus management on every client-side navigation (A6).
+  // Direction stamp + focus management on every client-side navigation.
   // Stamping data-slide before paint lets the view-transition CSS pick the
   // slide direction; moving focus to the incoming screen's heading is the
   // researched best practice for SPA route changes (Marcy Sutton's assistive-

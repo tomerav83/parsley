@@ -1,7 +1,7 @@
 // Smoke test — 1 VU, ~60s, all three endpoints, thresholds on. Cheap enough to
 // gate every PR: catches "an endpoint got slow or broke under trivial load"
 // before the expensive baseline runs. Thresholds mirror the KPI table in
-// LOADTEST.md. Thresholds ratcheted off the 2026-07-20 baseline (commit 0c15303,
+// docs/load-testing.md. Thresholds ratcheted off the 2026-07-20 baseline (commit 0c15303,
 // see the Recorded baselines table) — a regression gate, not a tight SLO.
 import { sleep } from 'k6';
 import { hitHealth, hitExtract, hitExtractHtml, RECIPES } from './common.js';

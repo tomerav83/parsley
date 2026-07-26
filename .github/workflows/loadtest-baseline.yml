@@ -5,11 +5,11 @@
 # a night is enough signal; a run covers every merge since the last baseline.
 #
 # WHY TREND-ONLY: hosted runners have variable, shared CPUs — their absolute ms
-# are NOT comparable to the locally-recorded baseline in LOADTEST.md, and vary
+# are NOT comparable to the locally-recorded baseline in docs/load-testing.md, and vary
 # run-to-run. So we compare each run to the PREVIOUS run (relative Δ), kept in the
 # Actions cache, and only flag a p95 regression past a wide threshold. k6's own
 # absolute thresholds are left in (they create the tagged sub-metrics we read) but
-# not allowed to fail the job — the comparator owns the signal. See LOADTEST.md.
+# not allowed to fail the job — the comparator owns the signal. See docs/load-testing.md.
 name: Load-test baseline
 
 on:
@@ -95,7 +95,7 @@ jobs:
               echo "_First tracked run — no previous baseline commit to diff against._"
             fi
             echo
-            echo "[Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · thresholds & method: \`LOADTEST.md\`"
+            echo "[Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · thresholds & method: \`docs/load-testing.md\`"
           } > loadtest/.out/issue-body.md
 
       - name: Open or update the regression issue

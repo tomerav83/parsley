@@ -3,7 +3,7 @@ import App from "@/app/App.tsx";
 import { HomeScreen } from "@/app/screens/HomeScreen/HomeScreen";
 import { ExtractScreen } from "@/app/screens/ExtractScreen/ExtractScreen";
 
-// Data-mode router (REDESIGN D6): real URLs, browser back/forward, and
+// Data-mode router (see docs/decisions.md #15): real URLs, browser back/forward, and
 // deep-linkable recipes (/recipe?url=…). Data mode — createBrowserRouter, not
 // <BrowserRouter> — is the minimum mode that supports the route `lazy` property
 // and `viewTransition` navigations (https://reactrouter.com/start/modes).
@@ -13,7 +13,7 @@ import { ExtractScreen } from "@/app/screens/ExtractScreen/ExtractScreen";
 // fetched during navigation — before render, so there's no Suspense flicker
 // (https://remix.run/blog/lazy-loading-routes).
 //
-// The recipe view being off Home's first paint (REDESIGN F2) is an invariant
+// The recipe view being off Home's first paint (see docs/decisions.md #21) is an invariant
 // enforced by lint: `.oxlintrc.json`'s no-restricted-imports bans static imports
 // of the recipe view (@/features/recipe/** and the RecipeScreen) from eager code,
 // so it can be reached only through the dynamic import() below. This file is
@@ -45,7 +45,7 @@ export const router = createBrowserRouter([
           // The loader resolves /recipe?url=… before the screen renders (cache-first,
           // network only for a cold deep-link); a failed extract throws and the
           // ErrorBoundary shows the sad-parsley in place. All three are code-split,
-          // so the recipe view stays off Home's first paint (REDESIGN F2).
+          // so the recipe view stays off Home's first paint (see docs/decisions.md #21).
           Component: async () =>
             (await import("@/app/screens/RecipeScreen/RecipeScreen"))
               .RecipeScreen,

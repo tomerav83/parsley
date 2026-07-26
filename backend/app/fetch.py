@@ -105,7 +105,7 @@ async def _assert_public_host(host: str) -> None:
     """
     # Load-test escape hatch (off unless explicitly set): the mock upstream in
     # docker-compose.loadtest.yml resolves to a private compose-network IP the
-    # guard would otherwise reject. Never set in prod — see config.py / LOADTEST.md.
+    # guard would otherwise reject. Never set in prod — see config.py / docs/load-testing.md.
     if LOADTEST_ALLOW_PRIVATE_HOSTS:
         return
     # getaddrinfo is blocking; run it in a thread so a slow DNS lookup can't stall

@@ -20,7 +20,7 @@ function toExtractError(err: unknown): ExtractError {
 
 // Owns the extraction request lifecycle: the state machine plus an AbortController
 // so a new request cancels the one before it (the retry button could otherwise
-// race the original and let the slower response win — REDESIGN C3). The screen the
+// race the original and let the slower response win). The screen the
 // app slides to on success stays App's concern; this hook only reports the outcome.
 export function useRecipeExtractor() {
   const [state, dispatch] = useReducer(extractReducer, initialExtractState);

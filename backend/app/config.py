@@ -8,7 +8,7 @@ deployment-time setting, not something tests toggle.
 
 import os
 
-# Load-test escape hatches (see LOADTEST.md) — NEVER set in production.
+# Load-test escape hatches (see docs/load-testing.md) — NEVER set in production.
 # LOADTEST_ALLOW_PRIVATE_HOSTS lets the mock upstream resolve to a compose-network
 # IP the SSRF guard would otherwise reject; LOADTEST_DISABLE_RATE_LIMIT stops the
 # 10/min limiter from 429ing a load test within seconds.

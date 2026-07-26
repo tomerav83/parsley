@@ -8,7 +8,7 @@ injected as plain callables with real defaults, so:
   - it's unit-testable without network or a real scraper (inject fakes),
   - either the fetcher or the extraction engine can be swapped without touching a
     route (e.g. adding a JSON-LD/LLM extractor, or a proxy fetcher), and
-  - Phase 2 (a saved recipe box + auth, per PLAN.md) has an obvious home: a
+  - the saved recipe box + auth (docs/motivation.md) has an obvious home: a
     `RecipeRepository`/auth dependency becomes another constructor arg here, not
     new orchestration inlined into the handlers.
 """

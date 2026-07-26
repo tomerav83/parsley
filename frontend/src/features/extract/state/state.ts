@@ -1,4 +1,4 @@
-// The extraction flow as an explicit state machine (see REDESIGN C2). The four
+// The extraction flow as an explicit state machine. The four
 // statuses are mutually exclusive, so impossible states like "loading with a stale
 // recipe" or "error next to a recipe" simply can't be represented.
 //

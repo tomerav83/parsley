@@ -2,7 +2,7 @@
 """Compare a k6 baseline summary against the previous run's and decide if it
 regressed. Trend-only: we compare CI-run-to-CI-run (relative delta), never to a
 locally-recorded number, because hosted runners have variable CPU and their
-absolute ms are not comparable across machines (see LOADTEST.md).
+absolute ms are not comparable across machines (see docs/load-testing.md).
 
 Signals that flag a regression:
   - error rate (5xx) over the ceiling — runner-independent, a real fault.

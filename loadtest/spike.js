@@ -1,5 +1,5 @@
 // Spike test — a sudden 0→100 VU burst on the primary endpoint (the "recipe link
-// hits the HN front page" case), then a drop (LOADTEST.md Stage 3). Unlike the
+// hits the HN front page" case), then a drop (docs/load-testing.md Stage 3). Unlike the
 // steady stress test, what matters here is RECOVERY, not peak latency: does the
 // instance shed the surge without erroring out, and does it return to normal once
 // the crowd leaves? The health canary runs past the end of the spike so its
@@ -34,7 +34,7 @@ export const options = {
     // during the surge, which is physics, not a defect. So the ONLY assertion is
     // survival: a bounded 5xx rate through the burst. Recovery is read from the
     // health series (median settles back once the crowd leaves), recorded in
-    // LOADTEST.md rather than gated — no aggregate threshold captures "recovered".
+    // docs/load-testing.md rather than gated — no aggregate threshold captures "recovered".
     errors_5xx: ['rate<0.05'],
   },
 };

@@ -1,7 +1,7 @@
 """Mock upstream for load testing — stands in for real recipe sites.
 
 The load test must never fetch real sites (that DoSes someone else and measures
-their servers, not our code — LOADTEST.md). This serves the same fixture HTML the
+their servers, not our code — docs/load-testing.md). This serves the same fixture HTML the
 unit tests use, at /recipe/<fixture-name>, with a fixed injected latency so
 Parsley's full fetch path sees a production-shaped response time.
 
