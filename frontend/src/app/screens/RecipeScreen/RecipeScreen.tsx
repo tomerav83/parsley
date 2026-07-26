@@ -5,20 +5,15 @@ import { BackButton } from "@/components/BackButton/BackButton";
 import type { RecipeLoaderData } from "./recipeLoader.ts";
 import styles from "./RecipeScreen.module.css";
 
-// Source label for the recipe bar: the site name if the backend gave one, else the
-// bare host of the source URL (falls back to the raw string if it won't parse).
+/** Bare host of a URL, falling back to the raw string if it won't parse. */
 function hostOf(url: string): string {
   return URL.parse(url)?.hostname.replace(/^www\./, "") ?? url;
 }
 
-// The recipe view: a fixed top bar (back to search + source) over the card. The
-// recipe is resolved by the route loader (recipeLoader) before this renders —
-// cache-first, network only for a cold deep-link — so there's no in-component
-// fetch or loading state. A Home submit caches then navigates, so the loader
-// resolves synchronously and the card paints at once; only a cold hard-load
-// deep-link waits on the network, showing the root's quiet-blank HydrateFallback
-// until it resolves. A failed extract renders the route's ErrorBoundary
-// (RecipeError) instead of this.
+/**
+ * The recipe view: a fixed bar (back to search, source) over the card. recipeLoader
+ * has already resolved the recipe, so there's no fetch or loading state here.
+ */
 export function RecipeScreen() {
   const { recipe } = useLoaderData<RecipeLoaderData>();
   const { backToSearch } = useAppOutlet();

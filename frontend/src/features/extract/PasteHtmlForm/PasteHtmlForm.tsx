@@ -10,11 +10,13 @@ interface PasteHtmlFormProps {
   loading: boolean;
 }
 
-// Fallback for sites that block server-side fetching at the IP level: the user
-// opens the page in their own browser, copies the page source, and pastes it
-// here. We extract from that HTML directly — no fetch, so the block is bypassed.
-// A failed paste is terminal, so it doesn't surface here — it returns to the
-// transition screen's report-only state (see useExtractionFlow.submitPaste).
+/**
+ * The fallback for sites that block us at the IP level: the user opens the page
+ * themselves, copies the source, and pastes it here to extract from directly.
+ *
+ * A failure never shows up on this screen — it's the end of the road, so it goes
+ * back to the transition screen's report-only state.
+ */
 export function PasteHtmlForm({
   url,
   onSubmit,
@@ -22,10 +24,8 @@ export function PasteHtmlForm({
   loading,
 }: PasteHtmlFormProps) {
   const [html, setHtml] = useState("");
-  // Defense in depth: the URL reaching this screen is http(s) in practice (only
-  // backend-validated URLs get to the states that open the paste fallback), but
-  // guard the href anyway so a non-http(s) value can never render as a
-  // javascript: link — mirrors RecipeCard.safeImage.
+  // Only backend-validated URLs reach this screen, so this is belt and braces —
+  // but it costs one line to be sure nothing renders as a javascript: link.
   const safeHref = /^https?:\/\//i.test(url) ? url : undefined;
 
   function handleSubmit(event: FormEvent) {

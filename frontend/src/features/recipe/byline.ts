@@ -1,8 +1,7 @@
 import type { Recipe } from "@/lib/api";
 
-// Collapse "Dine & Dish", "Dine and Dish", "dine  dish" to one canonical form so
-// an author and site_name that are really the same name get deduped, not printed
-// twice.
+// "Dine & Dish", "Dine and Dish" and "dine  dish" all collapse to the same thing,
+// which is how we notice the author and the site are one name printed twice.
 function canonical(value: string): string {
   return value
     .toLowerCase()
@@ -11,8 +10,7 @@ function canonical(value: string): string {
     .trim();
 }
 
-// The recipe's attribution line: "Author — Site", deduped when the two are really
-// the same name, and dropping whichever is missing.
+/** The attribution line, "Author — Site", minus whichever is missing or repeated. */
 export function byline({
   author,
   site_name,

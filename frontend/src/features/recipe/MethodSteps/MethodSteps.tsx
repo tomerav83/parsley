@@ -33,12 +33,14 @@ function Chevron({ dir }: { dir: "prev" | "next" }) {
   );
 }
 
-// Does the active step's text overflow its fixed-height box? Drives the
-// stacked-sheets cue: an overflowing card clips with a fade and opens the
-// full-step lightbox instead of shrinking its type.
-// Re-measures on resize — including a hidden mobile pane becoming visible
-// (0 → real height fires the observer) — and once the webfonts land, whose
-// metrics change the text's height but not the box's.
+/**
+ * Whether the step's text is taller than its box, which is what turns the card
+ * into a tappable one with a fade and a sheets glyph.
+ *
+ * Re-measures on resize, which also covers a hidden mobile pane becoming visible,
+ * and again once the webfonts land — their metrics change the text's height but
+ * not the box's.
+ */
 function useOverflows(text: string) {
   const ref = useRef<HTMLDivElement>(null);
   const [overflows, setOverflows] = useState(false);
@@ -64,19 +66,20 @@ function useOverflows(text: string) {
   return { ref, overflows };
 }
 
-// The Method panel: one step at a time. The Prev/Next controls live in the panel
-// HEADER (not a row under the card), so they never eat into the step card's
-// reading area — the concern was they stole height on mobile. The card itself can
-// also be swiped. Every step is a real <li> so the whole method is in the DOM
-// (and prints); only the current one is shown, the rest carry the `hidden`
-// attribute (out of the a11y tree + tab order, not merely aria-hidden). Keys are
-// scoped to this element, never window, so they don't hijack the page. The step
-// index is controlled so the mobile segment can label it.
-//
-// A step too long for the card no longer shrinks its type: it clips under a fade,
-// grows a stacked-sheets glyph ("more pages under this one"), and the whole card
-// becomes a tap target that lifts the full step into a lightbox over a dimmed
-// backdrop. Short steps stay clean — no cue, no tap.
+/**
+ * The Method panel: one step at a time, walked by the header buttons, the arrow
+ * keys or a swipe. Prev/Next sit in the header rather than under the card so they
+ * never eat into its reading height on mobile.
+ *
+ * Every step is a real <li> so the whole method is in the DOM and prints; the ones
+ * that aren't current are `hidden`, which takes them out of the a11y tree and the
+ * tab order rather than just hiding them visually. Key handlers are scoped to this
+ * element so they can't hijack the page.
+ *
+ * A step too long for its card doesn't shrink its type — it clips under a fade,
+ * grows a stacked-sheets glyph, and the card becomes a tap target that lifts the
+ * full step into a lightbox. Short steps get none of that.
+ */
 export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   const count = steps.length;
   const clamped = Math.max(0, Math.min(count - 1, index));
@@ -84,8 +87,8 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   const touch = useRef<{ x: number; y: number } | null>(null);
   const groupRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  // The lightbox's content only mounts while it's open — a closed <dialog>
-  // otherwise keeps a duplicate copy of the step's text in the DOM.
+  // Mount the lightbox's content only while it's open; a closed <dialog> would
+  // otherwise keep a second copy of the step's text in the DOM.
   const [lightOpen, setLightOpen] = useState(false);
 
   const go = (delta: number) =>
@@ -94,14 +97,12 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   const openFull = () => {
     const d = dialogRef.current;
     if (!d || d.open) return;
-    // flushSync so the content exists before showModal picks the dialog's
-    // initial focus target.
+    // flushSync so the content exists before showModal picks what to focus
     flushSync(() => setLightOpen(true));
     d.showModal();
   };
 
-  // Tapping anywhere in the lightbox — backdrop or the step text itself —
-  // closes it back to the card.
+  // Anywhere in the lightbox closes it — backdrop and step text alike.
   const onLightboxClick = () => dialogRef.current?.close();
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
@@ -114,21 +115,18 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
     }
   }
 
-  // Horizontal swipe walks the steps — the thumb-friendly path that keeps the
-  // controls out of the card. Only clearly-horizontal swipes count, so a vertical
-  // drag (e.g. scrolling the open lightbox) is left alone.
+  // Only clearly horizontal swipes walk the steps, so a vertical drag — scrolling
+  // the open lightbox, say — is left alone.
   function onTouchStart(e: TouchEvent) {
     const t = e.touches[0];
     if (t) touch.current = { x: t.clientX, y: t.clientY };
   }
 
-  // Claims the horizontal drag as ours via a real (non-passive) listener —
-  // React attaches onTouchMove as passive, so preventDefault() there is a
-  // silent no-op. Without this, an unclaimed horizontal touchmove leaves
-  // Android Chrome's own gesture recognizer thinking a pan is in progress,
-  // and the *next* tap anywhere gets consumed just to settle it instead of
-  // registering as a click — surfacing as "swipe steps, then need to tap
-  // twice" on whatever you tap next.
+  // Claim the horizontal drag with a real non-passive listener. React attaches
+  // onTouchMove as passive, where preventDefault() is a silent no-op, and an
+  // unclaimed horizontal touchmove leaves Android Chrome's gesture recognizer
+  // believing a pan is under way — so the next tap anywhere gets swallowed
+  // settling it. It shows up as "swipe the steps, then have to tap twice".
   useEffect(() => {
     const el = groupRef.current;
     if (!el) return;
@@ -157,11 +155,9 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
   }
 
   return (
-    // A focusable, labelled carousel region walked by ←/→ or swipe — the APG
-    // Carousel keyboard pattern. The rules assume a non-interactive group
-    // shouldn't be focusable, take key handlers, or use role="group", but a
-    // carousel container legitimately does all three (the header Prev/Next stay
-    // the primary, always-available control).
+    // The APG carousel keyboard pattern. The lint rules below assume a
+    // non-interactive group shouldn't be focusable, handle keys or use
+    // role="group"; a carousel container legitimately does all three.
     // https://www.w3.org/WAI/ARIA/apg/patterns/carousel/
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
@@ -204,8 +200,8 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
         </div>
       </div>
 
-      {/* aria-live so pressing Next/Prev (focus stays on the button) announces the
-          step that comes into view. */}
+      {/* Focus stays on Next/Prev, so aria-live is what announces the step that
+          comes into view. */}
       <ol className={styles.stage} aria-live="polite">
         {steps.map((s, i) => {
           const timer = stepTimer(s);
@@ -218,10 +214,9 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
               hidden={!active}
               aria-current={active ? "step" : undefined}
             >
-              {/* The card-wide click is pointer convenience over a big, forgiving
-                  target; the sheets glyph is the real, focusable control, so the
-                  step text stays plain readable content rather than becoming a
-                  giant button label. */}
+              {/* The card-wide click is just a forgiving pointer target — the
+                  sheets glyph is the real focusable control, which keeps the step
+                  text as readable content rather than a giant button label. */}
               {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
               <article
                 className={
@@ -261,12 +256,10 @@ export function MethodSteps({ steps, index, onIndex }: MethodStepsProps) {
         })}
       </ol>
 
-      {/* The lightbox: the current step in full, zoomed up over a dimmed backdrop.
-          A native <dialog> — Escape, focus trapping and the backdrop come free.
-          No close button: a tap anywhere in the dialog (backdrop or text) closes
-          it, so the whole surface is the dismiss target instead of one small icon.
-          Key/touch events are stopped so the carousel behind it doesn't walk.
-          Deliberately no timer chip in here: the chip lives on the card. */}
+      {/* The current step in full. A native <dialog>, so Escape, focus trapping
+          and the backdrop come free. No close button — the whole surface
+          dismisses. Key and touch events stop here so the carousel behind
+          doesn't walk along with them. */}
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <dialog
         ref={dialogRef}

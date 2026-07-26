@@ -10,11 +10,11 @@ interface RecipeSectionsProps {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// Ingredients + Method in one window. On mobile a segment switch shows one at a
-// time (the Method segment carries the current step number); on desktop both sit
-// side by side as columns with no switch. Either way the Method is one step at a
-// time, walked by ←/→ or the visible buttons (MethodSteps). The active step lives
-// here so the segment can label it.
+/**
+ * Ingredients and Method in one window: a segment switch between them on mobile,
+ * side-by-side columns on desktop. The active step lives here rather than in
+ * MethodSteps so the Method segment can show which one you're on.
+ */
 export function RecipeSections({ ingredients, steps }: RecipeSectionsProps) {
   const [section, setSection] = useState<"ingredients" | "method">(
     "ingredients",
@@ -29,9 +29,9 @@ export function RecipeSections({ ingredients, steps }: RecipeSectionsProps) {
 
   return (
     <div className={styles.sections}>
-      {/* Mobile-only section switch. On desktop both panes show, so it's hidden. */}
-      {/* role="group" labels the segmented control for AT; fieldset (the rule's
-          suggestion) is for form field sets, not a view switch. */}
+      {/* Mobile only — both panes show on desktop, so it's hidden there.
+          role="group" labels the control; fieldset, which the rule suggests
+          instead, is for form fields rather than a view switch. */}
       {/* oxlint-disable-next-line jsx-a11y/prefer-tag-over-role */}
       <div className={styles.seg} role="group" aria-label="Recipe section">
         <button

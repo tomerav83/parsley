@@ -8,9 +8,10 @@ import {
 import { extractReducer, initialExtractState } from "./state/state.ts";
 import { cacheRecipe } from "@/lib/recipeCache.ts";
 
-// The outcome of a run. "aborted" means a newer request superseded this one — the
-// caller should do nothing (the newer run owns the navigation), which is why it's
-// distinct from "error".
+/**
+ * How a run ended. "aborted" is separate from "error" because a newer request
+ * superseded this one and now owns the navigation — the caller should do nothing.
+ */
 export type RunResult = "success" | "error" | "aborted";
 
 function toExtractError(err: unknown): ExtractError {
@@ -18,10 +19,13 @@ function toExtractError(err: unknown): ExtractError {
   return new ExtractError("unknown", "Something went wrong. Please try again.");
 }
 
-// Owns the extraction request lifecycle: the state machine plus an AbortController
-// so a new request cancels the one before it (the retry button could otherwise
-// race the original and let the slower response win). The screen the
-// app slides to on success stays App's concern; this hook only reports the outcome.
+/**
+ * Owns the request lifecycle: the state machine, plus an AbortController so each
+ * new request cancels the one before it. Without that, a retry could race the
+ * original and let the slower answer win.
+ *
+ * Reports an outcome and nothing more — where the app goes next is App's call.
+ */
 export function useRecipeExtractor() {
   const [state, dispatch] = useReducer(extractReducer, initialExtractState);
   const controllerRef = useRef<AbortController | null>(null);
@@ -40,15 +44,15 @@ export function useRecipeExtractor() {
       try {
         const recipe = await fetcher(controller.signal);
         if (controller.signal.aborted) return "aborted";
-        // Cache before the caller navigates: the recipe route's loader reads this
-        // synchronously, so writing it here (not in a post-render effect) is what
-        // keeps a Home submit from re-fetching a recipe we already have.
+        // Cache before the caller navigates. The recipe route's loader reads this
+        // synchronously, so writing it here rather than in an effect is what keeps
+        // a Home submit from re-fetching what we already have.
         cacheRecipe(url, recipe);
         dispatch({ type: "success", recipe });
         return "success";
       } catch (err) {
-        // Not just our own signal: the browser can abort a fetch itself (e.g. on
-        // navigation), and that must never read as a user-visible failure.
+        // Not only our own signal — the browser aborts fetches on navigation too,
+        // and neither should ever surface as a failure.
         if (
           controller.signal.aborted ||
           (err instanceof DOMException && err.name === "AbortError")
@@ -88,9 +92,9 @@ export function useRecipeExtractor() {
 
   const dismiss = useCallback(() => dispatch({ type: "dismiss" }), []);
 
-  // Put a recipe straight into success state without a request — used to rehydrate
-  // from the sessionStorage cache on a refresh / deep-link (see lib/recipeCache).
-  // Aborts any in-flight request so a slow response can't clobber the restore.
+  // Drop a recipe straight into success state, for rehydrating from the session
+  // cache on a refresh. Aborts anything in flight so a slow response can't land on
+  // top of the restored one.
   const restore = useCallback((recipe: Recipe) => {
     controllerRef.current?.abort();
     controllerRef.current = null;

@@ -15,8 +15,7 @@ function formatMinutes(minutes: number): string {
   return rest ? `${hours}h ${rest}` : `${hours}h`;
 }
 
-// The timing strip, pinned under the title. Specimen-style (direction B): hairline
-// dividers, mono uppercase labels, tabular figures. Renders nothing if no timings.
+/** Prep, cook, total and yield under the title. Renders nothing if the recipe has none. */
 export function TimingRow({ recipe, variant = "strip" }: TimingRowProps) {
   const cells = (
     [

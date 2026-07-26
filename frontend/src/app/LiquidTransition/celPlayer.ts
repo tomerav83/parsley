@@ -1,18 +1,15 @@
-// The cel playback machine for the liquid transition — framework-free and
-// clock-injected (drive it with tick(now)) so it unit-tests without rAF.
+// Cel playback for the liquid transition. No framework and no rAF of its own —
+// drive it with tick(now), which is also what makes it unit-testable.
 //
-// Timing is the film's own: drawings swap at its 24fps hold counts (mostly on
-// twos). Transport is smoother than the film: "drawn on twos, moved on ones"
-// — between swaps the current artwork glides at display rate along the wave's
-// travel, using each drawing's measured coverage as its front position. The
-// glide directions are chosen so no gap can open at the anchored edge:
-//   enter — the NEXT drawing shows through each slot, slid back to the
-//           current front and easing forward (mass is left-anchored, so a
-//           negative offset never uncovers anything)
-//   exit  — the CURRENT drawing slides onward toward the next trailing
-//           position (mass is right-anchored, ditto for positive offsets)
-// The amber wall runs LEAD frames ahead on the way in and LEAD behind on the
-// way out. Direction/mirroring is the component's concern.
+// Drawings swap on the film's own 24fps hold counts, mostly on twos, but they move
+// on ones: between swaps the artwork glides at display rate, using each drawing's
+// measured coverage as its front position. Which drawing glides is picked so no gap
+// can open at the anchored edge — on the way in the next drawing slides forward
+// from the current front (mass is left-anchored), on the way out the current one
+// slides on toward the next (right-anchored).
+//
+// The amber wall runs LEAD frames ahead going in and LEAD behind coming out.
+// Mirroring is the component's business, not ours.
 import { CEL } from "./celData.ts";
 
 export const FRAME_MS = 1000 / 24;
@@ -103,6 +100,10 @@ export type CelPlayerEvents = {
   onFinished: () => void;
 };
 
+/**
+ * A player for one wave. start() covers the screen, release() lets it leave the
+ * hold, and tick(now) advances it — returning false once there's nothing left.
+ */
 export function createCelPlayer(ev: CelPlayerEvents) {
   let phase: "idle" | "enter" | "hold" | "exit" = "idle";
   let fi = 0;

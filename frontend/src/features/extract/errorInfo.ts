@@ -1,11 +1,11 @@
 import type { ErrorCode } from "@/lib/api";
 
-// UI copy for each error code: a plain-language title (cause) and hint (fix),
-// plus which recovery affordances the error UI should offer.
-//
-// `unexpected` marks codes that indicate a likely bug on our side (as opposed to
-// expected outcomes like a blocked site or a page with no recipe). Only these
-// show the "Report it on GitHub" action — see reportIssueUrl below.
+/**
+ * What the UI says about an error code and which ways out it offers.
+ *
+ * `unexpected` marks the codes that mean a bug on our side, as opposed to an
+ * ordinary outcome like a blocked site — only those offer to report the issue.
+ */
 export interface ErrorInfo {
   title: string;
   hint: string;
@@ -82,20 +82,21 @@ const ERROR_INFO: Record<ErrorCode, ErrorInfo> = {
   },
 };
 
+/** Copy for a code, falling back to "unknown" for anything we don't recognise. */
 export function errorInfo(code: ErrorCode): ErrorInfo {
   return ERROR_INFO[code] ?? ERROR_INFO.unknown;
 }
 
-// Shown when a retry has failed too and no fallback remains, so the window
-// collapses to just "Report on GitHub" — reached only for `unexpected` codes
-// with no paste fallback (paste, when available, outlives a failed retry).
+/**
+ * For when the retry failed too and nothing else is left, so the panel collapses to
+ * just "Report on GitHub". Only `unexpected` codes with no paste fallback get here.
+ */
 export const RETRY_STUCK: Pick<ErrorInfo, "title" | "hint"> = {
   title: "Weird. Still nothing",
   hint: "Two tries, no response — that one's on us, not you.",
 };
 
-// A failed paste is the end of the recovery road: the pasted page itself gave
-// us nothing, so reporting is all that's left.
+/** For a failed paste: the page itself gave us nothing, so reporting is all that's left. */
 export const PASTE_DEAD: Pick<ErrorInfo, "title" | "hint"> = {
   title: "Not today",
   hint: "Even the pasted page gave us nothing we could read as a recipe. That one's on us — report it and we'll fix it.",
@@ -103,9 +104,13 @@ export const PASTE_DEAD: Pick<ErrorInfo, "title" | "hint"> = {
 
 const REPO = "tomerav83/parsley";
 
-// Build a prefilled GitHub "new issue" URL. We use `body` (not `template`) so the
-// dynamic context survives — GitHub ignores `body` when a `template` is set. The
-// `extraction-failure` label must exist in the repo or it's silently dropped.
+/**
+ * A prefilled GitHub "new issue" URL for a failure.
+ *
+ * Uses `body` rather than `template`: GitHub ignores `body` whenever a template is
+ * set, and the whole point is the context we fill in. The `extraction-failure`
+ * label has to exist in the repo or it's dropped without a word.
+ */
 export function reportIssueUrl(code: ErrorCode, sourceUrl: string): string {
   const host = sourceUrl.replace(/^https?:\/\//, "").split("/")[0] || "a page";
   const title = `[extract] ${code} on ${host}`;

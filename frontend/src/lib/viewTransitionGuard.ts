@@ -1,10 +1,11 @@
-// React Router runs `viewTransition: true` navigations through
-// document.startViewTransition. When one navigation supersedes another before its
-// transition finishes — our submit chains home → /extract → recipe — the browser
-// rejects the skipped transition with an AbortError ("Transition was skipped")
-// that React Router gives no handle to catch. It's benign: the superseding
-// transition simply takes over. Swallow exactly that rejection so it doesn't log
-// as unhandled (in prod for reduced-motion users, and in tests).
+/**
+ * Swallow the AbortError the browser raises when one view transition supersedes
+ * another, which our submit chain (home → /extract → recipe) does constantly.
+ *
+ * It's benign — the newer transition takes over — but React Router gives no handle
+ * to catch it, so without this it logs as an unhandled rejection in tests and for
+ * reduced-motion users in production.
+ */
 export function ignoreSkippedViewTransitions(): void {
   if (typeof window === "undefined") return;
   window.addEventListener("unhandledrejection", (event) => {

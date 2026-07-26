@@ -1,12 +1,10 @@
-// Module-level handle to the mounted LiquidTransition overlay. Kept apart
-// from the component so useExtractionFlow imports no JSX and fast refresh
-// keeps working on the component file.
+// Module-level handle to the mounted overlay, kept apart from the component so the
+// flow hook imports no JSX and fast refresh keeps working over there.
 //
-// Every entry point degrades when no overlay is registered (not mounted, or
-// it unmounted mid-wave): the swap still runs, promises still resolve —
-// callers never hang and tests that mount App alone stay on the plain path.
+// With no overlay registered — never mounted, or unmounted mid-wave — every entry
+// point still runs the swap and resolves its promise. Callers can't hang.
 
-export type Dir = 1 | -1; // 1 = LTR (forward in the filmstrip), -1 = RTL (back)
+export type Dir = 1 | -1; // 1 = forward through the filmstrip, -1 = back
 
 export type LiquidController = {
   begin(dir: Dir): Promise<void>;
@@ -24,6 +22,7 @@ export function registerLiquid(c: LiquidController): () => void {
   };
 }
 
+/** Whether a wave can actually play: an overlay is mounted and motion is welcome. */
 export function liquidAvailable(): boolean {
   return (
     controller !== null &&
@@ -32,10 +31,8 @@ export function liquidAvailable(): boolean {
 }
 
 /**
- * Wave-only pass-through: cover in `dir`, swap the route under full cover, reveal.
- * The one navigation primitive the app uses — every screen change (submit,
- * landing, paste, back) rides one. The extraction itself no longer runs under
- * cover: the transition screen (ExtractScreen) shows the work orb while it pends.
+ * Cover the screen in `dir`, run `swap` while nothing is visible, then reveal.
+ * Every screen change rides one of these.
  */
 export async function wavePass(dir: Dir, swap: () => void): Promise<void> {
   const c = controller;

@@ -1,12 +1,10 @@
-// A session-scoped cache of extracted recipes, keyed by the URL they're addressed
-// by (the `/recipe?url=…` query param). It lets a refresh or a back/forward to a
-// recipe restore instantly from storage instead of re-hitting the API — and it's
-// the only way a *paste-sourced* recipe survives a reload at all, since its URL
-// can't be re-fetched (the site blocked our reader, which is why it was pasted).
+// Extracted recipes, keyed by the URL in /recipe?url=…, so a refresh or a
+// back/forward restores instead of re-hitting the API. It's also the only way a
+// pasted recipe survives a reload — its URL can't be re-fetched, which is why it
+// got pasted in the first place.
 //
-// sessionStorage, not localStorage: the cache is per-tab and clears when the tab
-// closes, so it behaves like in-memory state that merely outlives a reload — not a
-// durable store that could serve a stale recipe days later.
+// sessionStorage keeps this per-tab and clears it on close: memory that outlives a
+// reload, not a store that can hand back a week-old recipe.
 
 import { recipeSchema, type Recipe } from "./api.ts";
 
@@ -26,6 +24,7 @@ function read(): Cache {
   }
 }
 
+/** Store a recipe under its URL, evicting the oldest once past MAX. */
 export function cacheRecipe(url: string, recipe: Recipe): void {
   if (!url) return;
   try {
@@ -43,6 +42,7 @@ export function cacheRecipe(url: string, recipe: Recipe): void {
   }
 }
 
+/** The cached recipe for `url`, or null if it's absent or no longer a valid Recipe. */
 export function readCachedRecipe(url: string): Recipe | null {
   if (!url) return null;
   const entry = read()[url];

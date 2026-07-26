@@ -12,24 +12,22 @@ import {
 } from "../LiquidTransition/liquidController.ts";
 import { screenOrder } from "./screens.ts";
 
-// The wave-navigation choreography, split out of useExtractionFlow so that hook
-// stays about the extraction journey rather than the animation plumbing:
-//  - `go` is the one navigation primitive the app uses — cover in `dir`, swap the
-//    route under full cover, reveal. With the overlay absent or reduced-motion on
-//    (liquidAvailable() false) it falls back to the view-transition slide exactly
-//    as before, so tests that mount App alone stay on the plain path.
-//  - the POP block makes the browser's own back/forward ride the same wave instead
-//    of skipping it (a POP swaps the route without ever going through `go`).
+/**
+ * Wave navigation: `go` is the one primitive every screen change uses, and the
+ * blocker below makes the browser's back/forward ride the same wave.
+ *
+ * Split out of useExtractionFlow so that hook stays about the journey rather than
+ * the animation. Without the overlay, or under reduced motion, everything here
+ * degrades to a plain view-transition navigation.
+ */
 export function useRouteChoreography() {
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
 
-  // Browser back/forward is a POP: it swaps the route without touching go(), so on
-  // its own it skips the wave. Block the POP, play the wave, and let proceed()
-  // commit the swap under full cover — the same cover→reveal the in-app buttons
-  // get. Scoped to POP, real screen changes only, and only when the overlay is
-  // live: reduced motion and tests fall through to the browser's plain back/forward.
+  // A POP swaps the route without going through go(), so it would skip the wave.
+  // Block it, play the wave, and let proceed() commit the swap under full cover —
+  // the same cover-then-reveal the in-app buttons get.
   const blocker = useBlocker(
     ({ currentLocation, nextLocation, historyAction }) =>
       historyAction === "POP" &&
@@ -51,13 +49,10 @@ export function useRouteChoreography() {
     void wavePass(dir, () => blocker.proceed());
   }, [blocker, location.pathname]);
 
-  // Liquid-wave navigation (approved v5.1 design) with the view-transition slide
-  // as the fallback. liquidAvailable() is false when the overlay isn't mounted
-  // (tests mount App without it) or the user prefers reduced motion — both keep
-  // the pre-wave behavior exactly. `afterSwap` runs under full cover alongside the
-  // route commit (used to clear error state as we leave the transition screen, so
-  // it never flashes its stray-landing guard on the way out). The returned promise
-  // resolves once the wave has fully revealed.
+  // Cover in `dir`, swap the route while the screen is hidden, reveal; the promise
+  // resolves once the wave is fully out of the way. `afterSwap` runs under that
+  // cover, which is how the transition screen's error clears without flashing its
+  // stray-landing guard on the way out.
   function go(
     dir: Dir,
     to: string,

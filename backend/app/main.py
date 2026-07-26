@@ -1,3 +1,9 @@
+"""The HTTP surface: parse the request, hand it to ExtractionService, return the result.
+
+Route docstrings below are the public descriptions rendered at /docs, so they're
+written for someone calling the API.
+"""
+
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request, Response
@@ -13,7 +19,7 @@ _extraction_service = ExtractionService()
 
 
 def get_extraction_service() -> ExtractionService:
-    """Injectable extraction service — overridden in tests via app.dependency_overrides."""
+    """Return the shared service; tests swap it via app.dependency_overrides."""
     return _extraction_service
 
 
@@ -23,11 +29,13 @@ app.state.limiter = limiter
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
+    """Return slowapi's 429; it writes the response, FastAPI just needs it registered."""
     return _rate_limit_exceeded_handler(request, exc)
 
 
 @app.exception_handler(AppError)
 async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
+    """Render any AppError as an ErrorResponse, at the status the exception carries."""
     return JSONResponse(
         status_code=exc.status,
         content=ErrorResponse(code=exc.code, message=exc.detail or str(exc)).model_dump(
@@ -38,6 +46,7 @@ async def app_error_handler(_request: Request, exc: AppError) -> JSONResponse:
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
+    """Liveness check. Always `{"status": "ok"}` if the app is up."""
     return {"status": "ok"}
 
 
@@ -56,6 +65,12 @@ async def extract(
     payload: ExtractRequest,
     service: Annotated[ExtractionService, Depends(get_extraction_service)],
 ) -> Recipe:
+    """Fetch a public recipe page and return just the recipe.
+
+    Rate limited to 10 requests a minute per client. Sites that block automated
+    readers come back as `site_blocked` — retry that page through
+    `/api/extract-html` with the HTML yourself.
+    """
     return await service.from_url(str(payload.url))
 
 
@@ -72,4 +87,9 @@ async def extract_html(
     payload: ExtractHtmlRequest,
     service: Annotated[ExtractionService, Depends(get_extraction_service)],
 ) -> Recipe:
+    """Extract a recipe from page HTML you already have — no fetch.
+
+    The fallback for pages `/api/extract` can't reach. `url` is the page the HTML
+    came from; it's kept as the recipe's source link. Rate limited to 10 a minute.
+    """
     return await service.from_html(payload.html, str(payload.url))

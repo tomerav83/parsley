@@ -1,21 +1,17 @@
-"""Central runtime config — the one place environment variables are read.
+"""The one place environment variables are read.
 
-Keeping these together (rather than scattering os.environ.get across modules)
-makes the app's tunable surface discoverable, and gives Phase-2 additions (DB
-URL, auth secret) an obvious home. Read once at import: every value here is a
-deployment-time setting, not something tests toggle.
+Everything here is a deployment setting, read once at import — nothing tests
+toggle. None are required.
 """
 
 import os
 
-# Load-test escape hatches (see docs/load-testing.md) — NEVER set in production.
-# LOADTEST_ALLOW_PRIVATE_HOSTS lets the mock upstream resolve to a compose-network
-# IP the SSRF guard would otherwise reject; LOADTEST_DISABLE_RATE_LIMIT stops the
-# 10/min limiter from 429ing a load test within seconds.
+# Load-test escape hatches — NEVER set in production (docs/load-testing.md).
+# ALLOW_PRIVATE_HOSTS lets the mock upstream's compose-network IP past the SSRF
+# guard; DISABLE_RATE_LIMIT stops the limiter 429ing a load test within seconds.
 LOADTEST_ALLOW_PRIVATE_HOSTS = bool(os.environ.get("LOADTEST_ALLOW_PRIVATE_HOSTS"))
 LOADTEST_DISABLE_RATE_LIMIT = bool(os.environ.get("LOADTEST_DISABLE_RATE_LIMIT"))
 
-# Rate-limit storage. In-memory (the default) is PER INSTANCE on a serverless /
-# horizontally-scaled deploy and resets on cold start — point this at a shared
-# backend (e.g. redis://…) to make the cap a real global ceiling. See rate_limit.py.
+# In-memory storage is per instance and resets on cold start, so on Vercel the cap
+# is best-effort. Point this at a shared backend (redis://…) to make it global.
 RATE_LIMIT_STORAGE_URI = os.environ.get("RATE_LIMIT_STORAGE_URI") or "memory://"

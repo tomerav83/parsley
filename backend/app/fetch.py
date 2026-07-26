@@ -13,16 +13,13 @@ from anyio import to_thread
 from app.config import LOADTEST_ALLOW_PRIVATE_HOSTS
 from app.models import AppError, ErrorCode
 
-# Many recipe sites sit behind Cloudflare/WP firewalls that reject default
-# python client headers; a full browser-like header set gets the same HTML a
-# person would. IP-level blocks (our shared datacenter egress being flagged) can't
-# be fixed from here — those fall through to the third-party fetchers below, with
-# the paste-HTML fallback as the final resort.
+# Recipe sites behind Cloudflare/WP firewalls reject default python client headers;
+# a full browser header set gets the same HTML a person would. IP-level blocks are
+# a different problem — those fall through to curl_cffi, then to pasted HTML.
 #
-# Accept-Encoding must only list codings httpx can decode — advertising one we
-# can't (e.g. brotli without the `brotli` dep) returns undecodable bytes, not an
-# error. gzip/deflate are built in; br/zstd come from the `brotli` and
-# `zstandard` deps. This matches what Chrome sends; a test guards the invariant.
+# Only advertise Accept-Encoding codings httpx can actually decode: naming one it
+# can't returns undecodable bytes rather than an error. gzip/deflate are built in,
+# br/zstd come from the extras. A test guards this.
 BROWSER_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -39,10 +36,9 @@ BROWSER_HEADERS = {
     "Sec-Fetch-Site": "none",
 }
 TIMEOUT_SECONDS = 6.0
-# Whole-fetch deadline (DNS + both fetch attempts + all redirects). The per-client
-# timeouts above are per-operation — every socket read resets them — so a
-# drip-feeding server could otherwise hold a request slot until Vercel's 30s
-# maxDuration kills the function. Finishing under it keeps the error a clean 502.
+# Deadline for the whole fetch: DNS, both attempts, every redirect. TIMEOUT_SECONDS
+# is per-operation and resets on each socket read, so without this a drip-feeding
+# server could hold the slot until Vercel's 30s maxDuration kills the function.
 TOTAL_TIMEOUT_SECONDS = 15.0
 MAX_REDIRECTS = 5
 MAX_BYTES = 3 * 1024 * 1024
@@ -60,6 +56,8 @@ class FetchError(AppError):
 
 
 class InvalidUrlError(FetchError):
+    """Not a URL we can fetch — malformed, or not http(s). The user's mistake, so 400."""
+
     code = ErrorCode.INVALID_URL
     status = 400
 
@@ -92,24 +90,22 @@ async def validate_url(url: str) -> httpx.URL:
 
 
 async def _assert_public_host(host: str) -> None:
-    """Reject hosts that resolve to private/loopback/link-local/reserved addresses.
+    """Reject hosts that resolve to private, loopback, link-local or reserved addresses.
 
-    Checked after DNS resolution so a hostname pointing at 127.0.0.1 or
-    169.254.x.x is caught, not just literal IPs.
+    Resolves first, so a hostname pointing at 127.0.0.1 is caught and not just a
+    literal IP.
 
-    Accepted residual gap (DNS rebinding): the fetch itself re-resolves the name,
-    so a short-TTL attacker can answer public to this check and private to the
-    connect. Closing that means pinning the validated IP via a custom transport;
-    deliberately skipped — revisit if this ever deploys beside a privileged
-    internal network instead of Vercel's.
+    Known gap — DNS rebinding: the fetch re-resolves the name, so a short-TTL
+    attacker can answer public here and private on the connect. Closing it means
+    pinning the validated IP through a custom transport. Worth doing if this ever
+    deploys next to a privileged internal network; on Vercel it isn't.
     """
-    # Load-test escape hatch (off unless explicitly set): the mock upstream in
-    # docker-compose.loadtest.yml resolves to a private compose-network IP the
-    # guard would otherwise reject. Never set in prod — see config.py / docs/load-testing.md.
+    # Load-test escape hatch: the mock upstream sits on a private compose-network
+    # IP. Never set in prod — see config.py.
     if LOADTEST_ALLOW_PRIVATE_HOSTS:
         return
-    # getaddrinfo is blocking; run it in a thread so a slow DNS lookup can't stall
-    # the event loop (which would stall every other request on this instance).
+    # getaddrinfo blocks, so a slow lookup on the event loop would stall every
+    # other request on this instance.
     try:
         infos = await to_thread.run_sync(socket.getaddrinfo, host, None)
     except socket.gaierror as exc:
@@ -121,15 +117,15 @@ async def _assert_public_host(host: str) -> None:
 
 
 async def fetch_page(url: str) -> str:
-    """Fetch a page's HTML. Sites that block a plain httpx client (Cloudflare/Akamai
-    bot walls) get a second attempt with a real Chrome TLS/JA3 fingerprint before
-    giving up — that's enough to get past several major recipe sites' front doors.
+    """Fetch a page's HTML.
 
-    Deliberately doesn't retry a still-blocked cycle: verified against EatingWell
-    that the block is IP-reputation based, not a transient fluke — a fresh
-    Cloudflare Worker IP got flagged too, after one prior use elsewhere. Retrying
-    from the same shared egress pool just doubles latency for no better odds, so
-    a block goes straight to the paste-HTML fallback instead.
+    A site that turns away plain httpx gets one more try with a real Chrome TLS
+    fingerprint, which is enough for several major recipe sites' front doors.
+
+    A still-blocked cycle isn't retried. Checked against EatingWell: the block is
+    IP reputation, not a fluke — even a fresh Cloudflare Worker IP got flagged
+    after one prior use. Trying again from the same egress pool only doubles the
+    latency, so a block goes straight to the paste fallback.
     """
     try:
         with anyio.fail_after(TOTAL_TIMEOUT_SECONDS):
@@ -150,9 +146,11 @@ async def fetch_page(url: str) -> str:
 
 
 async def _read_capped_text(chunks: AsyncIterator[bytes], charset: str | None) -> str:
-    """Accumulate a (decompressed) body, failing as soon as it exceeds MAX_BYTES —
-    the cap must abort the transfer mid-download, not fire after an arbitrarily
-    large body already sits in memory."""
+    """Read a decompressed body, failing the moment it passes MAX_BYTES.
+
+    The cap has to abort mid-download; checking afterwards means the oversized body
+    is already in memory.
+    """
     body = bytearray()
     async for chunk in chunks:
         body += chunk
@@ -164,13 +162,8 @@ async def _read_capped_text(chunks: AsyncIterator[bytes], charset: str | None) -
         return body.decode("utf-8", errors="replace")
 
 
-# A transport's two variable parts, injected into the shared driver below:
-#  - open_stream: start one streaming GET (no redirect-following) as an async
-#    context manager yielding a response with .status_code/.headers/.charset_encoding
-#  - read_body: turn that response's body stream into capped, decoded text
-# Everything else — the redirect loop, per-hop SSRF re-validation, blocked/error
-# status mapping, and the size cap — is written once here, so httpx and curl_cffi
-# can't drift on the security-critical parts (and a third transport is a few lines).
+# All a transport has to supply: open_stream starts one streaming GET without
+# following redirects, read_body turns the response into capped text.
 _OpenStream = Callable[[httpx.URL], Any]
 _ReadBody = Callable[[Any], Awaitable[str]]
 
@@ -181,6 +174,12 @@ async def _drive_fetch(
     transport_error: type[Exception],
     target: httpx.URL,
 ) -> str:
+    """Follow redirects to a page and return its text, whatever the transport.
+
+    The redirect loop, the SSRF re-check on every hop, the status mapping and the
+    size cap live here so httpx and curl_cffi can't drift apart on the parts that
+    matter for security.
+    """
     for _ in range(MAX_REDIRECTS + 1):
         try:
             async with open_stream(target) as response:
@@ -217,13 +216,14 @@ async def _fetch_via_httpx(target: httpx.URL) -> str:
 
 
 async def _fetch_via_curl_cffi(target: httpx.URL) -> str:
-    """Retry with an impersonated Chrome TLS fingerprint + header order — what actually
-    trips bot walls is the httpx/requests TLS signature, not the User-Agent string.
+    """Retry with an impersonated Chrome TLS fingerprint and header order.
 
-    Imports curl_cffi lazily: it bundles a ~30MB compiled libcurl (vs. httpx's
-    ~700KB), and this path only runs for the minority of requests httpx doesn't
-    already handle. An eager module-level import would pay that cold-start cost
-    on every single request, blocked or not.
+    What trips bot walls is httpx's TLS signature, not its User-Agent.
+
+    curl_cffi is imported here rather than at module level: it bundles a ~30MB
+    compiled libcurl against httpx's ~700KB, and only the minority of requests
+    httpx can't handle ever reach this. Importing it eagerly would put that on
+    every cold start.
     """
     from curl_cffi.requests import AsyncSession
     from curl_cffi.requests.exceptions import RequestException as CurlRequestException

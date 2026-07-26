@@ -1,14 +1,16 @@
-// Typed client for the Parsley extraction API. Calls are relative (/api/*) so
-// the app is always same-origin: on Vercel a rewrite routes /api to the backend
-// service (see vercel.json); in dev Vite proxies /api to the backend.
+// Typed client for the extraction API. Every call is relative (/api/*) so the app
+// stays same-origin — Vercel rewrites /api to the backend, Vite proxies it in dev.
+// A base URL or CORS config here would break both.
 
 import { z } from "zod";
 
-// Runtime schema for the extraction response, validated at the network boundary
-// (see postExtract). A backend shape drift then fails HERE as a named
-// ExtractError instead of crashing deep in the recipe UI where the mismatch is
-// unrecognisable. Mirrors backend/app/models.py::Recipe; the optional fields
-// accept null OR an omitted key and normalise both to null.
+/**
+ * Runtime shape of an extraction response, checked at the network boundary so a
+ * backend change fails here as an ExtractError rather than deep in the recipe UI.
+ *
+ * Mirrors `Recipe` in backend/app/models.py — change one, change both and
+ * contract.json. Optional fields take null or a missing key and give back null.
+ */
 export const recipeSchema = z.object({
   name: z.string(),
   image: z.string().nullable().default(null),
@@ -23,14 +25,15 @@ export const recipeSchema = z.object({
   site_name: z.string().nullable().default(null),
 });
 
-// Single source of truth for the Recipe type — inferred from the schema so the
-// validator and the type can never drift apart.
+/** Inferred from the schema, so the validator and the type can't drift apart. */
 export type Recipe = z.infer<typeof recipeSchema>;
 
-// The error codes the UI handles. The backend-originated ones are pinned to the
-// server's taxonomy via contract.json (enforced by contract.test.ts); the last
-// three are client-surfaced cases the backend never names. Kept as a runtime
-// array so the contract test can enumerate it and the type derives from it.
+/**
+ * Every error code the UI handles. The first five come from the backend and are
+ * pinned to its taxonomy by contract.json; the last three only ever happen here.
+ *
+ * An array rather than a union so contract.test.ts can enumerate it.
+ */
 export const ERROR_CODES = [
   "invalid_url",
   "blocked_url",
@@ -43,6 +46,7 @@ export const ERROR_CODES = [
 ] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
+/** Any failed extraction. `code` picks the copy and recovery actions the UI offers. */
 export class ExtractError extends Error {
   code: ErrorCode;
   constructor(code: ErrorCode, message: string) {
@@ -60,6 +64,7 @@ interface ErrorBody {
   detail?: unknown;
 }
 
+/** Turn a failed response into the ExtractError the UI knows how to render. */
 async function parseError(response: Response): Promise<ExtractError> {
   if (response.status === 429) {
     return new ExtractError(
@@ -86,6 +91,12 @@ async function parseError(response: Response): Promise<ExtractError> {
   return new ExtractError(code, message);
 }
 
+/**
+ * POST to an extraction endpoint and validate what comes back.
+ *
+ * Throws an ExtractError for anything that goes wrong except an abort, which is
+ * rethrown untouched — the caller superseded its own request and should stay quiet.
+ */
 async function postExtract(
   path: string,
   payload: unknown,
@@ -124,6 +135,7 @@ async function postExtract(
   return parsed.data;
 }
 
+/** Extract the recipe at `url` — the backend fetches the page itself. */
 export function extractRecipe(
   url: string,
   signal?: AbortSignal,
@@ -131,6 +143,7 @@ export function extractRecipe(
   return postExtract("/api/extract", { url }, signal);
 }
 
+/** Extract from HTML the user pasted. `url` is where it came from, kept as the source link. */
 export function extractRecipeFromHtml(
   html: string,
   url: string,

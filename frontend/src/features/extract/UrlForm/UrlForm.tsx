@@ -9,9 +9,10 @@ interface UrlFormProps {
   inputRef: RefObject<HTMLInputElement | null>;
 }
 
-// The single input that drives the whole app. Squared, mono placeholder — the
-// "mise en place" treatment. Submitting is handled by the parent (App), which
-// owns the URL so error recovery ("Edit link") and the paste fallback reuse it.
+/**
+ * The single input that drives the whole app. The parent owns the URL, so error
+ * recovery and the paste fallback can reuse it.
+ */
 export function UrlForm({
   value,
   onChange,

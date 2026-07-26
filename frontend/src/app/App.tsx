@@ -9,19 +9,18 @@ import { ThemeToggle } from "@/components/ThemeToggle/ThemeToggle";
 import styles from "./App.module.css";
 import "@/app/transitions/transitions.css";
 
-// The layout route: app chrome (background, theme toggle) around the routed
-// screen. The extraction lifecycle — including the failure surface, now the
-// transition screen (ExtractScreen), not an overlay — lives in useExtractionFlow.
+/**
+ * The layout route: app chrome around whichever screen is routed, with the whole
+ * extraction lifecycle in useExtractionFlow and shared through the outlet context.
+ */
 function App() {
   const flow = useExtractionFlow();
   const location = useLocation();
 
-  // Direction stamp + focus management on every client-side navigation.
-  // Stamping data-slide before paint lets the view-transition CSS pick the
-  // slide direction; moving focus to the incoming screen's heading is the
-  // researched best practice for SPA route changes (Marcy Sutton's assistive-
-  // tech user testing). Skipped on the initial page load — the browser already
-  // put focus at the document start, and stealing it would skip content.
+  // Stamp the slide direction before paint so the view-transition CSS can read it,
+  // then move focus to the incoming screen's heading — the researched best practice
+  // for SPA route changes (Marcy Sutton's assistive-tech testing). Not on first
+  // load: focus is already at the top of the document and moving it skips content.
   const prevOrder = useRef(screenOrder(location.pathname));
   const firstKey = useRef(location.key);
   useLayoutEffect(() => {
