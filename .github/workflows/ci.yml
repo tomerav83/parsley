@@ -41,6 +41,11 @@ jobs:
   # so frontend-only PRs don't pay the ~90s; runs unconditionally on master.
   loadtest-smoke:
     runs-on: ubuntu-latest
+    # Only in this repo. tomerav83/parsley-video carries a copy of this tree
+    # alongside the film's Remotion project; it is private, so a k6 run there
+    # spends billed Actions minutes to tell nobody anything. Fork PRs are
+    # unaffected — they run in this repo's context, where the name matches.
+    if: github.repository == 'tomerav83/parsley'
     steps:
       - uses: actions/checkout@v4
       # Step-level gate, not a workflow `paths:` filter — same reasoning as the
@@ -172,6 +177,12 @@ jobs:
       # simply leave no Argos check at all. Never skipped on master: that's the
       # build PR baselines resolve from, and letting it lapse orphans them.
       - name: Visual regression
+        # The paragraph above is about *this* repo, where skipping the step
+        # outright would leave the PR with no Argos check. A copy of this tree
+        # (tomerav83/parsley-video) has no Argos project to check against and is
+        # private, so tokenless auth can't verify it either — there the step is
+        # skipped outright rather than reported as skipped.
+        if: github.repository == 'tomerav83/parsley'
         env:
           # `== 'false'`, not `!= 'true'`: skip only when we affirmatively know the
           # frontend is untouched. Anything else — an empty output, a gate that
