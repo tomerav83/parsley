@@ -34,3 +34,9 @@ skills-lock.json
 loadtest/.out/*
 !loadtest/.out/.gitkeep
 loadtest/.store/
+
+# The intro film (video/) — Remotion project, captured footage, renders and the
+# recording stack's compose override. Kept out of the repo entirely; the
+# finished film is published as the `parsley-commercial` release asset, which is
+# what the README embeds.
+video/

@@ -3,13 +3,15 @@
 Paste a recipe URL, get the clean recipe back — ingredients, method, times and
 yield, lifted out of the essay and the ads.
 
-![The Parsley home screen: a single URL field under the wordmark](docs/images/home.png)
+<video src="https://github.com/tomerav83/parsley/releases/download/parsley-commercial/parsley-intro.mp4" controls muted>
+  <a href="https://github.com/tomerav83/parsley/releases/download/parsley-commercial/parsley-intro.mp4">Watch the Parsley intro film (78s, mp4)</a>
+</video>
+
+*A 78-second film about why this exists — rendered from React with Remotion.*
 
 Almost every recipe site already embeds its recipe as `schema.org/Recipe` JSON-LD
 so Google can show a rich result. Parsley reads that. One standards-based path,
 no per-site scrapers, no LLM. See [why this exists](docs/motivation.md).
-
-![An extracted recipe: timings, an ingredients checklist, and the method one step at a time](docs/images/recipe.png)
 
 ## Quick start
 
