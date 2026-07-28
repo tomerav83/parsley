@@ -10,9 +10,9 @@
 
 **Paste a recipe URL, get the clean recipe back** — ingredients, method, times and yield, lifted out of the essay and the ads.
 
-[![CI](https://img.shields.io/github/actions/workflow/status/tomerav83/parsley/ci.yml?branch=master&style=flat-square&label=CI&labelColor=141c17&color=059669)](https://github.com/tomerav83/parsley/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/tomerav83/parsley?style=flat-square&labelColor=141c17&color=b5620a)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/tomerav83/parsley/ci.yml?branch=master&style=flat-square&label=CI&labelColor=141c17)](https://github.com/tomerav83/parsley/actions/workflows/ci.yml) [![prod](https://img.shields.io/github/deployments/tomerav83/parsley/Production?style=flat-square&label=prod&labelColor=141c17)](https://parsley-io.vercel.app) [![preview](https://img.shields.io/github/deployments/tomerav83/parsley/Preview?style=flat-square&label=preview&labelColor=141c17)](https://github.com/tomerav83/parsley/deployments/Preview) [![License](https://img.shields.io/github/license/tomerav83/parsley?style=flat-square&labelColor=141c17&color=b5620a)](LICENSE)
 
-[Try it](https://parsley-io.vercel.app) · [Docs](docs/) · [Why it exists](docs/motivation.md) · [Decisions](docs/decisions.md) · [Contributing](CONTRIBUTING.md)
+[Docs](docs/) · [Why it exists](docs/motivation.md) · [Decisions](docs/decisions.md) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
