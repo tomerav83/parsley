@@ -60,11 +60,12 @@ The root `vercel.json` declares both services and the rewrites that expose them:
   app to work — the frontend's relative `/api/*` calls are rewritten to the
   backend service.
 
-> ⚠️ **Rate limiting is degraded on serverless.** `app/main.py` uses `slowapi`
-> with in-memory counters. On Vercel Functions those counters aren't shared
-> across invocations/instances, so the `10/minute` limit is effectively
-> best-effort. Fine for a low-traffic demo; for real enforcement, move slowapi to
-> a shared store (e.g. Upstash Redis via `storage_uri`).
+> ⚠️ **Rate limiting is degraded on serverless.** `app/rate_limit.py` configures
+> `slowapi` with in-memory counters. On Vercel Functions those counters aren't
+> shared across invocations or instances, so the `10/minute` limit is effectively
+> best-effort. Fine for a low-traffic demo; for real enforcement, add a Vercel WAF
+> rate-limit rule at the edge, or point `RATE_LIMIT_STORAGE_URI` at a shared store.
+> See [decision 12](decisions.md#12--rate-limiting-is-best-effort-by-design--for-now).
 
 > **Note on `entrypoint`.** `app.main:app` is a module:attribute spec pointing at
 > the `app` instance in `backend/app/main.py`. If the first deploy can't find the
@@ -94,9 +95,13 @@ make stop             # stop + remove (make stop S=backend to stop just one)
 ```
 
 - Frontend: http://localhost:5173 — the Vite dev server proxies `/api` to the
-  `backend` service (`VITE_API_PROXY` in the compose file).
-- Backend API: http://localhost:8000 (e.g. http://localhost:8000/docs).
-- Non-Docker fallback: `make dev-backend` / `make dev-frontend`.
+  `backend` service (`VITE_API_PROXY` in the compose file). This is where you
+  work; it has HMR.
+- Same-origin QA: http://localhost:8080 — the `proxy` service (nginx, `nginx.conf`)
+  reproduces the production rewrite shape, `/api/*` to the backend and everything
+  else to the frontend. This is where routing itself gets checked, because it's
+  the path production uses.
+- Backend API: http://localhost:8000 (OpenAPI docs at http://localhost:8000/docs).
 
 ### WSL + Docker Desktop credential helper (handled automatically)
 

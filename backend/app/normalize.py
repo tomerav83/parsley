@@ -22,7 +22,11 @@ def clean_lines(values: list[str]) -> list[str]:
 
 
 def safe[T](getter: Callable[[], T]) -> T | None:
-    """Call a scraper getter, returning None when the site omits the field."""
+    """Call a scraper getter, returning None when the site omits the field.
+
+    recipe-scrapers raises rather than returning None for a missing field, and
+    every field but ingredients and steps is optional to us.
+    """
     try:
         return getter()
     except Exception:

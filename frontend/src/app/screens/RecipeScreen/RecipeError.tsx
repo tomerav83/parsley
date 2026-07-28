@@ -10,10 +10,11 @@ import { ErrorWindow } from "@/features/extract/ErrorWindow/ErrorWindow";
 import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import styles from "./RecipeError.module.css";
 
-// Recipe route ErrorBoundary — a cold deep-link whose loader fails shows the leaf
-// failure panel in place of the recipe. useRouteError is the only way to read a
-// thrown loader error, so this thin adapter wires ErrorWindow to the router
-// (retry re-fetches, then revalidates) and centres it in the app frame.
+/**
+ * The recipe route's ErrorBoundary: when the loader fails, the leaf failure panel
+ * takes the recipe's place. useRouteError is the only way to read a thrown loader
+ * error, so this adapter exists to wire ErrorWindow up to the router.
+ */
 export function RecipeError() {
   const error = useRouteError();
   const url = useSearchParams()[0].get("url") ?? "";

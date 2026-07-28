@@ -5,25 +5,22 @@ import { LeafOrb } from "@/features/extract/LeafOrb/LeafOrb.tsx";
 import { ErrorWindow } from "@/features/extract/ErrorWindow/ErrorWindow";
 import styles from "./ExtractScreen.module.css";
 
-// The transition screen: where a submit lands. The leaf works in its porthole
-// while the request pends, and — if it fails — the same porthole morphs to the
-// failure in place (ErrorWindow), never bouncing the error back over Home. On
-// success App has already waved on to the recipe; this screen just holds the work
-// orb under that cover.
-//
-// It's only ever reached through useExtractionFlow.submitUrl, so a stray landing
-// (a hard deep-link to /extract, or a re-render after the error cleared) has
-// nothing to show and bounces itself home. History keeps it out of the back stack
-// (submit pushes it; success/paste replace it), so Back never returns here.
+/**
+ * Where a submit lands: the leaf works in its porthole while the request pends,
+ * and a failure morphs that same porthole into the error panel in place, so the
+ * error never lands back over Home.
+ *
+ * Only submitUrl navigates here, so a stray landing has nothing to show and sends
+ * itself home.
+ */
 export function ExtractScreen() {
   const { extract, lastUrl, retry, openPaste, editLink, dismissError } =
     useAppOutlet();
   const { error, loading, recipe, pasteFailed } = extract;
 
-  // A stray landing (hard deep-link to /extract) mounts with nothing to show —
-  // bounce home. But once we've shown something, a later empty render just means
-  // we're leaving (a recovery action cleared the error as it navigates away); sit
-  // blank for that beat rather than racing our own navigation with a redirect.
+  // Nothing to show on mount means a deep-link landed here: go home. Nothing to
+  // show *after* we've rendered means we're on our way out (a recovery action
+  // cleared the error), so sit blank rather than race our own navigation.
   const shown = useRef(false);
   if (error || loading || recipe) shown.current = true;
   if (!error && !loading && !recipe) {
@@ -33,9 +30,8 @@ export function ExtractScreen() {
   return (
     <div className={styles.extractScreen}>
       <title>Parsley — extracting…</title>
-      {/* Stable route-heading for App's route-change focus. The work→error morph
-          isn't a route change, so the ErrorWindow moves focus to its own primary
-          action and announces via role="alert". */}
+      {/* App moves focus here on a route change. The work-to-error morph isn't
+          one, so ErrorWindow handles its own focus and announcement. */}
       <h1 className={styles.srHeading} data-route-heading tabIndex={-1}>
         {error ? "Extraction failed" : "Extracting your recipe"}
       </h1>

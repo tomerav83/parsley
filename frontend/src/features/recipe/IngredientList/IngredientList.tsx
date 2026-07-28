@@ -5,9 +5,10 @@ interface IngredientListProps {
   ingredients: string[];
 }
 
-// A checklist so a cook can tick items off while shopping or cooking. Each line's
-// leading measurement is split into a tight mono column (the "mise en place"
-// quantity signature). State is local and not persisted — resets on reload.
+/**
+ * A checklist to tick off while shopping or cooking, with the quantities split
+ * into their own column. Nothing is persisted — the ticks reset on reload.
+ */
 export function IngredientList({ ingredients }: IngredientListProps) {
   return (
     <ul className={styles.list}>

@@ -1,4 +1,4 @@
-/* Directional slide between routed screens (REDESIGN D6). React Router wraps each
+/* Directional slide between routed screens (see docs/decisions.md #22). React Router wraps each
    navigate({ viewTransition: true }) in document.startViewTransition; App stamps
    html[data-slide="forward"|"back"] before the DOM update, so the direction is
    known when the transition's animations start.

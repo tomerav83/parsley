@@ -121,6 +121,38 @@
 @media (max-width: 560px) {
   .title {
     font-size: 26px;
+    /* two lines at most, so a wordy title can't push the header into the cap
+       below and clip its own top off (.heroBody is bottom-anchored) */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+  .source {
+    /* one line: the site name is already in the bar above */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Ceiling on the header. Without it a long title, a wrapped byline and a
+     second row of timing chips together take ~40% of a phone screen and leave
+     the ingredients/method pane showing three rows. The percentage resolves
+     against .card, which fills the fixed frame, so it scales with the device
+     instead of guessing a pixel height. */
+  .hero {
+    min-height: 0;
+    max-height: 34%;
+  }
+  .heroBody {
+    /* top-anchored on mobile: if the cap does bite (a short screen), it trims
+       the last chip row rather than beheading the title */
+    align-self: flex-start;
+    padding: 14px 16px 13px;
+  }
+  /* decoration is the first thing to go when the header has to fit a cap */
+  .hero .stationKicker {
+    display: none;
   }
 }
 

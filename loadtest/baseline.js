@@ -3,7 +3,7 @@
 // pin throughput regardless of latency, so a slow response shows up as p95
 // breach + rising VU count, not as backed-off load. Run manually / on merge,
 // not per-PR. Records the numbers that replace the provisional thresholds
-// (LOADTEST.md Stage 2). See the KPI table there for the targets below.
+// (docs/load-testing.md Stage 2). See the KPI table there for the targets below.
 import { hitExtract, hitExtractHtml, RECIPES } from './common.js';
 
 const RECIPE_HTML = open('/fixtures/graph_howtostep/page.html');
@@ -40,7 +40,7 @@ export const options = {
     },
   },
   // Ratcheted off the 2026-07-20 baseline (commit 0c15303) — see the Recorded
-  // baselines table in LOADTEST.md for the numbers and rationale.
+  // baselines table in docs/load-testing.md for the numbers and rationale.
   thresholds: {
     'http_req_duration{endpoint:extract}': ['p(95)<1000', 'p(99)<1200'],
     'http_req_duration{endpoint:extract_html}': ['p(95)<100', 'p(99)<150'],

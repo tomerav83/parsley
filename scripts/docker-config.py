@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Emit a Docker config.json for `make` to use via DOCKER_CONFIG, with credential
-helpers stripped out.
+"""Print a Docker config.json for `make` to use via DOCKER_CONFIG, minus the
+credential helpers.
 
-Under WSL, Docker Desktop writes `"credsStore": "desktop.exe"` into the global
-~/.docker/config.json. BuildKit (used by `docker compose build`) can't exec that
-Windows helper and fails every build with "exec format error". None of Parsley's
-base images need auth, so we drop the helpers and let Docker do anonymous pulls.
+Under WSL, Docker Desktop puts `"credsStore": "desktop.exe"` in the global
+~/.docker/config.json. BuildKit can't exec a Windows helper, so every
+`docker compose build` dies with "exec format error". No Parsley base image needs
+auth, so dropping the helpers and pulling anonymously is enough.
 
-The user's real config is used as a base so any inline `auths` are preserved; only
-the helper keys are removed. Output goes to stdout — the Makefile writes it to
-./.docker/config.json. This is scoped to `make`; the global config is untouched.
+Builds on the real config so inline `auths` survive; only the helper keys go. The
+Makefile writes stdout to ./.docker/config.json — the global config is untouched.
 """
 
 import json

@@ -15,26 +15,23 @@ import workBase from "./poses/work/work.webp";
 import workLids from "./poses/work/work-lids.webp";
 import workTicks from "./poses/work/work-ticks.webp";
 
-// The Parsley mascot — the approved character art cut into a CSS puppet.
-// frontend/.visual-check/crop_poses.py slices each img.png pose into a base
-// sprite plus the moving parts (and prints the %-geometry below); CSS then
-// animates the parts in place: lids blink, ??/?! float, the cloud drifts
-// (its rain is redrawn in CSS so it can fall), sweat drips (the falling
-// drop is drawn in the pipeline; over's painted bead stays baked in its
-// base), and the stressed poses tremble. The pupils stay painted in the
-// base — they sit against the glasses rim and laptop ink, so any cut layer
-// drags fragments along; eye life comes from the blinks. At rest every
-// layer sits exactly where it was cut from, so a static frame is identical
-// to the original illustration — which is also the prefers-reduced-motion
-// rendering.
-//   work  — glasses, laptop, LEAF FOCUS mug; plays while an extraction runs
-//   hmm   — puzzled upward glance under ?? (an extract failed)
-//   weird — startled double-take under ?!, sweating (the retry failed too;
-//           the sheet has no fifth drawing, so crop_poses.py composites it
-//           from hmm's art)
-//   flat  — rain cloud + puddle, heavy lids (a paste failed; terminal)
-//   over  — sweating over the TO-DO scroll, trembling (rate limited)
-// Decorative throughout: aria-hidden.
+/**
+ * The Parsley mascot: the character art cut into a CSS puppet. crop_poses.py
+ * slices each pose into a base sprite plus its moving parts and prints the
+ * percentages used below; CSS blinks the lids, floats the ?? and ?!, drifts the
+ * cloud, drips the sweat and trembles the stressed poses. The pupils stay painted
+ * into the base — cutting them drags the glasses rim along with them, so the eyes
+ * get their life from blinking instead.
+ *
+ * At rest every layer sits where it was cut from, so a still frame is the original
+ * illustration. That's also what reduced motion renders. Decorative throughout.
+ *
+ *   work  — glasses, laptop, LEAF FOCUS mug; runs while an extraction does
+ *   hmm   — puzzled glance under ?? (the extract failed)
+ *   weird — startled double-take under ?!, sweating (the retry failed too)
+ *   flat  — rain cloud and puddle, heavy lids (a paste failed; nothing left)
+ *   over  — sweating over the TO-DO scroll, trembling (rate limited)
+ */
 export type LeafMood = "work" | "hmm" | "weird" | "flat" | "over";
 
 interface Part {
@@ -83,6 +80,7 @@ const SCENES: Record<
     base: weirdBase,
     parts: [
       part(weirdBang, styles.qq, 71.43, 5.63, 28.57),
+      // the sheet has no sweat drawn for this pose, so borrow over's
       part(overSweat, styles.sweat, 84.57, 36.71, 13.14),
       part(weirdLids, styles.lids, 21.43, 43.92, 42.29),
     ],
@@ -96,8 +94,8 @@ const SCENES: Record<
   },
 };
 
-// Streak columns cluster beside the crown like the original art's rain —
-// none fall across the face. left is % of the rain band; delays de-sync.
+// Streaks cluster beside the crown the way the original art's rain does — none
+// cross the face. left is a % of the rain band; the delays keep them out of step.
 const RAIN_DROPS: Array<[left: number, delay: number]> = [
   [3, 0],
   [13, 0.5],

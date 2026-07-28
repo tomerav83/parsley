@@ -1,5 +1,5 @@
 // Stress test — ramp concurrent users on the primary endpoint to find the
-// degradation shape and prove the Stage 2 fix (LOADTEST.md Stage 3). The load
+// degradation shape and prove the Stage 2 fix (docs/load-testing.md Stage 3). The load
 // hits /recipe/large (a ~1.5 MB parse-heavy page) so the CPU-bound parse is real;
 // a steady /api/health canary runs alongside as the direct signal that the parse
 // stays OFF the event loop — if it ever blocked, health latency would spike into

@@ -1,7 +1,6 @@
-// Split a leading measurement off an ingredient line so the recipe card can show
-// quantities in a tight mono column (the "mise en place" signature) with the
-// ingredient name beside it. Degrades gracefully: lines with no leading amount
-// return an empty quantity and the whole string as the name.
+// Splits the leading measurement off an ingredient line so the card can set
+// quantities in their own mono column. A line with no amount up front keeps the
+// whole string as its name.
 
 const UNITS = new Set([
   "tsp",
@@ -125,10 +124,9 @@ export interface SplitIngredient {
   name: string;
 }
 
-// Precomposed "vulgar fraction" glyphs (½, ¾, …) render as tiny superscript/
-// subscript pairs in Space Mono, so a quantity like "½ tsp" looks shrunken next
-// to plain digits. Expand them to full-size ASCII ("1/2"), inserting a space
-// after a leading whole number so "1½" becomes "1 1/2".
+// Space Mono renders ½ and friends as a tiny superscript/subscript pair, so "½ tsp"
+// looks shrunken beside plain digits. Expanding them to "1/2" keeps the column at
+// one size; the space handles "1½" becoming "1 1/2" rather than "11/2".
 const FRACTION_MAP: Record<string, string> = {
   "¼": "1/4",
   "½": "1/2",
@@ -151,6 +149,13 @@ function expandFractions(text: string): string {
   );
 }
 
+/**
+ * Split "2 tbsp olive oil" into its quantity and its name.
+ *
+ * The trailing word only joins the quantity if it's a known unit, so "2 large
+ * eggs" keeps "large" with the name. If either half comes out empty the whole line
+ * is the name — a bare quantity isn't worth a column of its own.
+ */
 export function splitQuantity(line: string): SplitIngredient {
   const trimmed = line.trim();
   const m = trimmed.match(LEAD);

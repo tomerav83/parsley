@@ -109,7 +109,7 @@ describe("recipeExtractor — request lifecycle", () => {
   });
 });
 
-// The reason this hook exists at all (REDESIGN C3): a retry button firing twice
+// The reason this hook exists at all: a retry button firing twice
 // — or a deep-link request racing a fresh submit — must never let the stale
 // response win.
 describe("recipeExtractor — supersede a stale request", () => {

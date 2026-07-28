@@ -1,5 +1,5 @@
 // Breakpoint test — ramp load until the instance breaks, to record the actual
-// per-instance ceiling (LOADTEST.md Stage 3). k6 aborts the run the moment the
+// per-instance ceiling (docs/load-testing.md Stage 3). k6 aborts the run the moment the
 // error rate or latency crosses the abort thresholds, so the VU count / elapsed
 // time at abort IS the ceiling. The ramp is linear to 300 VUs over 5 min, so at
 // t seconds VUs ≈ t/1 — read the abort time as the breaking-point VU count. Load

@@ -56,19 +56,13 @@
 
 :root {
   /* ---- primitives: the raw palette (theme-independent) ------------------ */
-  --green-900: #064e3b;
-  --green-800: #065f46;
-  --green-700: #047857;
   --green-600: #059669;
   --green-500: #10b981;
-  --green-400: #34d399;
-  --green-300: #6ee7b7;
   --amber-700: #b5620a;
   --amber-500: #f5a623;
 
   /* ---- semantic tokens: what components read (light theme) -------------- */
   --color-brand: var(--green-600); /* emerald identity */
-  --color-brand-strong: var(--green-700); /* emerald, deeper */
   --color-accent: var(--amber-700); /* quantities & data accent */
   --color-bg: #ffffff;
   --color-text: #141c17;
@@ -78,8 +72,6 @@
   --color-code-bg: #f4f3ec;
   --color-grid: rgba(5, 150, 105, 0.15); /* dotted station grid */
   --color-danger: #cb4a3b;
-  --color-danger-bg: #fbf0ee;
-  --color-danger-border: #eac7c0;
   --plate: #ffffff; /* the leaf porthole; also the raster art's light ground */
   --shadow: 0 24px 60px -34px rgba(4, 120, 87, 0.45);
   --shadow-soft: 0 14px 34px -22px rgba(4, 120, 87, 0.4);
@@ -109,7 +101,6 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-brand: var(--green-500);
-    --color-brand-strong: var(--green-400);
     --color-accent: var(--amber-500);
     --color-bg: #0d1411;
     --color-text: #e9f1ec;
@@ -119,8 +110,6 @@
     --color-code-bg: #171c19;
     --color-grid: rgba(16, 185, 129, 0.14);
     --color-danger: #f0796a;
-    --color-danger-bg: #231512;
-    --color-danger-border: #4a2620;
     --plate: #f6f2e8; /* raster art can't retheme — keeps a cream ground in dark */
     --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
     --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
@@ -128,7 +117,6 @@
 }
 :root[data-theme="dark"] {
   --color-brand: var(--green-500);
-  --color-brand-strong: var(--green-400);
   --color-accent: var(--amber-500);
   --color-bg: #0d1411;
   --color-text: #e9f1ec;
@@ -138,8 +126,6 @@
   --color-code-bg: #171c19;
   --color-grid: rgba(16, 185, 129, 0.14);
   --color-danger: #f0796a;
-  --color-danger-bg: #231512;
-  --color-danger-border: #4a2620;
   --plate: #f6f2e8; /* raster art can't retheme — keeps a cream ground in dark */
   --shadow: 0 28px 70px -34px rgba(0, 0, 0, 0.75);
   --shadow-soft: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
@@ -176,21 +162,6 @@ h3 {
 
 p {
   margin: 0;
-}
-
-/* Visually hide but keep in the accessibility tree — used by App's always-mounted
-   role="status" region that announces a fresh collapsed extraction error. */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
 }
 
 /* respect reduced motion globally as a safety net */

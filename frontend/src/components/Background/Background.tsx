@@ -4,18 +4,18 @@ import { ParsleyLogo } from "@/components/ParsleyLogo.tsx";
 
 import styles from "./Background.module.css";
 
-/* Ambient page background: faint ParsleyLogo sprigs drifting slowly up the
-   viewport. Decoration only. All motion is plain CSS animation (see
-   Background.module.css); this file just rolls the dice once per page load for
-   where each sprig lives and how fast it moves. */
+// Faint sprigs drifting up the viewport. CSS does all the motion; this file only
+// rolls the dice once per page load for where each one lives and how fast it goes.
 
 const SPRIG_COUNT = 22;
 
-/* One random sprig. Durations are seconds: a sprig takes `rise`s to cross the
-   screen bottom-to-top, wobbles ±`swayAmp`px every `swayDur`s, and turns once
-   per `spin`s. `phase` (0..1) is how far through its journey it starts — fed to
-   CSS as a negative animation-delay so the screen is scattered with sprigs
-   immediately instead of empty for the first minute. */
+/**
+ * One sprig's numbers. Durations are seconds: it takes `rise` to cross the screen,
+ * wobbles ±`swayAmp` every `swayDur`, and turns once per `spin`.
+ *
+ * `phase` is how far along it starts, handed to CSS as a negative animation-delay
+ * so the screen is scattered with sprigs at once instead of empty for a minute.
+ */
 function randomSprig(index: number) {
   return {
     lane: Math.random() * 100, // vw — the vertical path it rises along

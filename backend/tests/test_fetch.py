@@ -7,7 +7,9 @@
 """
 
 import socket
+from collections.abc import AsyncIterator
 
+import anyio
 import brotli
 import httpx
 import pytest
@@ -189,6 +191,44 @@ async def test_oversized_page_rejected() -> None:
 
     with pytest.raises(FetchError, match="large"):
         await fetch_page("https://example.com/huge")
+
+
+@respx.mock
+async def test_size_cap_aborts_mid_download() -> None:
+    """The cap must abort the transfer, not buffer an arbitrarily large body
+    into memory and check afterwards."""
+
+    class EndlessBody(httpx.AsyncByteStream):
+        chunk = b"x" * (1024 * 1024)
+        sent = 0
+
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            for _ in range(100):  # 100 MB on offer
+                self.sent += len(self.chunk)
+                yield self.chunk
+
+    body = EndlessBody()
+    respx.get("https://example.com/endless").respond(200, stream=body)
+
+    with pytest.raises(FetchError, match="large"):
+        await fetch_page("https://example.com/endless")
+    assert body.sent <= MAX_BYTES + 2 * len(body.chunk), "kept downloading long past the cap"
+
+
+@respx.mock
+async def test_drip_feed_hits_total_deadline(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Per-operation timeouts reset on every read, so only the whole-fetch
+    deadline stops a server that drips bytes forever."""
+    monkeypatch.setattr("app.fetch.TOTAL_TIMEOUT_SECONDS", 0.1)
+
+    async def stall(request: httpx.Request) -> httpx.Response:
+        await anyio.sleep(5)
+        return httpx.Response(200, text="too late")
+
+    respx.get("https://example.com/slow").mock(side_effect=stall)
+
+    with pytest.raises(FetchError, match="too long"):
+        await fetch_page("https://example.com/slow")
 
 
 # --- Content-Encoding ---

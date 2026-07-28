@@ -4,9 +4,11 @@ import styles from "./ThemeToggle.module.css";
 
 type Theme = "light" | "dark";
 
-// The effective theme right now: an explicit choice on <html> wins, otherwise the
-// OS preference. The explicit choice is applied pre-paint by the inline script in
-// index.html, so this matches what's on screen with no flash.
+/**
+ * The theme on screen right now: an explicit choice on <html> if there is one,
+ * else the OS preference. index.html applies the choice before paint, so reading
+ * it here can't disagree with what the user sees.
+ */
 function currentTheme(): Theme {
   const set = document.documentElement.getAttribute("data-theme");
   if (set === "light" || set === "dark") return set;
@@ -15,15 +17,15 @@ function currentTheme(): Theme {
     : "light";
 }
 
-// Light/dark switch. The palette is already theme-aware via tokens (index.css);
-// this just sets `data-theme` on <html> (overriding the OS default) and remembers
-// the choice in localStorage.
+/**
+ * Light/dark switch. The tokens in index.css already handle both, so all this does
+ * is set `data-theme` on <html> and remember the choice.
+ */
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(currentTheme);
 
-  // Follow the OS while the user hasn't chosen explicitly, so the icon stays in
-  // sync. An explicit choice lives as `data-theme` on <html>; while it's set, OS
-  // changes must be ignored or the icon would drift from the visible page.
+  // Follow the OS until the user picks a side. Once `data-theme` is set, OS changes
+  // have to be ignored or the icon drifts away from the page it describes.
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {

@@ -3,14 +3,16 @@ import { createCelPlayer, type LiquidFrame } from "./celPlayer.ts";
 import { registerLiquid, type Dir } from "./liquidController.ts";
 import styles from "./LiquidTransition.module.css";
 
-// The liquid route transition (approved v5.1 prototype): a fixed overlay that
-// plays the rotoscoped wave. Mounted once in main.tsx — deliberately OUTSIDE
-// the router so it has no route coupling and so tests that mount App keep the
-// plain (view-transition slide) code path. Callers reach it through
-// liquidController.ts; useExtractionFlow guards with liquidAvailable().
+/**
+ * The liquid route transition: a fixed overlay playing the rotoscoped wave.
+ *
+ * Mounted once in main.tsx, outside the router, so it has no route coupling and
+ * tests that mount App keep the plain slide. Callers reach it through
+ * liquidController.
+ */
 export function LiquidTransition() {
-  // "cover" swallows input (enter + hold); "exit" is decorative — the revealed
-  // screen underneath is already interactive
+  // "cover" swallows input; "exit" is decorative, since the screen underneath is
+  // already interactive by then
   const [stage, setStage] = useState<"cover" | "exit" | null>(null);
   const waveRef = useRef<SVGSVGElement>(null);
   const emRef = useRef<SVGPathElement>(null);
@@ -52,9 +54,10 @@ export function LiquidTransition() {
     const unregister = registerLiquid({
       begin(dir) {
         if (!alive) return Promise.resolve();
-        // a begin while active would corrupt the sequence; input is swallowed
-        // while covered, so this only defends programmatic races
+        // input is swallowed while covered, so a begin mid-run can only come
+        // from a programmatic race — but it would corrupt the sequence
         if (player.phase !== "idle") player.stop();
+        cancelAnimationFrame(raf); // don't leave a prior run's pump loop ticking
         setStage("cover");
         mirror(dir);
         return new Promise<void>((resolve) => {
@@ -64,8 +67,8 @@ export function LiquidTransition() {
         });
       },
       reveal(dir, swap) {
-        // a caller can hold this handle across an unmount (cleanup resolves
-        // its covered await) — degrade to running the swap directly
+        // a caller can still be holding this handle across an unmount, so run
+        // the swap directly rather than dropping it
         if (!alive) return Promise.resolve(void swap?.());
         mirror(dir); // invisible under full cover, so flipping here is safe
         swap?.();

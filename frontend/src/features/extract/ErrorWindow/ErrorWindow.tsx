@@ -24,8 +24,7 @@ interface ErrorWindowProps {
   onDismiss: () => void; // clear the error and close the window
 }
 
-// One recovery action, rendered by <ActionButton> as either the full-width primary
-// or a secondary ghost. `href` makes it a link (Report); otherwise a button.
+/** One way out, rendered as the primary or a ghost. `href` makes it a link. */
 interface Action {
   key: string;
   icon: ReactNode;
@@ -46,8 +45,8 @@ function ActionButton({
   className?: string;
 }) {
   const className = `${btn.btn} ${btn.compact} ${btn[variant]}${extra ? ` ${extra}` : ""}`;
-  // The primary is where focus lands when the panel appears (see the effect
-  // below) — tagged so focus never depends on DOM position.
+  // Tag the primary so the focus effect below can find it without depending on
+  // where it happens to sit in the DOM.
   const autofocus = variant === "primary" ? "" : undefined;
   const inner = (
     <>
@@ -81,30 +80,23 @@ function ActionButton({
   );
 }
 
-// The failure panel: the leaf mascot acting out the state, over the cause + fix
-// copy and the recovery actions. It's the error half of the transition screen
-// (ExtractScreen) — a failure morphs the working porthole into this in place, so
-// the error sits exactly where the leaf already was, never over Home. The mood
-// escalates with the recovery journey: hmm (fresh failure) → weird (the retry
-// failed too) → flat (a paste failed; terminal), with over reserved for rate
-// limiting.
-//
-// Layout: an unboxed centered column on the transition screen's own ground (no
-// card) — orb, badge, cause, fix, then the actions stacked by importance: one
-// prominent primary (the likeliest fix, picked by intent retry > paste > edit),
-// any secondaries in a quiet centered row beneath it, and "Not now" as a subtle
-// text link at the foot. In the report-only collapse the primary is Report.
-//
-// A11y: the panel is a `role="alert"` — appearing after the work orb (a state
-// change, not a route change), it announces itself, and it moves focus to its
-// primary action so the name/hint are read and recovery is one keypress away.
-// Escape (scoped to the panel) and "Not now" both dismiss; focus restoration
-// afterwards is the parent's job, in onDismiss.
-//
-// Retry flow: "Try again" calls onRetry (which re-runs the extract WITHOUT
-// clearing `error`, so this component stays mounted) and folds a failure into
-// local state. It's a one-shot: once a retry has failed and a fallback
-// remains, retry is gone and the fallback becomes primary.
+/**
+ * The failure panel: the mascot acting out the state, the cause and the fix, then
+ * the ways out — one prominent primary (retry, else paste, else edit), the rest in
+ * a quiet row, and "Not now" at the foot.
+ *
+ * The mood escalates with the journey: hmm for a first failure, weird once the
+ * retry has failed too, flat when a paste failed and nothing is left, over for rate
+ * limiting.
+ *
+ * Retry is one-shot — once it has failed and a fallback remains, it disappears and
+ * the fallback takes the primary slot. It re-runs without clearing the error, so
+ * this component stays mounted through the attempt.
+ *
+ * It appears without a route change, so it's a role="alert" that announces itself
+ * and moves focus to its primary action. Escape and "Not now" both dismiss;
+ * restoring focus afterwards is the parent's job in onDismiss.
+ */
 export function ErrorWindow({
   error,
   sourceUrl,
@@ -119,9 +111,8 @@ export function ErrorWindow({
   const panelRef = useRef<HTMLDivElement>(null);
 
   const info = errorInfo(error.code);
-  // Report-only collapse: a terminal paste is dead from the start; otherwise a
-  // failed retry collapses only when nothing else can take over (unexpected,
-  // no paste) — a live fallback (paste/edit) instead takes the primary slot.
+  // Collapse to report-only: a failed paste is dead on arrival, and a failed retry
+  // only gets here when nothing else could take the primary slot.
   const failed = terminal || (retryFailed && info.unexpected && !info.canPaste);
   const retryUsed = retryFailed && (info.canPaste || info.canEdit);
   const copy = terminal ? PASTE_DEAD : failed ? RETRY_STUCK : info;
@@ -134,8 +125,8 @@ export function ErrorWindow({
         ? "weird"
         : "hmm";
 
-  // Focus the primary action when the panel appears, and again when a retry
-  // resolves (the retry button disables mid-flight, dropping focus to <body>).
+  // Focus the primary when the panel appears, and again when a retry resolves —
+  // the button disables mid-flight, which drops focus to <body>.
   useEffect(() => {
     if (!retrying) {
       const scope = panelRef.current;
@@ -155,9 +146,8 @@ export function ErrorWindow({
 
   const canRetry = info.canRetry && !retryUsed;
 
-  // Recovery actions in intent order: the first eligible is the full-width
-  // primary, the rest share the secondary ghost row. Every error code offers at
-  // least one of retry/paste/edit, so a primary always exists.
+  // In intent order — the first eligible one becomes the primary. Every code offers
+  // at least one of retry, paste or edit, so there's always something to promote.
   const reportAction: Action = {
     key: "report",
     icon: <GithubIcon />,
@@ -195,14 +185,12 @@ export function ErrorWindow({
   ].filter(Boolean) as Action[];
 
   return (
-    // presentation wrapper carries the Escape handler (it only catches events
-    // bubbling from the real controls, and keeps the key listener off the
-    // non-interactive alert). display:contents, so the panel centres as before.
+    // Escape lives on this wrapper rather than the alert or the window: it only
+    // catches keys bubbling from the real controls, so it can't hijack Escape
+    // page-wide. display:contents, so it doesn't affect the layout.
     <div
       className={styles.keys}
       role="presentation"
-      // Escape dismisses — bound here so it only fires while focus is inside
-      // the panel, never hijacking Escape page-wide.
       onKeyDown={(e) => e.key === "Escape" && onDismiss()}
     >
       <div
@@ -215,20 +203,15 @@ export function ErrorWindow({
         <LeafOrb mood={mood} state="error" className={styles.orb} />
         <h2 className={styles.title}>
           {copy.title}
-          {/* the second-failure marker the old badge carried, folded into the
-              title as a subtle count */}
+          {/* quiet marker that this is the second failure, not the first */}
           {retryFailed && !terminal && (
             <span className={styles.retryCount}>×2</span>
           )}
         </h2>
         <p className={styles.hint}>{copy.hint}</p>
 
-        {/* Actions stacked by importance; focus targets the primary via
-            [data-autofocus], which is always rendered first. */}
         <div className={styles.actions}>
           {failed ? (
-            // Report-only: a terminal paste, or a second failed retry with no
-            // fallback left.
             <ActionButton
               action={reportAction}
               variant="primary"

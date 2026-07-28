@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Compare a k6 baseline summary against the previous run's and decide if it
-regressed. Trend-only: we compare CI-run-to-CI-run (relative delta), never to a
-locally-recorded number, because hosted runners have variable CPU and their
-absolute ms are not comparable across machines (see LOADTEST.md).
+"""Compare a k6 summary against the previous run's and say whether it regressed.
 
-Signals that flag a regression:
-  - error rate (5xx) over the ceiling — runner-independent, a real fault.
-  - an endpoint's p95 up more than --threshold vs the previous run.
+Comparisons are run-to-run and relative. Hosted runners have variable CPU, so
+their absolute milliseconds mean nothing across machines (docs/load-testing.md).
 
-The first run has no previous to compare against, so it just seeds the store and
-reports no regression. Emits a markdown table for the issue body and sets
-`regression`/`reason` on GITHUB_OUTPUT. Never exits non-zero (the workflow, not
-this script, decides what to do with a regression) unless given bad input.
+Two things flag a regression: a 5xx rate over the ceiling (runner-independent, so
+a real fault), or an endpoint's p95 up by more than --threshold since last run.
+The first run has nothing to compare against and just seeds the store.
+
+Writes a markdown table for the issue body and sets regression/reason on
+GITHUB_OUTPUT. Exits non-zero only on bad input — what to do about a regression is
+the workflow's call.
 
 Self-check: `python check_regression.py --selftest`.
 """
@@ -46,7 +45,7 @@ def error_rate(summary: dict) -> float:
 
 
 def evaluate(current: dict, previous: dict | None, threshold: float) -> dict:
-    """Return {regression: bool, reason: str, rows: [(label, prev, cur, delta_pct, flagged)]}."""
+    """Judge one run against the last. Rows are (label, prev, cur, delta, flagged)."""
     rows = []
     reasons = []
 

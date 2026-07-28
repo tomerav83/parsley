@@ -1,5 +1,4 @@
-// The Parsley sprig mark — a stem with paired leaflets. Inherits currentColor so
-// it takes the brand green wherever it's placed.
+/** The Parsley sprig mark. Strokes in currentColor, so it takes its colour from context. */
 export function ParsleyLogo({ className }: { className?: string }) {
   return (
     <svg

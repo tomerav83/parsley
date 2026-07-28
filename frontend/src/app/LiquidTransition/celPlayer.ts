@@ -1,26 +1,19 @@
-// The cel playback machine for the liquid transition — framework-free and
-// clock-injected (drive it with tick(now)) so it unit-tests without rAF.
+// Cel playback for the liquid transition. No framework and no rAF of its own —
+// drive it with tick(now), which is also what makes it unit-testable.
 //
-// Timing is the film's own: drawings swap at its 24fps hold counts (mostly on
-// twos). Transport is smoother than the film: "drawn on twos, moved on ones"
-// — between swaps the current artwork glides at display rate along the wave's
-// travel, using each drawing's measured coverage as its front position. The
-// glide directions are chosen so no gap can open at the anchored edge:
-//   enter — the NEXT drawing shows through each slot, slid back to the
-//           current front and easing forward (mass is left-anchored, so a
-//           negative offset never uncovers anything)
-//   exit  — the CURRENT drawing slides onward toward the next trailing
-//           position (mass is right-anchored, ditto for positive offsets)
-// The whirlpool cycles only if the hold outlasts a short grace, so an
-// immediate release (back nav, instant result) stays wave-only. The amber
-// wall runs LEAD frames ahead on the way in and LEAD behind on the way out.
-// Direction/mirroring is the component's concern.
+// Drawings swap on the film's own 24fps hold counts, mostly on twos, but they move
+// on ones: between swaps the artwork glides at display rate, using each drawing's
+// measured coverage as its front position. Which drawing glides is picked so no gap
+// can open at the anchored edge — on the way in the next drawing slides forward
+// from the current front (mass is left-anchored), on the way out the current one
+// slides on toward the next (right-anchored).
+//
+// The amber wall runs LEAD frames ahead going in and LEAD behind coming out.
+// Mirroring is the component's business, not ours.
 import { CEL } from "./celData.ts";
-import { WHIRL_POSES } from "./whirlPoses.ts";
 
 export const FRAME_MS = 1000 / 24;
 const LEAD = 3;
-const WHIRL_GRACE = 2;
 const W = 1280; // the art's viewBox width
 
 const byF = new Map(CEL.map((c) => [c.f, c]));
@@ -97,8 +90,6 @@ export type LiquidFrame = {
   /** amber layer path and glide offset */
   am: string;
   amDx: number;
-  /** whirl pose index to show, or null to hide the whirl */
-  whirlPose: number | null;
 };
 
 export type CelPlayerEvents = {
@@ -109,14 +100,15 @@ export type CelPlayerEvents = {
   onFinished: () => void;
 };
 
-export type CelPlayer = ReturnType<typeof createCelPlayer>;
-
+/**
+ * A player for one wave. start() covers the screen, release() lets it leave the
+ * hold, and tick(now) advances it — returning false once there's nothing left.
+ */
 export function createCelPlayer(ev: CelPlayerEvents) {
   let phase: "idle" | "enter" | "hold" | "exit" = "idle";
   let fi = 0;
   let acc = 0;
   let last: number | null = null;
-  let holdFrames = 0;
   let released = false;
 
   const offset = (s: Sample, phi: number) => s.t0 + (s.t1 - s.t0) * phi - s.xd;
@@ -126,11 +118,9 @@ export function createCelPlayer(ev: CelPlayerEvents) {
     if (phase === "enter") {
       if (fi - LEAD >= ENTER.length - 1) {
         phase = "hold";
-        holdFrames = 0;
         ev.onCovered();
       }
     } else if (phase === "hold") {
-      holdFrames++;
       if (released) {
         phase = "exit";
         fi = -1; // ++ below lands on 0
@@ -157,19 +147,9 @@ export function createCelPlayer(ev: CelPlayerEvents) {
         emDx: offset(em, phi),
         am: am.d,
         amDx: offset(am, phi),
-        whirlPose: null,
       });
     } else if (phase === "hold") {
-      ev.onFrame({
-        em: FULL,
-        emDx: 0,
-        am: FULL,
-        amDx: 0,
-        whirlPose:
-          !released && holdFrames > WHIRL_GRACE
-            ? (holdFrames >> 1) % WHIRL_POSES.length
-            : null,
-      });
+      ev.onFrame({ em: FULL, emDx: 0, am: FULL, amDx: 0 });
     } else if (phase === "exit") {
       const em = fi < EXIT.length ? EXIT[fi]! : BLANK;
       const amJ = fi - LEAD;
@@ -179,7 +159,6 @@ export function createCelPlayer(ev: CelPlayerEvents) {
         emDx: offset(em, phi),
         am: am.d,
         amDx: offset(am, phi),
-        whirlPose: null,
       });
     }
   }
@@ -193,7 +172,6 @@ export function createCelPlayer(ev: CelPlayerEvents) {
       fi = 0;
       acc = 0;
       last = null;
-      holdFrames = 0;
       released = false;
     },
     /** allow leaving the hold — call after the under-cover swap */
@@ -218,7 +196,7 @@ export function createCelPlayer(ev: CelPlayerEvents) {
       while (acc >= FRAME_MS) {
         acc -= FRAME_MS;
         if (!stepFrame()) {
-          ev.onFrame({ em: "", emDx: 0, am: "", amDx: 0, whirlPose: null });
+          ev.onFrame({ em: "", emDx: 0, am: "", amDx: 0 });
           return false;
         }
       }

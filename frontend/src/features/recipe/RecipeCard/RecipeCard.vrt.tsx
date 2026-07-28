@@ -38,7 +38,7 @@ describe("RecipeCard", () => {
     await argosScreenshot("RecipeCard/mobile-hero", { element: target });
   });
 
-  // Dark is a semantic-token flip (REDESIGN B5). Pinning it catches a token that
+  // Dark is a semantic-token flip. Pinning it catches a token that
   // gets hardcoded back to a literal — the regression the two-tier split exists to
   // prevent, and one no light-mode baseline can see.
   it("desktop, dark theme", async () => {

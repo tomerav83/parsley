@@ -1,8 +1,13 @@
 # Load testing Parsley
 
-Staged plan for verifying the app handles a bare assumption of concurrent
-users, and fixing what doesn't. Written 2026-07-19 from parallel research
-(frameworks, Vercel platform behavior, KPI practice) — sources cited inline.
+The method, the harness and the measured numbers. Originally written 2026-07-19
+as a staged plan; the stages are kept because they record what was measured, in
+what order, and what each measurement bought. **If you only want the results,
+skip to [recorded baselines](#recorded-baselines)** — headline: the per-instance
+ceiling is ~180 VUs (~11 extract req/s) on 1 vCPU, latency-bound with zero 5xx.
+
+Run it with `make loadtest-smoke` (60 s) or `make loadtest` (15 min). One item
+remains open: rate limiting is per-instance on serverless, defect #3 below.
 
 ## Reality checks that shape the whole plan
 

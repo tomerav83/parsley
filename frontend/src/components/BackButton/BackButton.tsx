@@ -1,6 +1,6 @@
 import btn from "@/components/Button.module.css";
 
-// The "NEW SEARCH" back control shown above the recipe view and the paste form.
+/** The "NEW SEARCH" control above the recipe view and the paste form. */
 export function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button type="button" className={btn.back} onClick={onClick}>

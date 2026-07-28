@@ -3,9 +3,10 @@ import { UrlForm } from "@/features/extract/UrlForm/UrlForm";
 import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
 import styles from "./HomeScreen.module.css";
 
-// The landing screen: the wordmark, the promise, and the single URL input that
-// drives the whole app. State lives in App and is read from the outlet context;
-// this is presentation only.
+/**
+ * The landing screen: wordmark, promise, and the URL input that drives everything.
+ * Presentation only — the state lives in App and arrives via the outlet context.
+ */
 export function HomeScreen() {
   const { url, setUrl, submitUrl, extract, urlFieldRef } = useAppOutlet();
 
@@ -14,8 +15,8 @@ export function HomeScreen() {
       <title>Parsley — paste a link, get just the recipe</title>
       <div className={styles.homeInner}>
         <p className={styles.homeKicker}>recipe, extracted</p>
-        {/* focus target on route change (App moves focus here); tabIndex={-1}
-            makes it programmatically focusable without adding a tab stop */}
+        {/* App moves focus here on a route change; tabIndex={-1} allows that
+            without adding a tab stop */}
         <h1 className={styles.wordmark} data-route-heading tabIndex={-1}>
           <ParsleyLogo className={styles.wordmarkLeaf} />
           <span>

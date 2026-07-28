@@ -1,4 +1,4 @@
-// Shared request helpers + KPI metric for the k6 scripts (LOADTEST.md).
+// Shared request helpers + KPI metric for the k6 scripts (docs/load-testing.md).
 // Every request is tagged by endpoint so thresholds can gate per-endpoint p95/p99.
 import http from 'k6/http';
 import { check } from 'k6';

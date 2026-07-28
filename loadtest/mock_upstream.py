@@ -1,11 +1,11 @@
-"""Mock upstream for load testing — stands in for real recipe sites.
+"""Stands in for real recipe sites during a load test.
 
-The load test must never fetch real sites (that DoSes someone else and measures
-their servers, not our code — LOADTEST.md). This serves the same fixture HTML the
-unit tests use, at /recipe/<fixture-name>, with a fixed injected latency so
-Parsley's full fetch path sees a production-shaped response time.
+Pointing a load test at real sites would DoS someone else and measure their
+servers instead of our code (docs/load-testing.md). This serves the unit tests'
+fixture HTML at /recipe/<fixture-name>, with a fixed latency so the fetch path
+sees a production-shaped response time.
 
-Reuses the backend image (starlette/uvicorn already installed); run with
+Runs on the backend image (starlette and uvicorn are already there):
 `uvicorn mock_upstream:app`. Fixtures are preloaded so the delay is the only
 variable, not disk I/O.
 """
@@ -24,10 +24,9 @@ LATENCY_S = int(os.environ.get("LOADTEST_UPSTREAM_LATENCY_MS", "500")) / 1000
 # {fixture_name: html} for every tests/fixtures/<name>/page.html.
 PAGES = {p.parent.name: p.read_text() for p in FIXTURES_DIR.glob("*/page.html")}
 
-# A large synthetic page (~1.5 MB) at /recipe/large for the stress test: a real
-# JSON-LD recipe wrapped in the ad/comment/markup bulk real recipe sites ship, so
-# extract's parse is CPU-heavy the way production is — the tiny fixtures would
-# only exercise fetch concurrency, not the parse-blocking the Stage 2 fix targets.
+# /recipe/large: a real JSON-LD recipe padded to ~1.5 MB with the comment bulk real
+# sites ship, so the parse is CPU-heavy the way production is. The small fixtures
+# only exercise fetch concurrency.
 _filler = '<div class="comment"><p>Lorem ipsum dolor sit amet.</p></div>' * 25000
 if "graph_howtostep" in PAGES:
     PAGES["large"] = PAGES["graph_howtostep"].replace("</body>", _filler + "</body>")

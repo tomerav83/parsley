@@ -1,4 +1,4 @@
-# Prod-like load-testing harness (LOADTEST.md). NOT for dev — use
+# Prod-like load-testing harness (docs/load-testing.md). NOT for dev — use
 # docker-compose.yml for that. Runs the backend the way one Vercel Fluid instance
 # would (1 vCPU / 2 GB, plain uvicorn, no --reload/watchfiles) against a local
 # mock upstream, so k6 measures our code's per-instance capacity without touching

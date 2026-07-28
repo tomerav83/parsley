@@ -1,7 +1,7 @@
 # Visual regression tests
 
 `*.vrt.tsx` specs screenshot a component and Argos compares it against the
-baseline (REDESIGN E7). They catch what behaviour tests structurally can't: a
+baseline. They catch what behaviour tests structurally can't: a
 dropped CSS rule, a token hardcoded back to a literal, text that clips or reflows.
 Everything else in `frontend` is asserted by role and doesn't care how it looks —
 this is the only thing that does.
@@ -51,8 +51,8 @@ OIDC authentication is not enabled for this project` instead of falling back.
 
 ## Screenshot budget
 
-The free tier is 5,000 screenshots/month and we upload 11 per build, so the ceiling
-is ~450 builds/month against a recent rate of ~36 CI runs/month — roughly 8% used.
+The free tier is 5,000 screenshots/month and we upload 14 per build, so the ceiling
+is ~350 builds/month against a recent rate of ~36 CI runs/month — roughly 10% used.
 Argos bills **every screenshot it stores**, not just changed ones ("Usage is billed
 only on successful builds"); identical images are deduped for _transfer_ only, so a
 re-run is faster but never free. Two guards keep the spend proportionate:
@@ -73,7 +73,7 @@ turned on (there is none today). A step skipped by `if:` reports Success.
 
 ## How this avoids being flaky
 
-E7's premise is that VRT done wrong is worse than none, so each source of
+The premise is that VRT done wrong is worse than none, so each source of
 nondeterminism is closed rather than papered over with a mismatch tolerance:
 
 - **The rAF sprig canvas** (`Background`) redraws every frame and would poison any
@@ -117,6 +117,6 @@ await argosScreenshot("RecipeCard/desktop-hero", { element: target });
 Name every shot `Component/case`: Argos names are **global across the build**, not
 per-file like Vitest snapshots.
 
-`FloatingError` is the exception — it's `position: fixed`, so its wrapper has no
-useful box and the specs target `[role="alertdialog"]` / `button[aria-expanded]`
-directly.
+`ErrorWindow` is the exception: its own layout wrapper has no useful box, so its
+specs target the panel's stable `[data-error-panel]` hook directly rather than
+going through `renderStill`'s wrapper.

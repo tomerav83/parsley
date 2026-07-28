@@ -5,15 +5,15 @@ import {
 } from "@/features/extract/LeafCharacter/LeafCharacter.tsx";
 import styles from "./LeafOrb.module.css";
 
-// The leaf in a white porthole — the single anchor shared by the extraction
-// wait and its failure. The character sits on a light plate (which doubles as
-// the ground the raster art needs in dark themes); a rim of liquid current
-// churns around it while `state="work"`, then stills to the mood colour when
-// `state="error"`. Same element in both states, so the transition from waiting
-// to recovery is a data-state flip, never a remount.
-//
-// Decorative: the character is aria-hidden and the copy around it (ErrorWindow's
-// title/hint) carries all meaning, so the orb needs no label of its own.
+/**
+ * The leaf in a white porthole — the one anchor shared by the wait and the failure
+ * that may follow it. A rim of liquid current churns while `state="work"` and
+ * stills to the mood colour on `state="error"`; it's the same element either way,
+ * so going from waiting to recovery is an attribute flip, not a remount.
+ *
+ * The plate under the character doubles as the ground the raster art needs in dark
+ * themes. Decorative — the copy around it carries the meaning.
+ */
 export function LeafOrb({
   mood,
   state,
@@ -36,8 +36,8 @@ export function LeafOrb({
     >
       <span className={styles.ring} aria-hidden />
       {working && (
-        // The rippling waterline: a stroked ring wobbled by turbulence and
-        // slowly rotated, so the rim reads as liquid, not a border.
+        // The waterline: a stroked ring wobbled by turbulence and slowly
+        // rotated, so the rim reads as liquid rather than a border.
         <svg className={styles.crest} viewBox="0 0 100 100" aria-hidden>
           <filter id={rippleId} x="-20%" y="-20%" width="140%" height="140%">
             <feTurbulence

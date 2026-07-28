@@ -1,0 +1,24 @@
+{
+  "_comment": "Single source of truth for the frontend<->backend API contract. Enforced from both sides: backend/tests/test_contract.py and frontend/src/lib/contract.test.ts. Regenerate when the contract intentionally changes (the failing test prints the current values).",
+  "recipe_fields": [
+    "name",
+    "image",
+    "author",
+    "ingredients",
+    "steps",
+    "prep_time_minutes",
+    "cook_time_minutes",
+    "total_time_minutes",
+    "yields",
+    "source_url",
+    "site_name"
+  ],
+  "backend_error_codes": [
+    "error",
+    "invalid_url",
+    "blocked_url",
+    "no_recipe",
+    "site_blocked",
+    "fetch_failed"
+  ]
+}

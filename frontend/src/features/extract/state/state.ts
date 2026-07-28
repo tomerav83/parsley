@@ -1,10 +1,9 @@
-// The extraction flow as an explicit state machine (see REDESIGN C2). The four
-// statuses are mutually exclusive, so impossible states like "loading with a stale
-// recipe" or "error next to a recipe" simply can't be represented.
+// The extraction flow as a state machine. The four statuses are mutually exclusive,
+// so "loading with a stale recipe" or "error beside a recipe" can't be represented.
 //
-// One deliberate transition: a *retry* `submit` keeps the current `error` set while
-// the request is in flight, so the floating error widget stays mounted and can tell
-// a second failure apart from a fresh one. A fresh `submit` clears it.
+// The one odd transition: a retry keeps the current error set while the request is
+// in flight, so the error panel stays mounted and can tell a second failure apart
+// from a fresh one. A fresh submit clears it.
 
 import type { ExtractError, Recipe } from "@/lib/api.ts";
 
@@ -14,8 +13,8 @@ export interface ExtractState {
   status: ExtractStatus;
   recipe: Recipe | null;
   error: ExtractError | null;
-  // A failed *paste* is terminal (no fallback left); the flag tells the floating
-  // widget to open straight into its report-only state.
+  // A failed paste leaves no fallback, so the error panel opens straight into its
+  // report-only state.
   pasteFailed: boolean;
 }
 
@@ -41,8 +40,6 @@ export function extractReducer(
       return {
         status: "submitting",
         recipe: null,
-        // Retry keeps the error visible while the request is in flight; a fresh
-        // run clears it.
         error: action.isRetry ? state.error : null,
         pasteFailed: false,
       };
@@ -61,8 +58,8 @@ export function extractReducer(
         pasteFailed: action.pasteFailed,
       };
     case "dismiss":
-      // Clear an error back to idle; but when a recipe is on screen (success),
-      // dismissing must not drop it — the recipe screen stays mounted.
+      // Clearing an error goes back to idle, but dismissing with a recipe on
+      // screen must keep it — that screen is still mounted.
       return state.status === "error"
         ? initialExtractState
         : { ...state, error: null, pasteFailed: false };
