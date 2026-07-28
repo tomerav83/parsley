@@ -1,18 +1,19 @@
-<div align="center">
-
 # Parsley
 
-**Paste a recipe URL, get the clean recipe back** — ingredients, method, times and yield, lifted out of the essay and the ads.
+**Paste a recipe URL, get the clean recipe back** — ingredients, method, times
+and yield, lifted out of the essay and the ads.
 
-[![CI](https://img.shields.io/github/actions/workflow/status/tomerav83/parsley/ci.yml?branch=master&style=flat-square&label=CI&labelColor=141c17&color=059669)](https://github.com/tomerav83/parsley/actions/workflows/ci.yml) [![Live app](https://img.shields.io/badge/live-parsley--io.vercel.app-059669?style=flat-square&labelColor=141c17)](https://parsley-io.vercel.app) [![License](https://img.shields.io/github/license/tomerav83/parsley?style=flat-square&labelColor=141c17&color=b5620a)](LICENSE)
+<!-- GitHub's site CSS renders markdown images as blocks, so badges stack rather
+     than sit in a row. Two, not six. -->
+
+[![CI](https://img.shields.io/github/actions/workflow/status/tomerav83/parsley/ci.yml?branch=master&style=flat-square&label=CI&labelColor=141c17&color=059669)](https://github.com/tomerav83/parsley/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/tomerav83/parsley?style=flat-square&labelColor=141c17&color=b5620a)](LICENSE)
 
 [Try it](https://parsley-io.vercel.app) · [Docs](docs/) · [Why it exists](docs/motivation.md) · [Decisions](docs/decisions.md) · [Contributing](CONTRIBUTING.md)
 
-</div>
-
 https://github.com/user-attachments/assets/bd4f5683-fa07-4cc2-8c2a-6d73faf1a206
 
-<div align="center"><i>A 78-second film about what this is and why — rendered from React with Remotion.</i></div>
+*A 78-second film about what this is and why — rendered from React with Remotion.*
 
 ## How it works
 
@@ -24,7 +25,7 @@ no per-site scrapers, no LLM, nothing to keep up to date as sites redesign.
 flowchart LR
     U([Browser]) -->|"paste a URL"| P["Parsley<br/>one origin"]
     P -->|"GET the page"| S([Recipe site])
-    S -.->|"schema.org/Recipe JSON-LD"| P
+    S -.->|"its JSON-LD"| P
     P -->|"a clean recipe"| U
 ```
 
