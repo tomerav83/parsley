@@ -1,5 +1,11 @@
 <div align="center">
 
+<!-- The app's own mascot in its working pose — the sprite the extract screen
+     runs while a recipe is being lifted. Referenced in place rather than copied,
+     so the README can't drift from the art the app actually ships. -->
+
+<img src="frontend/src/features/extract/LeafCharacter/poses/work/work.webp" alt="The Parsley mascot — a parsley sprig in glasses, working at a laptop beside a LEAF FOCUS mug" width="240">
+
 # Parsley
 
 **Paste a recipe URL, get the clean recipe back** — ingredients, method, times and yield, lifted out of the essay and the ads.
