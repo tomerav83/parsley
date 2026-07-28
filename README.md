@@ -1,15 +1,46 @@
 # Parsley
 
-Paste a recipe URL, get the clean recipe back — ingredients, method, times and
-yield, lifted out of the essay and the ads.
+**Paste a recipe URL, get the clean recipe back** — ingredients, method, times
+and yield, lifted out of the essay and the ads.
+
+<!-- GitHub's site CSS renders markdown images as blocks, so badges stack rather
+     than sit in a row. Two, not six. -->
+
+[![CI](https://img.shields.io/github/actions/workflow/status/tomerav83/parsley/ci.yml?branch=master&style=flat-square&label=CI&labelColor=141c17&color=059669)](https://github.com/tomerav83/parsley/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/tomerav83/parsley?style=flat-square&labelColor=141c17&color=b5620a)](LICENSE)
+
+[Try it](https://parsley-io.vercel.app) · [Docs](docs/) · [Why it exists](docs/motivation.md) · [Decisions](docs/decisions.md) · [Contributing](CONTRIBUTING.md)
 
 https://github.com/user-attachments/assets/bd4f5683-fa07-4cc2-8c2a-6d73faf1a206
 
 *A 78-second film about what this is and why — rendered from React with Remotion.*
 
+## How it works
+
 Almost every recipe site already embeds its recipe as `schema.org/Recipe` JSON-LD
-so Google can show a rich result. Parsley reads that. One standards-based path,
-no per-site scrapers, no LLM. See [why this exists](docs/motivation.md).
+so Google can show a rich result. Parsley reads that — one standards-based path,
+no per-site scrapers, no LLM, nothing to keep up to date as sites redesign.
+
+```mermaid
+flowchart LR
+    U([Browser]) -->|"paste a URL"| P["Parsley<br/>one origin"]
+    P -->|"GET the page"| S([Recipe site])
+    S -.->|"its JSON-LD"| P
+    P -->|"a clean recipe"| U
+```
+
+- **No scrapers to maintain** — the recipe comes from markup sites publish on
+  purpose, so a redesign doesn't break extraction.
+- **A way past walled sites** — when a site blocks server-side readers, paste the
+  page source instead: same extractor, no fetch.
+- **Nothing is stored** — no database, no accounts, no telemetry. A URL goes in, a
+  recipe comes out; the backend keeps no state between requests.
+- **Built to cook from** — an ingredients checklist, the method one step at a
+  time with the timing pulled out of each step, light and dark, and a print
+  stylesheet that flattens it all onto one page.
+- **Honest failures** — every error has a code from a fixed taxonomy, and the UI
+  offers the recovery that code allows — including a one-click, prefilled
+  [issue report](.github/ISSUE_TEMPLATE/extraction-failure.md).
 
 ## Quick start
 
@@ -78,15 +109,8 @@ recovery. `GET /api/health` is the liveness check.
 | `make loadtest-smoke` (and friends) | k6 load tests, **local only** — see [load testing](docs/load-testing.md) |
 
 The `lint`, `test` and `build` targets run on the host, so they need `uv` and
-Node 22 installed even if you develop in Docker.
-
-Before opening a PR, the same three things CI checks:
-
-```sh
-make lint
-make test                                  # backend
-cd frontend && npm test                    # needs `npx playwright install chromium` once
-```
+Node 22 installed even if you develop in Docker. Before opening a PR, run the
+[same three checks CI runs](CONTRIBUTING.md#before-you-open-a-pr).
 
 Production deploys from the connected Vercel project — see
 [deploy.md](docs/deploy.md).
@@ -104,7 +128,7 @@ and a Lighthouse budget.
 
 ## Docs
 
-Read in this order if you're new:
+Read in this order if you're new — or start at the [docs index](docs/).
 
 | | |
 | --- | --- |
@@ -116,6 +140,14 @@ Read in this order if you're new:
 Operational detail: [deploy.md](docs/deploy.md) ·
 [load-testing.md](docs/load-testing.md) ·
 [visual-regression.md](docs/visual-regression.md).
+
+## Contributing
+
+Bug reports and PRs are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) covers the
+setup, the checks and the conventions. If a recipe page won't extract, the
+fastest thing you can do is
+[file it](https://github.com/tomerav83/parsley/issues/new?template=extraction-failure.md):
+the app's failure screen prefills the report for you.
 
 ## License
 
