@@ -1,0 +1,224 @@
+<!doctype html>
+<!--
+  Source for .github/social-preview.png — the card GitHub shows when the repo is
+  linked on Slack, X, LinkedIn. 1280x640, the size GitHub asks for.
+
+  Same art direction as the app ("mise en place": emerald + amber, Inter + Space
+  Mono, the dotted station grid), reading the same values frontend/src/index.css
+  defines. Fonts resolve from ../frontend/public/fonts, so open this file from the
+  repo, not a copy.
+
+  Regenerate after editing:
+
+    cd frontend && node -e '
+      const {chromium} = require("playwright");
+      chromium.launch().then(async b => {
+        const p = await b.newPage({viewport:{width:1280,height:640}});
+        await p.goto("file://" + require("path").resolve("../.github/social-preview.html"));
+        await p.waitForTimeout(500);
+        await p.screenshot({path:"../.github/social-preview.png"});
+        await b.close();
+      })'
+
+  Then upload it: Settings → General → Social preview → Upload an image. There is
+  no API for that field, so it is the one step that stays manual.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @font-face {
+        font-family: "Inter";
+        font-weight: 100 900;
+        src: url("../frontend/public/fonts/Inter-variable.woff2") format("woff2");
+      }
+      @font-face {
+        font-family: "Space Mono";
+        font-weight: 700;
+        src: url("../frontend/public/fonts/SpaceMono-Bold.woff2") format("woff2");
+      }
+
+      :root {
+        --brand: #10b981;
+        --accent: #f5a623;
+        --bg: #0d1411;
+        --text: #e9f1ec;
+        --muted: #8fa69b;
+        --grid: rgba(16, 185, 129, 0.14);
+        --surface: #16231d;
+        --border: #233029;
+      }
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+      body {
+        width: 1280px;
+        height: 640px;
+        overflow: hidden;
+        font-family: "Inter", system-ui, sans-serif;
+        color: var(--text);
+        /* the station grid over the app's dark ground, with an emerald pool
+           behind the wordmark so the left half carries the weight */
+        background:
+          radial-gradient(
+            720px 520px at 20% 44%,
+            rgba(16, 185, 129, 0.17),
+            transparent 70%
+          ),
+          radial-gradient(var(--grid) 1px, transparent 1.4px) 0 0 / 22px 22px,
+          var(--bg);
+        display: flex;
+        align-items: center;
+        gap: 74px;
+        padding: 0 84px;
+      }
+
+      /* --- left: the lockup ------------------------------------------------ */
+      .lockup {
+        flex: 1 1 auto;
+      }
+      /* the sprig, at the proportions of components/ParsleyLogo.tsx */
+      .mark {
+        width: 82px;
+        height: 82px;
+        color: var(--brand);
+        margin-bottom: 26px;
+      }
+      .kicker {
+        font-family: "Space Mono", monospace;
+        font-weight: 700;
+        font-size: 19px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 14px;
+      }
+      h1 {
+        font-size: 108px;
+        font-weight: 800;
+        letter-spacing: -0.045em;
+        line-height: 0.94;
+      }
+      p {
+        font-size: 30px;
+        line-height: 1.3;
+        color: var(--muted);
+        margin-top: 20px;
+        max-width: 19ch;
+      }
+      p b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .rule {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 2px solid rgba(143, 166, 155, 0.24);
+        display: flex;
+        gap: 26px;
+        font-family: "Space Mono", monospace;
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+      }
+      .rule span::before {
+        content: "· ";
+        color: var(--brand);
+      }
+
+      /* --- right: the prep card, as the app draws it ----------------------- */
+      .prep {
+        flex: 0 0 430px;
+        border: 2px solid var(--border);
+        background:
+          radial-gradient(var(--grid) 1px, transparent 1.4px) 0 0 / 18px 18px,
+          var(--surface);
+        box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.8);
+        padding: 26px 28px 30px;
+      }
+      .slabel {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-family: "Space Mono", monospace;
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        border-bottom: 2px solid var(--text);
+        padding-bottom: 11px;
+      }
+      .slabel b {
+        color: var(--brand);
+      }
+      li {
+        display: flex;
+        align-items: baseline;
+        gap: 16px;
+        list-style: none;
+        padding: 17px 0;
+        font-size: 24px;
+        border-bottom: 1px dotted rgba(143, 166, 155, 0.3);
+      }
+      li:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+      ul {
+        padding: 0;
+      }
+      .box {
+        flex: 0 0 auto;
+        width: 21px;
+        height: 21px;
+        border: 2px solid var(--muted);
+        border-radius: 4px;
+        align-self: center;
+      }
+      .qty {
+        flex: 0 0 92px;
+        font-family: "Space Mono", monospace;
+        font-weight: 700;
+        font-size: 19px;
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="lockup">
+      <svg
+        class="mark"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M12 21V9" />
+        <path d="M12 12C12 8 9 5 4 5c0 5 3 8 8 7z" />
+        <path d="M12 10c0-4 3-7 8-7 0 5-3 8-8 7z" />
+        <path d="M12 15c-.5-2.5-2.5-4-5-4 0 3 2 4.5 5 4z" />
+      </svg>
+      <div class="kicker">schema.org/recipe → just the recipe</div>
+      <h1>Parsley</h1>
+      <p>Paste a recipe URL, get the <b>clean recipe</b> back.</p>
+      <div class="rule">
+        <span>no scrapers</span><span>no LLM</span><span>no accounts</span>
+      </div>
+    </div>
+
+    <div class="prep">
+      <div class="slabel">Ingredients <b>7 items</b></div>
+      <ul>
+        <li><i class="box"></i><span class="qty">2 tbsp</span>olive oil</li>
+        <li><i class="box"></i><span class="qty">1</span>onion, diced</li>
+        <li><i class="box"></i><span class="qty">1</span>red pepper, sliced</li>
+        <li><i class="box"></i><span class="qty">2 tsp</span>cumin</li>
+      </ul>
+    </div>
+  </body>
+</html>
