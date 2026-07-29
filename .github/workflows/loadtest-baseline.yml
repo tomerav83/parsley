@@ -36,6 +36,10 @@ permissions:
 jobs:
   baseline:
     runs-on: ubuntu-latest
+    # Only in this repo. The cron follows this file into any copy of the tree —
+    # tomerav83/parsley-video holds one — where a nightly 15-minute k6 run would
+    # spend billed Actions minutes measuring an app nobody deploys from there.
+    if: github.repository == 'tomerav83/parsley'
     steps:
       - uses: actions/checkout@v4
         with:
