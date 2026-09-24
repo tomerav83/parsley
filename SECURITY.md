@@ -38,7 +38,7 @@ if you can show the risk is worse than the write-up assumes:
 - **Rate limiting is best-effort.** It is per-instance and in-memory, so it caps
   a single client, not a distributed one —
   [decision 12](docs/decisions.md#12--rate-limiting-is-best-effort-by-design--for-now).
-- **`LOADTEST_*` environment variables disable safety rails** —
-  `LOADTEST_ALLOW_PRIVATE_HOSTS` turns off the SSRF guard outright. They exist
-  for the local load-test harness and must never be set in a deployment. Finding
-  them set on a live instance *is* a vulnerability; the mechanism itself isn't.
+- **The load-test harness runs without the SSRF guard and rate limiter.** It uses
+  its own entrypoint, `loadtest/backend_app.py`, which lives outside `backend/` and
+  is never deployed. The deployed app has no switch for turning either rail off —
+  [decision 27](docs/decisions.md#27--load-testing-runs-locally-against-a-prod-like-container).

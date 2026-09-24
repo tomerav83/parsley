@@ -10,7 +10,6 @@ import anyio
 import httpx
 from anyio import to_thread
 
-from app.config import LOADTEST_ALLOW_PRIVATE_HOSTS
 from app.models import AppError, ErrorCode
 
 # Recipe sites behind Cloudflare/WP firewalls reject default python client headers;
@@ -100,10 +99,6 @@ async def _assert_public_host(host: str) -> None:
     pinning the validated IP through a custom transport. Worth doing if this ever
     deploys next to a privileged internal network; on Vercel it isn't.
     """
-    # Load-test escape hatch: the mock upstream sits on a private compose-network
-    # IP. Never set in prod — see config.py.
-    if LOADTEST_ALLOW_PRIVATE_HOSTS:
-        return
     # getaddrinfo blocks, so a slow lookup on the event loop would stall every
     # other request on this instance.
     try:

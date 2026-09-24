@@ -504,9 +504,16 @@ sites under load (that is DoSing someone else, and it would measure their server
 Load-testing the static SPA (that tests a CDN; frontend performance is a latency
 question, so it gets a Lighthouse budget instead).
 
-**Consequences.** Two escape hatches exist in the backend for this harness only —
-`LOADTEST_ALLOW_PRIVATE_HOSTS` and `LOADTEST_DISABLE_RATE_LIMIT`. **Neither may
-ever be set in production**: the first disables the SSRF guard.
+**Consequences.** The harness has to lift two safety rails: the SSRF guard (the
+mock upstream sits on a private compose-network IP) and the rate limiter (10/min
+would measure slowapi, not the app). It does so in its own entrypoint,
+`loadtest/backend_app.py`, which wraps `app.main:app` and lives outside `backend/`,
+so it is never deployed. Production code has no switch that turns either rail off.
+The first version used `LOADTEST_*` env flags checked inside `fetch.py` and
+`rate_limit.py`. They were dropped because a single stray variable in a deployment
+disabled the SSRF guard, and `bool(os.environ.get(...))` read `=0` as on. The cost
+is that the entrypoint patches `fetch._assert_public_host`, a private name, so a
+rename there breaks the load-test smoke job, not production.
 
 ## 28 · k6, and its thresholds are the gate
 
