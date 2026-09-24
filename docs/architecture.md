@@ -51,7 +51,7 @@ A submit from the home screen:
    non-public addresses, then GET with browser headers, following redirects by
    hand and re-validating each hop. A bot-block status retries once through
    curl_cffi with a Chrome TLS fingerprint. Size- and time-capped throughout.
-5. **Extract** (`extractor.py`) — reduce the page to `<head>` plus its JSON-LD,
+5. **Extract** (`extractor.py`) — reduce the page (`extraction/html_reducer.py`) to `<head>` plus its JSON-LD,
    parse with `recipe-scrapers`, fall back to the full page if that yields
    nothing. Runs in a worker thread; it is CPU-bound and would otherwise block
    every other request on the instance.

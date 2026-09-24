@@ -189,7 +189,7 @@ with the pure-Python parser. Real recipe pages are multi-megabyte. A profile
 showed 7.5 s of a 7.6 s parse spent building that tree — used only for `<head>`
 opengraph fallbacks, because the recipe itself is read out of the JSON-LD string.
 
-**Decision.** `_reduce_html` uses lxml's C parser to cut the page down to `<head>`
+**Decision.** `reduce_html` (`extraction/html_reducer.py`) uses lxml's C parser to cut the page down to `<head>`
 plus its `ld+json` scripts and parses that instead. No JSON-LD, or a parse
 failure, returns `None` and the full page is used.
 

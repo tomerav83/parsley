@@ -1,10 +1,9 @@
 """Extract a normalized Recipe from a page's HTML."""
 
-from lxml import html as lxml_html
-from lxml.etree import ParserError
 from recipe_scrapers import scrape_html
 from recipe_scrapers._exceptions import RecipeScrapersExceptions
 
+from app.extraction.html_reducer import reduce_html
 from app.models import AppError, ErrorCode, Recipe
 from app.normalize import clean_lines, clean_text, safe
 
@@ -20,41 +19,13 @@ class RecipeNotFoundError(AppError):
     detail = "No recipe found on that page"
 
 
-def _reduce_html(page_html: str) -> str | None:
-    """Shrink a page to <head> plus its JSON-LD scripts, or None if that won't help.
-
-    recipe-scrapers soups the whole page with the slow pure-Python parser, which
-    takes seconds on the multi-MB pages real sites ship. It reads JSON-LD straight
-    from the string and only needs the soup for <head> opengraph fallbacks, so for
-    the common case this hands it a ~50x smaller parse for identical output.
-
-    None means no JSON-LD (the recipe, if there is one, is body microdata that
-    needs the full tree) or the page wouldn't parse — either way the caller retries
-    with the original HTML. lxml's C parser runs this in tens of milliseconds.
-    """
-    try:
-        root = lxml_html.fromstring(page_html)
-    except (ValueError, ParserError):
-        return None
-    scripts = [
-        lxml_html.tostring(s, encoding=str)
-        for s in root.iter("script")
-        if (s.get("type") or "").strip().lower() == "application/ld+json"
-    ]
-    if not scripts:
-        return None
-    head = root.find("head")
-    head_html = lxml_html.tostring(head, encoding=str) if head is not None else ""
-    return f"<html>{head_html}{''.join(scripts)}</html>"
-
-
 def extract_recipe(page_html: str, url: str) -> Recipe:
     """Parse a Recipe out of a page.
 
     Tries the reduced page first for speed, then the full HTML for sites whose
     recipe lives in body microdata.
     """
-    reduced = _reduce_html(page_html)
+    reduced = reduce_html(page_html)
     if reduced is not None:
         try:
             return _scrape(reduced, url)

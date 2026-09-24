@@ -22,7 +22,7 @@ Four terms recur below, all from the UI:
 
 `extract_recipe(html, url)` in `backend/app/extractor.py`:
 
-1. **Reduce.** `_reduce_html` parses the page with lxml's C parser and rebuilds it
+1. **Reduce.** `reduce_html` (`backend/app/extraction/html_reducer.py`) parses the page with lxml's C parser and rebuilds it
    as `<head>` plus every `application/ld+json` script. Returns `None` when there
    is no JSON-LD or the page won't parse.
 2. **Scrape.** `recipe_scrapers.scrape_html(html, org_url=url, supported_only=False)`
