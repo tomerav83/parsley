@@ -1,16 +1,28 @@
 import socket
+from collections.abc import Iterator
+from unittest import mock
 
 import pytest
 
-PUBLIC_IP = "93.184.216.34"
+from tests.support.dns import FakeResolver
 
 
 @pytest.fixture(autouse=True)
-def public_dns(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Resolve every hostname to a public IP, so no test does a real DNS lookup.
-    SSRF tests override it per case."""
+def dns() -> Iterator[FakeResolver]:
+    """Patch DNS for every test, so none does a real lookup."""
+    resolver = FakeResolver()
+    with mock.patch("socket.getaddrinfo", side_effect=resolver) as patched:
+        resolver.mock = patched
+        yield resolver
 
-    def _fake(host: str, port: object, **_: object) -> list:
-        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (PUBLIC_IP, 0))]
 
-    monkeypatch.setattr(socket, "getaddrinfo", _fake)
+@pytest.fixture(autouse=True)
+def no_network() -> Iterator[None]:
+    """Fail any test that opens a real connection, rather than let it pass by
+    reaching the internet."""
+    refuse = AssertionError("test tried to open a network connection")
+    with (
+        mock.patch.object(socket.socket, "connect", side_effect=refuse),
+        mock.patch.object(socket.socket, "connect_ex", side_effect=refuse),
+    ):
+        yield

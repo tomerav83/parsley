@@ -215,8 +215,19 @@ a directory, not writing test code. The cases cover the JSON-LD variants that
 matter — top-level with string instructions, `@graph` with `HowToStep`,
 `HowToSection` lists — plus a page with no recipe at all.
 
-**No test touches the network.** `respx` mocks httpx transports in
-`test_fetcher.py`, and `conftest.py` stubs DNS for every test; `ExtractionService` takes injected fakes elsewhere.
+The suite mirrors `app/`: `tests/fetching/transport/test_drive.py` tests
+`app/fetching/transport/drive.py`, and so on, so each module is tested directly
+rather than only through `fetch_page` or a route. A few end-to-end cases in
+`tests/fetching/test_fetcher.py` and `tests/test_main.py` cover the wiring.
+
+Shared builders and test doubles live in `tests/support/`; fixtures stay in
+`conftest.py` and the test modules.
+
+**No test touches the network.** `conftest.py` fakes DNS for every test (a
+`FakeResolver` that can also play a rebinding name) and fails any test that
+opens a socket connection. `respx` mocks httpx beneath the pinned transport, a
+fake `AsyncSession` stands in for curl_cffi, and `ExtractionService` takes
+injected mocks elsewhere.
 
 `test_contract.py` and `contract.test.ts` are the two ends of the contract guard
 ([decision 6](decisions.md#6--contractjson-at-the-root-asserted-from-both-sides)).

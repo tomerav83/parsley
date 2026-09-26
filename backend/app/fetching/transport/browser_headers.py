@@ -5,7 +5,7 @@ a browser; with these they serve the same HTML a person gets. Blocks on the IP
 itself are a different problem: those fall through to curl_cffi, then to pasted HTML.
 """
 
-# Every coding here must have an installed httpx decoder (test_fetcher checks).
+# Every coding here must have an installed httpx decoder (test_browser_headers checks).
 HTTPX_DECODABLE_ENCODINGS = "gzip, deflate, br, zstd"
 
 BROWSER_HEADERS = {
