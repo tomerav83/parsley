@@ -30,24 +30,31 @@ Four terms recur below, all from the UI:
    one attempt — that covers sites whose recipe lives in body microdata.
 3. **Require the essentials.** No ingredients or no steps is a `no_recipe`
    failure, not a half-empty recipe.
-4. **Map fields.** recipe-scrapers' strings are used as-is — it already strips
-   tags, unescapes entities and collapses whitespace. The scraper's `to_json()`
-   swallows the exception a getter raises for a field the site omits and leaves
-   that key out; `Recipe.model_validate` maps the rest through validation aliases
-   (`title` → `name`, `instructions_list` → `steps`, `prep_time` →
-   `prep_time_minutes`…), and a missing or empty field takes its default.
+4. **Map fields.** Only the getters `Recipe` needs run (`to_json()` would run
+   all ~25, twice on the fallback). A getter raises for a field the site omits,
+   which becomes `None`. Text fields are cleaned (tags stripped, entities
+   unescaped, whitespace collapsed, empty lines dropped): recipe-scrapers does
+   that for ingredients and steps but not author or yields, and site-specific
+   scrapers return whatever they return.
 
 Missing name falls back to "Untitled recipe". Everything else is nullable.
 
 ## Fetching
 
-`fetch_page(url)` in `backend/app/fetch.py` runs inside an
+`fetch_page(url)` in `backend/app/fetching/fetcher.py` runs inside an
 `anyio.fail_after(15 s)` deadline covering DNS, both attempts and every redirect
 — the per-operation timeouts (6 s) reset on each socket read, so a drip-feeding
 server could otherwise hold a slot until Vercel's 30 s `maxDuration` kills the
 function.
 
-**Validation.** http/https only, host must resolve entirely to global addresses.
+**Validation** (`url_guard.py`). http/https only, host must resolve entirely to global addresses.
+The check runs at connect time and the client is pinned to the IPs that passed,
+tried in resolver order: `PublicOnlyTransport` rewrites httpx's URL to each in
+turn (keeping the name in the Host header and `sni_hostname`, so TLS still
+verifies the name), and the curl_cffi path seeds `CURLOPT_RESOLVE` with the list.
+Neither client resolves DNS itself, which closes DNS rebinding. httpx's pool keys
+connections on the rewritten IP, so the transport keeps none alive: a redirect to
+another name on the same IP would otherwise reuse hop 1's TLS session.
 `socket.getaddrinfo` is blocking, so it runs in a worker thread.
 
 **Transports.** Plain httpx first, with a full browser header set. On 401, 402,
@@ -55,12 +62,13 @@ function.
 carries a real Chrome TLS fingerprint. curl_cffi is imported inside the function
 — it bundles ~30 MB of compiled libcurl and only a minority of requests get here.
 
-**One driver, two transports.** `_drive_fetch` owns the redirect loop, the
+**One driver, two transports.** `drive_fetch` (`transport/drive.py`) owns the redirect loop, the
 per-hop SSRF re-validation, the blocked/error status mapping and the size cap;
 each transport supplies only "open a stream" and "read the body". The
 security-critical parts are written once and can't drift between transports.
 
-**Caps.** 5 redirects, 3 MB body enforced *during* the download (`_read_capped_text`
+**Caps.** 5 redirects, 3 MB body enforced *during* the download (`decode_body`
+in `transport/body_decoder.py`
 fails as soon as the accumulated body crosses the limit, so an oversized page
 never fully lands in memory), and a decode that survives a bogus `charset=`.
 
@@ -208,7 +216,7 @@ matter — top-level with string instructions, `@graph` with `HowToStep`,
 `HowToSection` lists — plus a page with no recipe at all.
 
 **No test touches the network.** `respx` mocks httpx transports in
-`test_fetch.py`; `ExtractionService` takes injected fakes elsewhere.
+`test_fetcher.py`, and `conftest.py` stubs DNS for every test; `ExtractionService` takes injected fakes elsewhere.
 
 `test_contract.py` and `contract.test.ts` are the two ends of the contract guard
 ([decision 6](decisions.md#6--contractjson-at-the-root-asserted-from-both-sides)).

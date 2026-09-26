@@ -26,7 +26,9 @@ def reduce_html(page_html: str) -> str | None:
     if not root.xpath('boolean(//script[@type="application/ld+json"])'):
         return None
 
-    return _build_reduced_page(_extract_head(root), _extract_body_json_ld(root))
+    # The head is kept whole, so only JSON-LD from outside it is added.
+    body_scripts = root.xpath('//script[@type="application/ld+json"][not(ancestor::head)]')
+    return _build_reduced_page(root.find("head"), body_scripts)
 
 
 def _build_reduced_page(head: HtmlElement | None, scripts: list[HtmlElement]) -> str:
@@ -35,8 +37,6 @@ def _build_reduced_page(head: HtmlElement | None, scripts: list[HtmlElement]) ->
     The elements are moved, not copied — the page they came from loses them.
     """
     reduced = lxml_html.Element("html")
-
-    # The head is kept whole, so only JSON-LD from outside it is added.
     if head is not None:
         reduced.append(head)
 
@@ -45,13 +45,3 @@ def _build_reduced_page(head: HtmlElement | None, scripts: list[HtmlElement]) ->
         reduced.append(script)
 
     return lxml_html.tostring(reduced, encoding=str)
-
-
-def _extract_head(root: HtmlElement) -> HtmlElement | None:
-    """The page's <head> element, or None if it has none."""
-    return root.find("head")
-
-
-def _extract_body_json_ld(root: HtmlElement) -> list[HtmlElement]:
-    """The JSON-LD <script> elements outside <head>, in document order."""
-    return root.xpath('//script[@type="application/ld+json"][not(ancestor::head)]')

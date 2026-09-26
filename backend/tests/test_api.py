@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.fetch import FetchError, SiteBlockedError
+from app.fetching.errors import FetchError, SiteBlockedError
 from app.main import app, get_extraction_service
 from app.rate_limit import limiter
 from app.services import ExtractionService

@@ -8,19 +8,21 @@ Run from the backend image with /loadtest on the path:
 `uvicorn backend_app:app`.
 """
 
-from app import fetch
+from app.fetching import url_guard
 from app.main import app
 from app.rate_limit import limiter
 
 __all__ = ["app"]
 
 
-async def _allow_any_host(host: str) -> None:
-    """Accept every host — the mock upstream sits on a private compose-network IP."""
+def _allow_any_ip(ip: object) -> bool:
+    """Accept every address — the mock upstream sits on a private compose-network IP."""
+    return True
 
 
 # slowapi's 10/min would 429 the test within seconds and measure the limiter.
 limiter.enabled = False
-# validate_url looks the guard up at call time, so rebinding the module attribute
-# covers every call site, redirect hops included.
-fetch._assert_public_host = _allow_any_host
+# resolve_public_ips looks the check up at call time, so rebinding the module
+# attribute covers both transports and every redirect hop. Resolution and IP
+# pinning still run, so the load test exercises them too.
+url_guard.ip_allowed = _allow_any_ip

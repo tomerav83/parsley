@@ -4,9 +4,7 @@ real scraper because both collaborators are injected."""
 from app.models import Recipe
 from app.services import ExtractionService
 
-RECIPE = Recipe.model_validate(
-    {"title": "X", "ingredients": ["a"], "instructions_list": ["b"], "source_url": "u"}
-)
+RECIPE = Recipe(name="X", ingredients=["a"], steps=["b"], source_url="u")
 
 
 async def test_from_url_fetches_then_extracts() -> None:

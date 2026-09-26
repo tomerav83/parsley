@@ -69,3 +69,26 @@ def test_recipe_without_ingredients_or_steps_raises(missing: str) -> None:
     html = f'<html><head><script type="application/ld+json">{ld}</script></head></html>'
     with pytest.raises(RecipeNotFoundError):
         extract_recipe(html, URL)
+
+
+def test_cleans_fields_recipe_scrapers_leaves_raw() -> None:
+    """recipe-scrapers normalises ingredients and steps but hands author and
+    yields back as-is, and an ingredient that's only markup survives as ''."""
+    ld = json.dumps(
+        {
+            "@context": "https://schema.org",
+            "@type": "Recipe",
+            "name": "Clean",
+            "author": {"@type": "Person", "name": "Jane &amp; John"},
+            "recipeYield": "4&nbsp;servings",
+            "recipeIngredient": ["1 egg", "<span></span>"],
+            "recipeInstructions": ["Boil"],
+        }
+    )
+    html = f'<html><head><script type="application/ld+json">{ld}</script></head></html>'
+
+    recipe = extract_recipe(html, URL)
+
+    assert recipe.author == "Jane & John"
+    assert recipe.yields == "4 servings"
+    assert recipe.ingredients == ["1 egg"]

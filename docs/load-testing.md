@@ -83,7 +83,7 @@ The dev containers (`--reload`, watchfiles) don't represent production.
 - The backend runs as `loadtest/backend_app.py`, a harness-only entrypoint that
   wraps `app.main:app` and lifts two rails (never deployed; production has no
   switch for either):
-  - the SSRF guard (`fetch.py:_assert_public_host`), which would otherwise
+  - the SSRF guard (`fetching/url_guard.py:ip_allowed`), which would otherwise
     reject the mock upstream's private IP;
   - the rate limiter, because slowapi's 10/min would 429 the test within
     seconds and measure the limiter, not the app.

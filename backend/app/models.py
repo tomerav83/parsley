@@ -7,8 +7,7 @@ frontend/src/lib/api.ts have to change with it; tests on both sides fail otherwi
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
-from pydantic_core import PydanticUseDefault
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 # Limits
 
@@ -49,32 +48,19 @@ class ExtractHtmlRequest(BaseModel):
 
 
 class Recipe(BaseModel):
-    """What extraction returns, and what the frontend renders. Times are in minutes.
+    """What extraction returns, and what the frontend renders. Times are in minutes."""
 
-    Built only from recipe-scrapers' `to_json()` output: the validation aliases are
-    its keys, and pydantic accepts nothing else. They don't touch the wire shape —
-    serialization still uses the field names.
-    """
-
-    name: str = Field(default="Untitled recipe", validation_alias="title")
+    name: str = "Untitled recipe"
     image: str | None = None
     author: str | None = None
     ingredients: list[str]
-    steps: list[str] = Field(validation_alias="instructions_list")
-    prep_time_minutes: int | None = Field(default=None, validation_alias="prep_time")
-    cook_time_minutes: int | None = Field(default=None, validation_alias="cook_time")
-    total_time_minutes: int | None = Field(default=None, validation_alias="total_time")
+    steps: list[str]
+    prep_time_minutes: int | None = None
+    cook_time_minutes: int | None = None
+    total_time_minutes: int | None = None
     yields: str | None = None
     source_url: str
     site_name: str | None = None
-
-    @field_validator("name", mode="before")
-    @classmethod
-    def _blank_name_to_default(cls, value: object) -> object:
-        """A blank title comes back from recipe-scrapers as '', not a missing key."""
-        if not value:
-            raise PydanticUseDefault
-        return value
 
     @model_validator(mode="before")
     @classmethod
@@ -82,9 +68,7 @@ class Recipe(BaseModel):
         """Ingredients and steps are the two fields a recipe can't do without, so
         data missing either is no recipe at all. Runs before field validation
         because a missing required key never reaches a field validator."""
-        if isinstance(data, dict) and not (
-            data.get("ingredients") and data.get("instructions_list")
-        ):
+        if isinstance(data, dict) and not (data.get("ingredients") and data.get("steps")):
             raise RecipeNotFoundError("Recipe data is missing ingredients or steps")
         return data
 
