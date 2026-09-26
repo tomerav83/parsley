@@ -53,7 +53,7 @@ maintain and no model to pay per request
   answer is the paste fallback, not rotating proxies
   ([decision 3](decisions.md#3--paste-html-fallback-for-sites-that-block-server-side-fetching)).
 - **Not a general web scraper.** Only public http(s) recipe pages
-  ([decision 8](decisions.md#8--ssrf-guard-resolves-dns-first-the-rebinding-gap-is-accepted)).
+  ([decision 8](decisions.md#8--ssrf-guard-checks-at-connect-time-and-pins-the-ip)).
 
 ## Roadmap
 

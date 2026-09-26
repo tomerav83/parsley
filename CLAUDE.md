@@ -29,8 +29,9 @@ Break one of these and something fails in a way that isn't obvious locally.
   `frontend/src/lib/api.ts` together — tests on both sides fail otherwise.
 - **Environment variables are read only in `backend/app/config.py`.** None are
   required.
-- **`LOADTEST_*` variables must never be set in production** —
-  `LOADTEST_ALLOW_PRIVATE_HOSTS` disables the SSRF guard.
+- **Test-harness overrides stay out of `backend/app/`.** The load test lifts the
+  SSRF guard and rate limiter in `loadtest/backend_app.py`, which is never
+  deployed. Don't add env flags that switch safety rails off in production code.
 - **No test touches the network.** Backend extraction tests use HTML fixtures
   under `backend/tests/fixtures/`; `respx` mocks httpx; `ExtractionService` takes
   injected fakes.

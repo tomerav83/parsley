@@ -80,11 +80,13 @@ The dev containers (`--reload`, watchfiles) don't represent production.
   `cpus: 1.0`, `mem_limit: 2g` (one Fluid instance); plus a `mock-upstream`
   nginx service serving `backend/tests/fixtures/**/*.html` with ~500 ms
   injected latency (mock-baseline practice: [WireMock](https://www.wiremock.io/post/running-effective-load-tests-using-mocks-and-simulated-environments)).
-- Two env escape hatches in the backend, load-env only:
-  - `LOADTEST_ALLOW_PRIVATE_HOSTS=1` — the SSRF guard (`fetch.py:_assert_public_host`)
-    otherwise rejects the mock upstream's private IP.
-  - `LOADTEST_DISABLE_RATE_LIMIT=1` — slowapi's 10/min would 429 the test
-    within seconds and measure the limiter, not the app.
+- The backend runs as `loadtest/backend_app.py`, a harness-only entrypoint that
+  wraps `app.main:app` and lifts two rails (never deployed; production has no
+  switch for either):
+  - the SSRF guard (`fetching/url_guard.py:ip_allowed`), which would otherwise
+    reject the mock upstream's private IP;
+  - the rate limiter, because slowapi's 10/min would 429 the test within
+    seconds and measure the limiter, not the app.
 - `loadtest/` at repo root: k6 scripts (JS — matches frontend TS fluency),
   fixture payloads, `make loadtest` / `make loadtest-smoke` targets.
 

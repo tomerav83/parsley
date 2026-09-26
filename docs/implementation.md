@@ -20,9 +20,9 @@ Four terms recur below, all from the UI:
 
 ## Extraction
 
-`extract_recipe(html, url)` in `backend/app/extractor.py`:
+`extract_recipe(html, url)` in `backend/app/extraction/extractor.py`:
 
-1. **Reduce.** `_reduce_html` parses the page with lxml's C parser and rebuilds it
+1. **Reduce.** `reduce_html` (`backend/app/extraction/html_reducer.py`) parses the page with lxml's C parser and rebuilds it
    as `<head>` plus every `application/ld+json` script. Returns `None` when there
    is no JSON-LD or the page won't parse.
 2. **Scrape.** `recipe_scrapers.scrape_html(html, org_url=url, supported_only=False)`
@@ -30,22 +30,33 @@ Four terms recur below, all from the UI:
    one attempt — that covers sites whose recipe lives in body microdata.
 3. **Require the essentials.** No ingredients or no steps is a `no_recipe`
    failure, not a half-empty recipe.
-4. **Normalize.** `clean_text` strips tags, unescapes entities and collapses
-   whitespace; `clean_lines` does that per line and drops the empties. `safe()`
-   wraps each scraper getter so a field the site omits becomes `None` rather than
-   an exception.
+4. **Map fields.** `Recipe.model_validate(scraper)` reads the scraper through
+   `from_attributes`, with validation aliases naming its getters, so only the
+   getters `Recipe` needs run (`to_json()` would run all ~25, twice on the
+   fallback). A getter raises for a field the site omits, which becomes the
+   field's default. Text fields go through recipe-scrapers' own
+   `normalize_string` and empty lines are dropped: the library does that for
+   title, ingredients and steps but not author or yields, and site-specific
+   scrapers return whatever they return.
 
 Missing name falls back to "Untitled recipe". Everything else is nullable.
 
 ## Fetching
 
-`fetch_page(url)` in `backend/app/fetch.py` runs inside an
+`fetch_page(url)` in `backend/app/fetching/fetcher.py` runs inside an
 `anyio.fail_after(15 s)` deadline covering DNS, both attempts and every redirect
 — the per-operation timeouts (6 s) reset on each socket read, so a drip-feeding
 server could otherwise hold a slot until Vercel's 30 s `maxDuration` kills the
 function.
 
-**Validation.** http/https only, host must resolve entirely to global addresses.
+**Validation** (`url_guard.py`). http/https only, host must resolve entirely to global addresses.
+The check runs at connect time and the client is pinned to the IPs that passed,
+tried in resolver order: `PublicOnlyTransport` rewrites httpx's URL to each in
+turn (keeping the name in the Host header and `sni_hostname`, so TLS still
+verifies the name), and the curl_cffi path seeds `CURLOPT_RESOLVE` with the list.
+Neither client resolves DNS itself, which closes DNS rebinding. httpx's pool keys
+connections on the rewritten IP, so the transport keeps none alive: a redirect to
+another name on the same IP would otherwise reuse hop 1's TLS session.
 `socket.getaddrinfo` is blocking, so it runs in a worker thread.
 
 **Transports.** Plain httpx first, with a full browser header set. On 401, 402,
@@ -53,12 +64,13 @@ function.
 carries a real Chrome TLS fingerprint. curl_cffi is imported inside the function
 — it bundles ~30 MB of compiled libcurl and only a minority of requests get here.
 
-**One driver, two transports.** `_drive_fetch` owns the redirect loop, the
+**One driver, two transports.** `drive_fetch` (`transport/drive.py`) owns the redirect loop, the
 per-hop SSRF re-validation, the blocked/error status mapping and the size cap;
 each transport supplies only "open a stream" and "read the body". The
 security-critical parts are written once and can't drift between transports.
 
-**Caps.** 5 redirects, 3 MB body enforced *during* the download (`_read_capped_text`
+**Caps.** 5 redirects, 3 MB body enforced *during* the download (`decode_body`
+in `transport/body_decoder.py`
 fails as soon as the accumulated body crosses the limit, so an oversized page
 never fully lands in memory), and a decode that survives a bogus `charset=`.
 
@@ -205,8 +217,19 @@ a directory, not writing test code. The cases cover the JSON-LD variants that
 matter — top-level with string instructions, `@graph` with `HowToStep`,
 `HowToSection` lists — plus a page with no recipe at all.
 
-**No test touches the network.** `respx` mocks httpx transports in
-`test_fetch.py`; `ExtractionService` takes injected fakes elsewhere.
+The suite mirrors `app/`: `tests/fetching/transport/test_drive.py` tests
+`app/fetching/transport/drive.py`, and so on, so each module is tested directly
+rather than only through `fetch_page` or a route. A few end-to-end cases in
+`tests/fetching/test_fetcher.py` and `tests/test_main.py` cover the wiring.
+
+Shared builders and test doubles live in `tests/support/`; fixtures stay in
+`conftest.py` and the test modules.
+
+**No test touches the network.** `conftest.py` fakes DNS for every test (a
+`FakeResolver` that can also play a rebinding name) and fails any test that
+opens a socket connection. `respx` mocks httpx beneath the pinned transport, a
+fake `AsyncSession` stands in for curl_cffi, and `ExtractionService` takes
+injected mocks elsewhere.
 
 `test_contract.py` and `contract.test.ts` are the two ends of the contract guard
 ([decision 6](decisions.md#6--contractjson-at-the-root-asserted-from-both-sides)).

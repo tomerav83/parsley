@@ -17,10 +17,10 @@ Parsley has no accounts, no database and no secrets. It stores nothing between
 requests, so the interesting surface is small and mostly one thing: **the backend
 fetches a URL you give it.**
 
-- **The SSRF guard** (`backend/app/fetch.py`) resolves the host first and rejects
-  non-public addresses, re-validating every redirect hop. A way past it — a
-  scheme, an encoding, a redirect shape, an address class it doesn't cover — is
-  the highest-value bug in this repo.
+- **The SSRF guard** (`backend/app/fetching/url_guard.py`) resolves the host and
+  rejects non-public addresses; the clients in `transport/clients.py` connect only to
+  the IPs it checked, on every redirect hop. A way past it — a scheme, an encoding, a redirect shape, an
+  address class it doesn't cover — is the highest-value bug in this repo.
 - **Resource exhaustion** through the fetcher: the size cap, the timeouts, or the
   decompression path.
 - **Anything that escapes the recipe rendering.** Recipe text is untrusted
@@ -32,13 +32,10 @@ fetches a URL you give it.**
 These are documented decisions rather than oversights — a report is still welcome
 if you can show the risk is worse than the write-up assumes:
 
-- **DNS rebinding.** The guard validates the address it resolves, then hands the
-  hostname to httpx, which resolves again. The window is accepted rather than
-  closed — [decision 8](docs/decisions.md#8--ssrf-guard-resolves-dns-first-the-rebinding-gap-is-accepted).
 - **Rate limiting is best-effort.** It is per-instance and in-memory, so it caps
   a single client, not a distributed one —
   [decision 12](docs/decisions.md#12--rate-limiting-is-best-effort-by-design--for-now).
-- **`LOADTEST_*` environment variables disable safety rails** —
-  `LOADTEST_ALLOW_PRIVATE_HOSTS` turns off the SSRF guard outright. They exist
-  for the local load-test harness and must never be set in a deployment. Finding
-  them set on a live instance *is* a vulnerability; the mechanism itself isn't.
+- **The load-test harness runs without the SSRF guard and rate limiter.** It uses
+  its own entrypoint, `loadtest/backend_app.py`, which lives outside `backend/` and
+  is never deployed. The deployed app has no switch for turning either rail off —
+  [decision 27](docs/decisions.md#27--load-testing-runs-locally-against-a-prod-like-container).

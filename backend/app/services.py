@@ -9,8 +9,8 @@ from collections.abc import Awaitable, Callable
 
 from anyio import to_thread
 
-from app.extractor import extract_recipe
-from app.fetch import fetch_page
+from app.extraction.extractor import extract_recipe
+from app.fetching.fetcher import fetch_page
 from app.models import Recipe
 
 # FetchPage: URL → HTML. Extractor: HTML + its source URL → Recipe.

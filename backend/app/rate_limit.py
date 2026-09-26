@@ -4,7 +4,7 @@ from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from app.config import LOADTEST_DISABLE_RATE_LIMIT, RATE_LIMIT_STORAGE_URI
+from app.config import RATE_LIMIT_STORAGE_URI
 
 
 def _client_ip(request: Request) -> str:
@@ -22,12 +22,11 @@ def _client_ip(request: Request) -> str:
 
 
 # The cap is per instance unless RATE_LIMIT_STORAGE_URI points somewhere shared, so
-# the real ceiling is 10/min × live instances. Load tests turn it off entirely —
-# otherwise they'd measure the limiter instead of the app.
+# the real ceiling is 10/min × live instances. Load tests turn it off entirely
+# (loadtest/backend_app.py) — otherwise they'd measure the limiter, not the app.
 # ponytail: in-memory per-instance limit; wire the env var to Redis if the cap
 # ever needs to be a real global ceiling rather than best-effort abuse control.
-limiter = Limiter(
-    key_func=_client_ip,
-    storage_uri=RATE_LIMIT_STORAGE_URI,
-    enabled=not LOADTEST_DISABLE_RATE_LIMIT,
-)
+limiter = Limiter(key_func=_client_ip, storage_uri=RATE_LIMIT_STORAGE_URI)
+# slowapi reads RATELIMIT_ENABLED from the env/.env itself; pin it so no variable
+# outside config.py can switch the limiter off. loadtest/backend_app.py unpins it.
+limiter.enabled = True

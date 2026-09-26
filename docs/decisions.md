@@ -16,7 +16,7 @@ its number here.
 · [5 one Vercel project](#5--one-vercel-project-with-two-services)
 · [6 contract.json](#6--contractjson-at-the-root-asserted-from-both-sides)
 · [7 typed errors](#7--errors-carry-their-own-status-one-handler-renders-them)
-· [8 SSRF guard](#8--ssrf-guard-resolves-dns-first-the-rebinding-gap-is-accepted)
+· [8 SSRF guard](#8--ssrf-guard-checks-at-connect-time-and-pins-the-ip)
 · [10 off the event loop](#10--cpu-bound-work-runs-off-the-event-loop)
 · [12 rate limiting](#12--rate-limiting-is-best-effort-by-design--for-now)
 · [13 one config file](#13--environment-variables-are-read-in-exactly-one-file)
@@ -163,24 +163,28 @@ so the UI can choose the right recovery affordance, plus an HTTP status.
 **Consequences.** Adding an error is a class with two class attributes, and it is
 automatically enumerable for [#6](#6--contractjson-at-the-root-asserted-from-both-sides).
 
-## 8 · SSRF guard resolves DNS first; the rebinding gap is accepted
+## 8 · SSRF guard checks at connect time and pins the IP
 
 **Context.** The service fetches URLs supplied by anyone on the internet.
 
-**Decision.** `validate_url` allows only http/https, then `_assert_public_host`
-resolves the host and rejects any answer that isn't a global address. Re-run on
-every redirect hop. Plus a 3 MB body cap enforced mid-stream, a 6 s per-operation
+**Decision.** `validate_url` allows only http/https. At connect time,
+`resolve_public_ips` resolves the host and rejects it if any answer isn't a global
+address, and the client then connects only to those IPs: httpx through
+`PublicOnlyTransport` (URL rewritten to the IP, name kept in the Host header and TLS
+server name, no keep-alive so hops never share a connection), curl_cffi through
+`CURLOPT_RESOLVE`. Runs on every redirect hop. Plus a 3 MB body cap enforced mid-stream, a 6 s per-operation
 timeout, a 15 s whole-fetch deadline, and a 5-redirect limit.
 
 **Rejected.** Checking the literal host string only (a hostname pointing at
 127.0.0.1 walks straight through).
 
-**Consequences.** One accepted residual: DNS rebinding. The fetch re-resolves the
-name, so a short-TTL attacker can answer public to the check and private to the
-connect. Closing it means pinning the validated IP through a custom transport.
-
-**Reopen when.** This deploys next to a privileged internal network rather than
-on Vercel's egress.
+**Consequences.** DNS rebinding is closed: neither client resolves the name
+itself, so a short-TTL answer that turns private after the check never reaches a
+socket. Both clients run with `trust_env` off, since an env proxy would route
+around the pin. The first version resolved, checked, then let the client resolve
+again, and accepted that window; it was closed when the fetch layer was split up.
+Only the first resolved address is tried — no fallback to the next when it's
+unreachable.
 
 ## 9 · Reduce the page to `<head>` + JSON-LD before parsing
 
@@ -189,7 +193,7 @@ with the pure-Python parser. Real recipe pages are multi-megabyte. A profile
 showed 7.5 s of a 7.6 s parse spent building that tree — used only for `<head>`
 opengraph fallbacks, because the recipe itself is read out of the JSON-LD string.
 
-**Decision.** `_reduce_html` uses lxml's C parser to cut the page down to `<head>`
+**Decision.** `reduce_html` (`extraction/html_reducer.py`) uses lxml's C parser to cut the page down to `<head>`
 plus its `ld+json` scripts and parses that instead. No JSON-LD, or a parse
 failure, returns `None` and the full page is used.
 
@@ -203,7 +207,7 @@ attempt before the full-page fallback.
 instance — a 50-VU run measured `/api/health` p95 at 1.07 s.
 
 **Decision.** `ExtractionService` runs the parse through `anyio.to_thread.run_sync`,
-and `_assert_public_host` does the same for the blocking `socket.getaddrinfo`.
+and `resolve_public_ips` does the same for the blocking `socket.getaddrinfo`.
 
 **Consequences.** Health p95 under a 50-VU parse-heavy load dropped to 546 ms,
 and the remaining elevation is single-core CPU contention rather than a blocked
@@ -225,7 +229,7 @@ Verified against EatingWell that these blocks are IP-reputation based, not
 transient — a fresh Cloudflare Worker IP was flagged too. Retrying from the same
 egress pool doubles latency for no better odds.
 
-**Consequences.** Both transports share `_drive_fetch`, so the redirect loop, the
+**Consequences.** Both transports share `drive_fetch`, so the redirect loop, the
 per-hop SSRF re-validation and the size cap are written once and can't drift on
 the security-critical parts. A still-blocked page goes straight to
 [#3](#3--paste-html-fallback-for-sites-that-block-server-side-fetching).
@@ -504,9 +508,16 @@ sites under load (that is DoSing someone else, and it would measure their server
 Load-testing the static SPA (that tests a CDN; frontend performance is a latency
 question, so it gets a Lighthouse budget instead).
 
-**Consequences.** Two escape hatches exist in the backend for this harness only —
-`LOADTEST_ALLOW_PRIVATE_HOSTS` and `LOADTEST_DISABLE_RATE_LIMIT`. **Neither may
-ever be set in production**: the first disables the SSRF guard.
+**Consequences.** The harness has to lift two safety rails: the SSRF guard (the
+mock upstream sits on a private compose-network IP) and the rate limiter (10/min
+would measure slowapi, not the app). It does so in its own entrypoint,
+`loadtest/backend_app.py`, which wraps `app.main:app` and lives outside `backend/`,
+so it is never deployed. Production code has no switch that turns either rail off.
+The first version used `LOADTEST_*` env flags checked inside the fetcher and
+`rate_limit.py`. They were dropped because a single stray variable in a deployment
+disabled the SSRF guard, and `bool(os.environ.get(...))` read `=0` as on. The cost
+is that the entrypoint patches `url_guard.ip_allowed` by name, so a rename
+there breaks the load-test smoke job, not production.
 
 ## 28 · k6, and its thresholds are the gate
 
