@@ -12,7 +12,8 @@ from pathlib import Path
 
 import pytest
 
-from app.extraction.extractor import RecipeNotFoundError, extract_recipe
+from app.extraction.extractor import extract_recipe
+from app.models import RecipeNotFoundError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 URL = "https://example.com/recipe"
@@ -58,3 +59,13 @@ def test_extracts_microdata_recipe_via_full_page_fallback() -> None:
     assert recipe.name == "Microdata Cake"
     assert recipe.ingredients == ["1 cup flour", "2 eggs"]
     assert recipe.steps == ["Mix well", "Bake 30 min"]
+
+
+@pytest.mark.parametrize("missing", ["recipeIngredient", "recipeInstructions"])
+def test_recipe_without_ingredients_or_steps_raises(missing: str) -> None:
+    fields = {"name": "Half", "recipeIngredient": ["1 egg"], "recipeInstructions": ["Boil"]}
+    del fields[missing]
+    ld = json.dumps({"@context": "https://schema.org", "@type": "Recipe", **fields})
+    html = f'<html><head><script type="application/ld+json">{ld}</script></head></html>'
+    with pytest.raises(RecipeNotFoundError):
+        extract_recipe(html, URL)

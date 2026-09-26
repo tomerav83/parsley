@@ -5,9 +5,10 @@ frontend/src/lib/api.ts have to change with it; tests on both sides fail otherwi
 """
 
 from enum import StrEnum
-from typing import cast
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
+from pydantic_core import PydanticUseDefault
 
 # Recipe pages rarely run past 1-2 MB, so this only stops a giant paste tying up
 # the parser. max_length counts characters, not bytes — the UTF-8 size can be a
@@ -42,12 +43,10 @@ class ExtractHtmlRequest(BaseModel):
 class Recipe(BaseModel):
     """What extraction returns, and what the frontend renders. Times are in minutes.
 
-    The validation aliases are recipe-scrapers' `to_json()` keys, so a scraper's
-    output validates straight into a Recipe. They don't touch the wire shape —
+    Built only from recipe-scrapers' `to_json()` output: the validation aliases are
+    its keys, and pydantic accepts nothing else. They don't touch the wire shape —
     serialization still uses the field names.
     """
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
     name: str = Field(default="Untitled recipe", validation_alias="title")
     image: str | None = None
@@ -63,9 +62,23 @@ class Recipe(BaseModel):
 
     @field_validator("name", mode="before")
     @classmethod
-    def _empty_name_to_default(cls, value: object, info: ValidationInfo) -> object:
+    def _blank_name_to_default(cls, value: object) -> object:
         """A blank title comes back from recipe-scrapers as '', not a missing key."""
-        return value or cls.model_fields[cast(str, info.field_name)].default
+        if not value:
+            raise PydanticUseDefault
+        return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def _require_ingredients_and_steps(cls, data: Any) -> Any:
+        """Ingredients and steps are the two fields a recipe can't do without, so
+        data missing either is no recipe at all. Runs before field validation
+        because a missing required key never reaches a field validator."""
+        if isinstance(data, dict) and not (
+            data.get("ingredients") and data.get("instructions_list")
+        ):
+            raise RecipeNotFoundError("Recipe data is missing ingredients or steps")
+        return data
 
 
 class ErrorResponse(BaseModel):
@@ -84,3 +97,14 @@ class AppError(Exception):
     code: ErrorCode = ErrorCode.ERROR
     status = 500
     detail: str | None = None
+
+
+class RecipeNotFoundError(AppError):
+    """The page has no usable schema.org/Recipe markup.
+
+    The client sees `detail`; the message passed at each raise site is for logs.
+    """
+
+    code = ErrorCode.NO_RECIPE
+    status = 422
+    detail = "No recipe found on that page"
