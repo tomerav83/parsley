@@ -20,7 +20,7 @@ Four terms recur below, all from the UI:
 
 ## Extraction
 
-`extract_recipe(html, url)` in `backend/app/extractor.py`:
+`extract_recipe(html, url)` in `backend/app/extraction/extractor.py`:
 
 1. **Reduce.** `reduce_html` (`backend/app/extraction/html_reducer.py`) parses the page with lxml's C parser and rebuilds it
    as `<head>` plus every `application/ld+json` script. Returns `None` when there
@@ -30,10 +30,12 @@ Four terms recur below, all from the UI:
    one attempt — that covers sites whose recipe lives in body microdata.
 3. **Require the essentials.** No ingredients or no steps is a `no_recipe`
    failure, not a half-empty recipe.
-4. **Normalize.** `clean_text` strips tags, unescapes entities and collapses
-   whitespace; `clean_lines` does that per line and drops the empties. `safe()`
-   wraps each scraper getter so a field the site omits becomes `None` rather than
-   an exception.
+4. **Map fields.** recipe-scrapers' strings are used as-is — it already strips
+   tags, unescapes entities and collapses whitespace. The scraper's `to_json()`
+   swallows the exception a getter raises for a field the site omits and leaves
+   that key out; `Recipe.model_validate` maps the rest through validation aliases
+   (`title` → `name`, `instructions_list` → `steps`, `prep_time` →
+   `prep_time_minutes`…), and a missing or empty field takes its default.
 
 Missing name falls back to "Untitled recipe". Everything else is nullable.
 

@@ -51,15 +51,14 @@ A submit from the home screen:
    non-public addresses, then GET with browser headers, following redirects by
    hand and re-validating each hop. A bot-block status retries once through
    curl_cffi with a Chrome TLS fingerprint. Size- and time-capped throughout.
-5. **Extract** (`extractor.py`) — reduce the page (`extraction/html_reducer.py`) to `<head>` plus its JSON-LD,
+5. **Extract** (`extraction/extractor.py`) — reduce the page (`extraction/html_reducer.py`) to `<head>` plus its JSON-LD,
    parse with `recipe-scrapers`, fall back to the full page if that yields
    nothing. Runs in a worker thread; it is CPU-bound and would otherwise block
-   every other request on the instance.
-6. **Normalize** (`normalize.py`) — strip tags, unescape entities, collapse
-   whitespace, drop empty lines.
-7. **Response** — a `Recipe`, or an `ErrorResponse` with a code from the
+   every other request on the instance. recipe-scrapers already strips tags,
+   unescapes entities and collapses whitespace, so its strings go out as-is.
+6. **Response** — a `Recipe`, or an `ErrorResponse` with a code from the
    `ErrorCode` enum.
-8. **SPA** — the response is validated against the zod schema, cached in
+7. **SPA** — the response is validated against the zod schema, cached in
    `sessionStorage` by URL, and the flow navigates to `/recipe?url=…`. On failure
    the transition screen morphs into the failure panel in place, offering the
    recovery actions that error code allows.
@@ -74,8 +73,9 @@ backend/app/
 ├── main.py        FastAPI app, routes, exception handlers
 ├── services.py    ExtractionService — the seam routes call
 ├── fetch.py       SSRF-guarded, capped fetching (httpx + curl_cffi fallback)
-├── extractor.py   HTML → Recipe via recipe-scrapers
-├── normalize.py   cleanup helpers for raw scraper output
+├── extraction/
+│   ├── extractor.py     HTML → Recipe via recipe-scrapers
+│   └── html_reducer.py  cut the page to <head> + JSON-LD before parsing
 ├── models.py      pydantic models, ErrorCode, AppError
 ├── rate_limit.py  slowapi limiter and its client-IP key
 └── config.py      the only module that reads os.environ
@@ -170,8 +170,8 @@ Details in [deploy.md](deploy.md) and [load-testing.md](load-testing.md).
 
 ## Where to start reading
 
-The whole backend is eight short files; read them in request order —
-`main.py` → `services.py` → `fetch.py` → `extractor.py`. That is the entire
+The whole backend is nine short files; read them in request order —
+`main.py` → `services.py` → `fetch.py` → `extraction/extractor.py`. That is the entire
 server.
 
 On the frontend, four files carry most of the design:

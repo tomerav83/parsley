@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from app.extractor import RecipeNotFoundError, extract_recipe
+from app.extraction.extractor import RecipeNotFoundError, extract_recipe
 
 FIXTURES = Path(__file__).parent / "fixtures"
 URL = "https://example.com/recipe"

@@ -5,8 +5,9 @@ frontend/src/lib/api.ts have to change with it; tests on both sides fail otherwi
 """
 
 from enum import StrEnum
+from typing import cast
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, ValidationInfo, field_validator
 
 # Recipe pages rarely run past 1-2 MB, so this only stops a giant paste tying up
 # the parser. max_length counts characters, not bytes — the UTF-8 size can be a
@@ -39,19 +40,32 @@ class ExtractHtmlRequest(BaseModel):
 
 
 class Recipe(BaseModel):
-    """What extraction returns, and what the frontend renders. Times are in minutes."""
+    """What extraction returns, and what the frontend renders. Times are in minutes.
 
-    name: str
+    The validation aliases are recipe-scrapers' `to_json()` keys, so a scraper's
+    output validates straight into a Recipe. They don't touch the wire shape —
+    serialization still uses the field names.
+    """
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
+
+    name: str = Field(default="Untitled recipe", validation_alias="title")
     image: str | None = None
     author: str | None = None
     ingredients: list[str]
-    steps: list[str]
-    prep_time_minutes: int | None = None
-    cook_time_minutes: int | None = None
-    total_time_minutes: int | None = None
+    steps: list[str] = Field(validation_alias="instructions_list")
+    prep_time_minutes: int | None = Field(default=None, validation_alias="prep_time")
+    cook_time_minutes: int | None = Field(default=None, validation_alias="cook_time")
+    total_time_minutes: int | None = Field(default=None, validation_alias="total_time")
     yields: str | None = None
     source_url: str
     site_name: str | None = None
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _empty_name_to_default(cls, value: object, info: ValidationInfo) -> object:
+        """A blank title comes back from recipe-scrapers as '', not a missing key."""
+        return value or cls.model_fields[cast(str, info.field_name)].default
 
 
 class ErrorResponse(BaseModel):

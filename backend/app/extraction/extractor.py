@@ -5,7 +5,6 @@ from recipe_scrapers._exceptions import RecipeScrapersExceptions
 
 from app.extraction.html_reducer import reduce_html
 from app.models import AppError, ErrorCode, Recipe
-from app.normalize import clean_lines, clean_text, safe
 
 
 class RecipeNotFoundError(AppError):
@@ -35,7 +34,7 @@ def extract_recipe(page_html: str, url: str) -> Recipe:
 
 
 def _scrape(page_html: str, url: str) -> Recipe:
-    """Run recipe-scrapers over the HTML and clean up what it gives back.
+    """Run recipe-scrapers over the HTML and validate what it gives back into a Recipe.
 
     Ingredients and steps are the two fields a recipe can't do without, so a page
     missing either counts as no recipe at all.
@@ -45,25 +44,10 @@ def _scrape(page_html: str, url: str) -> Recipe:
     except RecipeScrapersExceptions as exc:
         raise RecipeNotFoundError(str(exc)) from exc
 
-    ingredients = clean_lines(safe(scraper.ingredients) or [])
-    steps = clean_lines(safe(scraper.instructions_list) or [])
-    if not ingredients or not steps:
+    # Every field a getter raised on (recipe-scrapers raises for a missing field
+    # rather than returning None) is simply absent from the dict.
+    data = scraper.to_json()
+    if not data.get("ingredients") or not data.get("instructions_list"):
         raise RecipeNotFoundError("Recipe markup is missing ingredients or instructions")
 
-    name = safe(scraper.title)
-    author = safe(scraper.author)
-    yields = safe(scraper.yields)
-
-    return Recipe(
-        name=clean_text(name) if name else "Untitled recipe",
-        image=safe(scraper.image),
-        author=clean_text(author) if author else None,
-        ingredients=ingredients,
-        steps=steps,
-        prep_time_minutes=safe(scraper.prep_time),
-        cook_time_minutes=safe(scraper.cook_time),
-        total_time_minutes=safe(scraper.total_time),
-        yields=clean_text(yields) if yields else None,
-        source_url=url,
-        site_name=safe(scraper.site_name),
-    )
+    return Recipe.model_validate({**data, "source_url": url})

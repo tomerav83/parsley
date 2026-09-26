@@ -9,7 +9,7 @@ from collections.abc import Awaitable, Callable
 
 from anyio import to_thread
 
-from app.extractor import extract_recipe
+from app.extraction.extractor import extract_recipe
 from app.fetch import fetch_page
 from app.models import Recipe
 
