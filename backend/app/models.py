@@ -10,10 +10,15 @@ from typing import Any
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 from pydantic_core import PydanticUseDefault
 
+# Limits
+
 # Recipe pages rarely run past 1-2 MB, so this only stops a giant paste tying up
 # the parser. max_length counts characters, not bytes — the UTF-8 size can be a
 # few times this.
 MAX_HTML_CHARS = 5_000_000
+
+
+# Enums
 
 
 class ErrorCode(StrEnum):
@@ -29,6 +34,9 @@ class ErrorCode(StrEnum):
     NO_RECIPE = "no_recipe"
     SITE_BLOCKED = "site_blocked"
     FETCH_FAILED = "fetch_failed"
+
+
+# Models
 
 
 class ExtractRequest(BaseModel):
@@ -84,6 +92,9 @@ class Recipe(BaseModel):
 class ErrorResponse(BaseModel):
     code: ErrorCode
     message: str
+
+
+# Exceptions
 
 
 class AppError(Exception):
