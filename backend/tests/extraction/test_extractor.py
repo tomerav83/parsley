@@ -1,4 +1,4 @@
-"""extract_recipe over real HTML, plus the cleaning helpers on their own.
+"""extract_recipe over real HTML.
 
 TestFixtureCases mirrors recipe-scrapers' own fixture style: each directory under
 tests/fixtures/ holds a page.html and the expected.json Recipe it must produce, so
@@ -9,9 +9,9 @@ import json
 from unittest import mock
 
 import pytest
-from recipe_scrapers._exceptions import NoSchemaFoundInWildMode, SchemaOrgException
+from recipe_scrapers._exceptions import NoSchemaFoundInWildMode
 
-from app.extraction.extractor import _clean_lines, _clean_text, _safe, extract_recipe
+from app.extraction.extractor import extract_recipe
 from app.models import RecipeNotFoundError
 from tests.support.pages import FIXTURES, URL, json_ld_page, read_fixture
 
@@ -124,51 +124,3 @@ class TestNoRecipe:
         ):
             extract_recipe("<html></html>", URL)
         assert excinfo.value.__cause__ is cause
-
-
-class TestSafe:
-    def test_returns_the_getter_value(self) -> None:
-        assert _safe(lambda: 42) == 42
-
-    @pytest.mark.parametrize(
-        "error",
-        [
-            SchemaOrgException("field missing"),  # how recipe-scrapers says "not provided"
-            TypeError("site scraper returned the wrong shape"),
-            KeyError("image"),
-            ValueError("bad duration"),
-        ],
-    )
-    def test_a_failing_getter_is_a_missing_field(self, error: Exception) -> None:
-        getter = mock.Mock(side_effect=error)
-
-        assert _safe(getter) is None
-        getter.assert_called_once_with()
-
-
-class TestCleanText:
-    @pytest.mark.parametrize(
-        ("raw", "clean"),
-        [
-            ("Plain", "Plain"),
-            ("<b>Bold</b> text", "Bold text"),
-            ("Jane &amp; John", "Jane & John"),
-            ("4&nbsp;servings", "4 servings"),
-            ("  spread \n\t out  ", "spread out"),
-            ("a<br>b", "a b"),
-        ],
-    )
-    def test_strips_tags_unescapes_and_collapses(self, raw: str, clean: str) -> None:
-        assert _clean_text(raw) == clean
-
-    @pytest.mark.parametrize("raw", [None, "", "   ", "<span></span>", "&nbsp;"])
-    def test_nothing_left_is_none(self, raw: str | None) -> None:
-        assert _clean_text(raw) is None
-
-
-class TestCleanLines:
-    def test_cleans_each_line_and_drops_the_empty_ones(self) -> None:
-        assert _clean_lines(["<b>1</b> egg", "", "<i></i>", " salt "]) == ["1 egg", "salt"]
-
-    def test_missing_list_is_empty(self) -> None:
-        assert _clean_lines(None) == []

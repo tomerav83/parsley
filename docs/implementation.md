@@ -30,11 +30,13 @@ Four terms recur below, all from the UI:
    one attempt — that covers sites whose recipe lives in body microdata.
 3. **Require the essentials.** No ingredients or no steps is a `no_recipe`
    failure, not a half-empty recipe.
-4. **Map fields.** Only the getters `Recipe` needs run (`to_json()` would run
-   all ~25, twice on the fallback). A getter raises for a field the site omits,
-   which becomes `None`. Text fields are cleaned (tags stripped, entities
-   unescaped, whitespace collapsed, empty lines dropped): recipe-scrapers does
-   that for ingredients and steps but not author or yields, and site-specific
+4. **Map fields.** `Recipe.model_validate(scraper)` reads the scraper through
+   `from_attributes`, with validation aliases naming its getters, so only the
+   getters `Recipe` needs run (`to_json()` would run all ~25, twice on the
+   fallback). A getter raises for a field the site omits, which becomes the
+   field's default. Text fields go through recipe-scrapers' own
+   `normalize_string` and empty lines are dropped: the library does that for
+   title, ingredients and steps but not author or yields, and site-specific
    scrapers return whatever they return.
 
 Missing name falls back to "Untitled recipe". Everything else is nullable.

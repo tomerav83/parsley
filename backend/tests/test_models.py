@@ -1,5 +1,8 @@
+from unittest import mock
+
 import pydantic
 import pytest
+from recipe_scrapers._exceptions import SchemaOrgException
 
 from app.models import (
     MAX_HTML_CHARS,
@@ -54,6 +57,75 @@ class TestRecipe:
 
         assert dumped["prep_time_minutes"] == 10
         assert list(dumped) == list(Recipe.model_fields)
+
+    @pytest.mark.parametrize(
+        ("raw", "clean"),
+        [
+            ("<b>Bold</b> text", "Bold text"),
+            ("Jane &amp; John", "Jane & John"),
+            ("4&nbsp;servings", "4 servings"),
+            ("  spread \n\t out  ", "spread out"),
+        ],
+    )
+    def test_normalizes_text_fields(self, raw: str, clean: str) -> None:
+        recipe = Recipe.model_validate({**MINIMAL, "author": raw, "yields": raw})
+
+        assert recipe.author == recipe.yields == clean
+
+    @pytest.mark.parametrize("raw", ["", "   ", "<span></span>", "&nbsp;"])
+    def test_text_that_normalizes_to_nothing_is_the_default(self, raw: str) -> None:
+        recipe = Recipe.model_validate({**MINIMAL, "name": raw, "author": raw})
+
+        assert (recipe.name, recipe.author) == ("Untitled recipe", None)
+
+    def test_drops_lines_that_normalize_to_nothing(self) -> None:
+        recipe = Recipe.model_validate({**MINIMAL, "ingredients": ["<b>1</b> egg", "", "<i></i>"]})
+
+        assert recipe.ingredients == ["1 egg"]
+
+
+class TestRecipeFromScraper:
+    """Recipe reads a scraper's getters by their validation aliases."""
+
+    def scraper(self, **getters: object) -> mock.Mock:
+        base = {
+            "ingredients": ["1 egg"],
+            "instructions_list": ["Boil"],
+            "url": MINIMAL["source_url"],
+        }
+        fields = {**base, **getters}
+        scraper = mock.Mock(spec=[*fields])
+        for field, value in fields.items():
+            if field == "url":
+                scraper.url = value
+            elif isinstance(value, Exception):
+                setattr(scraper, field, mock.Mock(side_effect=value))
+            else:
+                setattr(scraper, field, mock.Mock(return_value=value))
+        return scraper
+
+    def test_calls_the_aliased_getters(self) -> None:
+        recipe = Recipe.model_validate(self.scraper(title="Soup", prep_time=5))
+
+        assert (recipe.name, recipe.steps, recipe.prep_time_minutes) == ("Soup", ["Boil"], 5)
+        assert recipe.source_url == MINIMAL["source_url"]
+
+    @pytest.mark.parametrize(
+        "error",
+        [
+            SchemaOrgException("field missing"),  # how recipe-scrapers says "not provided"
+            TypeError("site scraper returned the wrong shape"),
+            KeyError("image"),
+        ],
+    )
+    def test_a_failing_getter_is_the_default(self, error: Exception) -> None:
+        recipe = Recipe.model_validate(self.scraper(title=error, image=error, author=error))
+
+        assert (recipe.name, recipe.image, recipe.author) == ("Untitled recipe", None, None)
+
+    def test_a_failing_ingredients_getter_is_no_recipe(self) -> None:
+        with pytest.raises(RecipeNotFoundError):
+            Recipe.model_validate(self.scraper(ingredients=SchemaOrgException("missing")))
 
 
 class TestExtractRequest:

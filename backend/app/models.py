@@ -5,9 +5,11 @@ frontend/src/lib/api.ts have to change with it; tests on both sides fail otherwi
 """
 
 from enum import StrEnum
-from typing import Any
+from typing import Self
 
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator, model_validator
+from pydantic_core import PydanticUseDefault
+from recipe_scrapers._utils import normalize_string
 
 # Limits
 
@@ -48,29 +50,61 @@ class ExtractHtmlRequest(BaseModel):
 
 
 class Recipe(BaseModel):
-    """What extraction returns, and what the frontend renders. Times are in minutes."""
+    """What extraction returns, and what the frontend renders. Times are in minutes.
 
-    name: str = "Untitled recipe"
+    Validates straight from a recipe-scrapers scraper: from_attributes reads each
+    field off it, the validation aliases name the getters, and only those getters
+    run. Aliases don't touch the wire shape — serialization uses the field names.
+    """
+
+    model_config = ConfigDict(from_attributes=True, validate_by_name=True)
+
+    name: str = Field(default="Untitled recipe", validation_alias="title")
     image: str | None = None
     author: str | None = None
-    ingredients: list[str]
-    steps: list[str]
-    prep_time_minutes: int | None = None
-    cook_time_minutes: int | None = None
-    total_time_minutes: int | None = None
+    ingredients: list[str] = Field(default_factory=list)
+    steps: list[str] = Field(default_factory=list, validation_alias="instructions_list")
+    prep_time_minutes: int | None = Field(default=None, validation_alias="prep_time")
+    cook_time_minutes: int | None = Field(default=None, validation_alias="cook_time")
+    total_time_minutes: int | None = Field(default=None, validation_alias="total_time")
     yields: str | None = None
-    source_url: str
+    source_url: str = Field(validation_alias="url")
     site_name: str | None = None
 
-    @model_validator(mode="before")
+    @field_validator("*", mode="before")
     @classmethod
-    def _require_ingredients_and_steps(cls, data: Any) -> Any:
+    def _call_getter(cls, value: object) -> object:
+        """recipe-scrapers raises rather than returning None for a field the page
+        omits, and every field but ingredients and steps is optional to us."""
+        if not callable(value):
+            return value
+        try:
+            return value()
+        except Exception as exc:
+            raise PydanticUseDefault from exc
+
+    @field_validator("name", "author", "yields")
+    @classmethod
+    def _normalize_text(cls, value: str | None) -> str:
+        """recipe-scrapers normalises title, ingredients and steps itself, but not
+        author or yields, and site-specific scrapers return whatever they return."""
+        if not (text := normalize_string(value or "")):
+            raise PydanticUseDefault
+        return text
+
+    @field_validator("ingredients", "steps")
+    @classmethod
+    def _normalize_lines(cls, value: list[str]) -> list[str]:
+        """A line that was only markup comes back from recipe-scrapers as ''."""
+        return [line for line in map(normalize_string, value) if line]
+
+    @model_validator(mode="after")
+    def _require_ingredients_and_steps(self) -> Self:
         """Ingredients and steps are the two fields a recipe can't do without, so
-        data missing either is no recipe at all. Runs before field validation
-        because a missing required key never reaches a field validator."""
-        if isinstance(data, dict) and not (data.get("ingredients") and data.get("steps")):
+        data missing either is no recipe at all."""
+        if not (self.ingredients and self.steps):
             raise RecipeNotFoundError("Recipe data is missing ingredients or steps")
-        return data
+        return self
 
 
 class ErrorResponse(BaseModel):
