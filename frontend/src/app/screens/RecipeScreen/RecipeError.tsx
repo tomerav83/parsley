@@ -7,7 +7,7 @@ import {
 import { ExtractError, extractRecipe } from "@/lib/api.ts";
 import { cacheRecipe } from "@/lib/recipeCache.ts";
 import { ErrorWindow } from "@/features/extract/ErrorWindow/ErrorWindow";
-import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
+import { useAppOutlet } from "@/features/extract/useAppOutlet.ts";
 import styles from "./RecipeError.module.css";
 
 /**

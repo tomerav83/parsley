@@ -1,5 +1,5 @@
 import { PasteHtmlForm } from "@/features/extract/PasteHtmlForm/PasteHtmlForm";
-import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
+import { useAppOutlet } from "@/features/extract/useAppOutlet.ts";
 import styles from "./PasteScreen.module.css";
 
 /**

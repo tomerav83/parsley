@@ -18,7 +18,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ExtractError, type Recipe } from "@/lib/api.ts";
-import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
+import { useAppOutlet } from "@/features/extract/useAppOutlet.ts";
 import App from "./App.tsx";
 import { HomeScreen } from "./screens/HomeScreen/HomeScreen.tsx";
 import { ExtractScreen } from "./screens/ExtractScreen/ExtractScreen.tsx";

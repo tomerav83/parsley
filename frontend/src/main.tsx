@@ -11,6 +11,17 @@ import { ignoreSkippedViewTransitions } from "./lib/viewTransitionGuard.ts";
 // Keep that out of the console.
 ignoreSkippedViewTransitions();
 
+// After a deploy, an open tab asks for chunk names that no longer exist (Vercel
+// answers them with index.html). Reload to pick up the new build, but at most
+// once per 10s so a deep link to a genuinely broken deploy can't loop forever.
+window.addEventListener("vite:preloadError", (event) => {
+  const last = Number(sessionStorage.getItem("chunkReloadAt") ?? 0);
+  if (Date.now() - last < 10_000) return; // falls through to the root ErrorBoundary
+  sessionStorage.setItem("chunkReloadAt", String(Date.now()));
+  event.preventDefault();
+  window.location.reload();
+});
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {/* Around the router so the flow reaches the wave through context; tests

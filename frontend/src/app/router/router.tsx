@@ -1,33 +1,34 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, redirect } from "react-router";
 import App from "@/app/App.tsx";
+import { RootError } from "./RootError/RootError";
 import { HomeScreen } from "@/app/screens/HomeScreen/HomeScreen";
 import { ExtractScreen } from "@/app/screens/ExtractScreen/ExtractScreen";
 
 /**
- * Data-mode router (docs/decisions.md #15): real URLs, browser back/forward,
- * deep-linkable recipes. createBrowserRouter is the minimum mode that supports the
- * route `lazy` property and viewTransition navigations.
- *
- * Home stays eagerly bundled — lazy-loading the landing screen would delay first
- * paint for everyone. Paste and Recipe are route chunks fetched during the
- * navigation, before render, so there's no Suspense flicker.
- *
- * The dynamic import below is the only way into the recipe view: .oxlintrc.json
- * bans static imports of it everywhere else and exempts this file alone, which is
- * what keeps it off Home's first paint (docs/decisions.md #21).
+ * The app's route table, handed to `<RouterProvider>` in main.tsx: real URLs,
+ * browser back/forward and deep-linkable `/recipe?url=…` (docs/decisions.md #15).
+ * Every screen renders inside App's `<Outlet>`; unknown paths redirect to `/`.
  */
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: App,
-    // Shows while a lazy chunk loads on a hard page load. Null renders a quiet
-    // blank rather than a flash of fallback chrome.
+    // Catches whatever no child route handles itself: a loader or render error
+    // outside /recipe, or a lazy chunk failing to load (including the recipe
+    // chunk, whose own ErrorBoundary lives in that chunk).
+    ErrorBoundary: RootError,
+    // Shows on a hard page load until the matched routes' lazy chunks and
+    // loaders settle (a cold /recipe deep link waits on the extract request).
+    // Null renders a quiet blank rather than a flash of fallback chrome.
     HydrateFallback: () => null,
     children: [
+      // Eager: lazy-loading the landing screen delays everyone's first paint.
       { index: true, Component: HomeScreen },
       // Eager: a submit navigates here at once, so the work orb has to paint
       // without waiting on a chunk fetch. It pulls in no recipe code.
       { path: "extract", Component: ExtractScreen },
+      // Route `lazy` fetches the chunk during the navigation, before render,
+      // so there's no Suspense flicker.
       {
         path: "paste",
         lazy: {
@@ -35,11 +36,13 @@ export const router = createBrowserRouter([
             (await import("@/app/screens/PasteScreen/PasteScreen")).PasteScreen,
         },
       },
+      // The only way into the recipe view, enforced by .oxlintrc.json
+      // (docs/decisions.md #21).
       {
         path: "recipe",
         lazy: {
           // The loader resolves ?url= before the screen renders; a failed extract
-          // throws and the ErrorBoundary shows the sad leaf in its place.
+          // throws and RecipeError's leaf failure panel renders in its place.
           Component: async () =>
             (await import("@/app/screens/RecipeScreen/RecipeScreen"))
               .RecipeScreen,
@@ -51,7 +54,8 @@ export const router = createBrowserRouter([
               .RecipeError,
         },
       },
-      { path: "*", element: <Navigate to="/" replace /> },
+      // Redirect before render, so App never mounts at an unknown path.
+      { path: "*", loader: () => redirect("/") },
     ],
   },
 ]);

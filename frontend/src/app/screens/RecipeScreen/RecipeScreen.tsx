@@ -1,6 +1,6 @@
 import { useLoaderData } from "react-router";
 import { RecipeCard } from "@/features/recipe/RecipeCard/RecipeCard";
-import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
+import { useAppOutlet } from "@/features/extract/useAppOutlet.ts";
 import { BackButton } from "@/components/BackButton/BackButton";
 import type { RecipeLoaderData } from "./recipeLoader.ts";
 import styles from "./RecipeScreen.module.css";

@@ -1,6 +1,6 @@
 import { ParsleyLogo } from "@/components/ParsleyLogo.tsx";
 import { UrlForm } from "@/features/extract/UrlForm/UrlForm";
-import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
+import { useAppOutlet } from "@/features/extract/useAppOutlet.ts";
 import styles from "./HomeScreen.module.css";
 
 /**

@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Navigate } from "react-router";
-import { useAppOutlet } from "@/app/router/useAppOutlet.ts";
+import { useAppOutlet } from "@/features/extract/useAppOutlet.ts";
 import { LeafOrb } from "@/features/extract/LeafOrb/LeafOrb.tsx";
 import { ErrorWindow } from "@/features/extract/ErrorWindow/ErrorWindow";
 import styles from "./ExtractScreen.module.css";

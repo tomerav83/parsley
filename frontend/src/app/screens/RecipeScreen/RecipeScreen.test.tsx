@@ -9,15 +9,15 @@ import { createMemoryRouter, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Recipe } from "@/lib/api.ts";
-import type { AppOutletContext } from "@/app/router/useAppOutlet.ts";
+import type { AppOutletContext } from "@/features/extract/useAppOutlet.ts";
 import type { RecipeLoaderData } from "./recipeLoader.ts";
 import { RecipeScreen } from "./RecipeScreen.tsx";
 
-vi.mock("@/app/router/useAppOutlet.ts", () => ({
+vi.mock("@/features/extract/useAppOutlet.ts", () => ({
   useAppOutlet: vi.fn(),
 }));
 
-const { useAppOutlet } = await import("@/app/router/useAppOutlet.ts");
+const { useAppOutlet } = await import("@/features/extract/useAppOutlet.ts");
 const mockedAppOutlet = vi.mocked(useAppOutlet);
 
 afterEach(() => vi.clearAllMocks());

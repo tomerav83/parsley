@@ -11,10 +11,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExtractError } from "@/lib/api.ts";
 import type { Recipe } from "@/lib/api.ts";
-import type { AppOutletContext } from "@/app/router/useAppOutlet.ts";
+import type { AppOutletContext } from "@/features/extract/useAppOutlet.ts";
 import { RecipeError } from "./RecipeError.tsx";
 
-vi.mock("@/app/router/useAppOutlet.ts", () => ({
+vi.mock("@/features/extract/useAppOutlet.ts", () => ({
   useAppOutlet: vi.fn(),
 }));
 vi.mock("@/lib/api.ts", async (importOriginal) => ({
@@ -23,7 +23,7 @@ vi.mock("@/lib/api.ts", async (importOriginal) => ({
 }));
 vi.mock("@/lib/recipeCache.ts", () => ({ cacheRecipe: vi.fn() }));
 
-const { useAppOutlet } = await import("@/app/router/useAppOutlet.ts");
+const { useAppOutlet } = await import("@/features/extract/useAppOutlet.ts");
 const { extractRecipe } = await import("@/lib/api.ts");
 const { cacheRecipe } = await import("@/lib/recipeCache.ts");
 const mockedAppOutlet = vi.mocked(useAppOutlet);
