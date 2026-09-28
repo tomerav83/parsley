@@ -5,11 +5,7 @@ import {
   useNavigate,
   useNavigationType,
 } from "react-router";
-import {
-  liquidAvailable,
-  wavePass,
-  type Dir,
-} from "../LiquidTransition/liquidController.ts";
+import { useWave, type Dir } from "@/navigation/WaveTransition/useWave.ts";
 import { screenOrder } from "./screens.ts";
 
 /**
@@ -17,10 +13,11 @@ import { screenOrder } from "./screens.ts";
  * blocker below makes the browser's back/forward ride the same wave.
  *
  * Split out of useExtractionFlow so that hook stays about the journey rather than
- * the animation. Without the overlay, or under reduced motion, everything here
- * degrades to a plain view-transition navigation.
+ * the animation. With no wave to play — no overlay, or reduced motion — everything
+ * here degrades to a plain view-transition navigation.
  */
 export function useRouteChoreography() {
+  const wave = useWave();
   const navigate = useNavigate();
   const location = useLocation();
   const navigationType = useNavigationType();
@@ -31,7 +28,7 @@ export function useRouteChoreography() {
   const blocker = useBlocker(
     ({ currentLocation, nextLocation, historyAction }) =>
       historyAction === "POP" &&
-      liquidAvailable() &&
+      wave !== null &&
       currentLocation.pathname !== nextLocation.pathname,
   );
   const popWaving = useRef(false);
@@ -46,8 +43,9 @@ export function useRouteChoreography() {
       screenOrder(blocker.location.pathname) < screenOrder(location.pathname)
         ? -1
         : 1;
-    void wavePass(dir, () => blocker.proceed());
-  }, [blocker, location.pathname]);
+    if (wave) void wave(dir, () => blocker.proceed());
+    else blocker.proceed();
+  }, [blocker, location.pathname, wave]);
 
   // Cover in `dir`, swap the route while the screen is hidden, reveal; the promise
   // resolves once the wave is fully out of the way. `afterSwap` runs under that
@@ -59,12 +57,12 @@ export function useRouteChoreography() {
     opts?: { replace?: boolean },
     afterSwap?: () => void,
   ): Promise<void> {
-    if (!liquidAvailable()) {
+    if (!wave) {
       navigate(to, { ...opts, viewTransition: true });
       afterSwap?.();
       return Promise.resolve();
     }
-    return wavePass(dir, () => {
+    return wave(dir, () => {
       navigate(to, opts);
       afterSwap?.();
     });

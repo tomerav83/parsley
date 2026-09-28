@@ -70,10 +70,10 @@ export default defineConfig({
         // legitimate hand-edit is rebasing DOWN after deleting covered code
         // (autoUpdate only raises; a smaller pool shifts the % without any
         // line losing its test). See docs/decisions.md (#25).
-        lines: 98.67,
-        branches: 90.58,
-        functions: 97.76,
-        statements: 97.47,
+        lines: 98.58,
+        branches: 91.28,
+        functions: 97.72,
+        statements: 97.65,
       },
     },
     projects: [

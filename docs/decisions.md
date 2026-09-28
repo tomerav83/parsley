@@ -30,6 +30,7 @@ its number here.
 · [20 no barrels](#20--one-folder-per-component-no-barrel-files)
 · [21 recipe view code-split](#21--the-recipe-view-stays-off-the-first-paint-enforced-by-lint)
 · [22 wave choreography](#22--liquid-wave-choreography-with-the-view-transition-as-fallback)
+· [31 pages-first layout](#31--frontend-layout-pages-first-shared-code-in-leaves)
 
 **Testing, CI and operations** — [23 two test environments](#23--two-test-environments-split-by-what-they-need)
 · [24 Argos VRT](#24--visual-regression-through-argos-no-baselines-in-git)
@@ -416,16 +417,26 @@ waiting on a chunk fetch.
 a cut.
 
 **Decision.** `go(dir, to)` in `useRouteChoreography` is the single navigation
-primitive: cover with the wave, swap the route under full cover, reveal. When the
-overlay isn't mounted or the user prefers reduced motion, `liquidAvailable()` is
-false and it falls through to `navigate(to, { viewTransition: true })`. The
-browser's own back/forward is a POP that would skip the wave, so a `useBlocker`
-scoped to POP plays the wave and lets `proceed()` commit under cover.
+primitive: cover with the wave, swap the route under full cover, reveal. The wave
+reaches it through context: `<WaveTransition>` wraps the router and provides a
+pass function, and `useWave()` returns it, or `null` when no overlay is mounted
+or the user prefers reduced motion. On `null`, `go` falls through to
+`navigate(to, { viewTransition: true })`. The browser's own back/forward is a POP
+that would skip the wave, so a `useBlocker` scoped to POP plays the wave and lets
+`proceed()` commit under cover.
+
+Inside the module, the film (which frame shows, both walls, compiled once from the
+traced drawings), the frame clock (which frame is due at a given timestamp) and the
+wave (rAF loop, DOM painting, the pass promise) are separate, with only the last
+one touching the DOM. A pass is one call. An earlier `begin`/`reveal` pair and an
+indefinite hold existed for a loader that ran under cover, and they went when
+that loader was deleted.
 
 **Consequences.** The animation plumbing is separated from the extraction journey
 — `useExtractionFlow` reads as the journey, `useRouteChoreography` as the
-choreography. Tests mount `App` without the overlay and take the fallback path,
-so behaviour tests never depend on animation.
+choreography. Because the context is nullable, TypeScript makes every caller
+handle the no-wave path. Tests mount `App` without the provider and take the
+fallback path, so behaviour tests never depend on animation.
 
 ## 23 · Two test environments, split by what they need
 
@@ -557,3 +568,68 @@ Under WSL, Docker Desktop writes a Windows credential helper into
 `~/.docker/config.json` that BuildKit can't exec, breaking every build; the `make`
 targets point `DOCKER_CONFIG` at a regenerated project-local config with the
 helpers stripped, scoped to `make` so direct `docker` commands are untouched.
+
+## 31 · Frontend layout: pages first, shared code in leaves
+
+**Context.** The `lib → components → features → app` layering from
+[#20](#20--one-folder-per-component-no-barrel-files) put the screens in `app/`,
+away from the components only they use. `features/recipe/` held code with
+exactly one caller, and nothing said where the wave overlay belonged.
+
+**Decision.** Follow Feature-Sliced Design v2.1's
+[pages-first rule](https://github.com/feature-sliced/documentation/releases/tag/v2.1),
+sized for four routes. This is the target tree. Folder and file names are
+examples and can change during the migration, but the shape and the rules
+below are fixed.
+
+```
+src/
+├── app/                 composition root: App, router, chrome only App renders
+│   ├── Background/
+│   └── ThemeToggle/
+├── pages/               one folder per route; owns everything only it uses
+│   ├── home/            HomeScreen + UrlForm/
+│   ├── extract/         ExtractScreen
+│   ├── paste/           PasteScreen + PasteHtmlForm/
+│   └── recipe/          RecipeScreen + recipeLoader at the root;
+│                        RecipeCard/ (+ byline), IngredientList/ (+ ingredients),
+│                        MethodSteps/ (+ timers), RecipeSections/, TimingRow/,
+│                        RecipeError/
+├── features/            only code that two or more pages share
+│   └── extraction/      extraction session and request, state/, ErrorWindow/
+│                        (+ errorInfo), LeafOrb/, LeafCharacter/, outlet hook
+├── navigation/          screen order, route choreography, view-transition
+│   └── WaveTransition/  guard, the wave overlay
+├── api/                 contract schema, client, session cache, repository
+├── ui/                  BackButton/, ParsleyLogo, Button.module.css
+└── test/                harness: setup, fixtures, VRT helpers
+```
+
+- **Put code next to its only caller.** A module with one importer lives in
+  that importer's folder, inside a page too (`timers.ts` goes in
+  `MethodSteps/`). Code moves up a layer only when a second caller appears.
+- **Import direction is `app → pages → features → {navigation, api, ui}`.** The
+  three leaf folders import nothing else in `src/`.
+- **`@/` crosses a slice boundary.** Imports inside a slice are relative.
+- **[#20](#20--one-folder-per-component-no-barrel-files) still applies:** one
+  folder per component, tests co-located, no barrel files.
+
+The code moves over one slice at a time. `WaveTransition/` went first, to
+`navigation/`, because it imports only React.
+
+**Rejected.** Keeping the Bulletproof layers: they left single-caller code in
+`features/` and gave no rule for when code moves up a layer. Full FSD
+(`widgets/`, `entities/`, `shared/`, kebab-case slices): it requires an
+`index.ts` in every slice, which undoes #20 and gives eager code an import
+path into the lazy recipe chunk ([#21](#21--the-recipe-view-stays-off-the-first-paint-enforced-by-lint)).
+Six layers is also more than four routes need. The FSD docs themselves suggest
+starting with pages and possibly stopping there.
+
+**Consequences.** Until the migration finishes, the tree mixes both layouts.
+`app/transitions/` still imports the wave from `navigation/`. When the recipe
+page moves, the #21 lint patterns in `.oxlintrc.json` have to follow it to
+`pages/recipe/**`. Once the tree matches, add the direction rule to
+`.oxlintrc.json`.
+
+**Reopen if** a page grows sub-areas that other pages reuse, which is the point
+where FSD's `widgets/` layer starts to pay for itself.

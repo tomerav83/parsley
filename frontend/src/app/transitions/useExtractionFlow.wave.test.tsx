@@ -1,8 +1,8 @@
-// useExtractionFlow's liquid-wave branches, with a real mounted overlay: every
+// useExtractionFlow's wave branches, with a real mounted overlay: every
 // navigation entry point covered by a wave — the passage to the transition
 // screen, the landing on the recipe, the paste passes — asserting the route
 // swap happens under full cover and the overlay always clears. The player's
-// frame-level behavior is celPlayer.test.ts; this file is about the orchestration.
+// frame-level behavior is waveTimeline/frameClock/waveManager's own tests; this file is about the orchestration.
 //
 // Waves run at real speed (~1.6s each), so assertions use generous timeouts.
 import { render, screen, waitFor } from "@testing-library/react";
@@ -11,7 +11,7 @@ import { Outlet, RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { RunResult } from "@/features/extract/recipeExtractor.ts";
-import { LiquidTransition } from "../LiquidTransition/LiquidTransition.tsx";
+import { WaveTransition } from "@/navigation/WaveTransition/WaveTransition.tsx";
 import { useExtractionFlow } from "./useExtractionFlow.ts";
 
 let nextResult: RunResult = "success";
@@ -77,10 +77,9 @@ function renderAt(initialEntries: string[]) {
     { initialEntries },
   );
   render(
-    <>
+    <WaveTransition>
       <RouterProvider router={router} />
-      <LiquidTransition />
-    </>,
+    </WaveTransition>,
   );
   return router;
 }
@@ -95,7 +94,7 @@ afterEach(() => {
   mockError = null;
 });
 
-describe("useExtractionFlow liquid waves", () => {
+describe("useExtractionFlow waves", () => {
   it("an empty url is a no-op — no wave, no request", async () => {
     renderAt(["/"]);
     await userEvent.click(screen.getByRole("button", { name: "submit" }));
@@ -229,4 +228,27 @@ describe("useExtractionFlow liquid waves", () => {
     expect(screen.getByText("home-screen")).toBeInTheDocument();
     expect(screen.queryByText("recipe-screen")).not.toBeInTheDocument();
   }, 15_000);
+
+  it("a POP blocked just before reduced motion switched on still goes through", async () => {
+    let onChange = () => {};
+    const query = {
+      matches: false,
+      addEventListener: (_: string, cb: () => void) => (onChange = cb),
+      removeEventListener: () => {},
+    };
+    vi.spyOn(window, "matchMedia").mockReturnValue(
+      query as unknown as MediaQueryList,
+    );
+    const router = renderAt(["/", "/recipe"]);
+    await screen.findByText("recipe-screen");
+
+    // same tick: the blocker still sees a wave, the re-render that follows won't
+    query.matches = true;
+    onChange();
+    void router.navigate(-1);
+
+    await screen.findByText("home-screen");
+    expect(overlay().hasAttribute("data-stage")).toBe(false);
+    vi.restoreAllMocks();
+  });
 });

@@ -6,7 +6,7 @@ import { renderStill } from "@/test/still";
 import { LeafCharacter } from "./LeafCharacter";
 
 // The four error moods are pinned through ErrorWindow's shots; `work` only ever
-// appears inside the liquid transition (unscreenshotable mid-wave), so it gets
+// appears inside the wave transition (unscreenshotable mid-wave), so it gets
 // its own still — in both themes, since the dark theme swaps the limb/water
 // tokens for background contrast.
 describe("LeafCharacter", () => {

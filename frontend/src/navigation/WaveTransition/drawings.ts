@@ -1,19 +1,19 @@
 // GENERATED — do not hand-edit. 22 drawings rotoscoped from the motionbites
 // "Liquid Transitions" preview clip (product 944): each frame thresholded,
 // contour-traced (holes kept), simplified, in the clip's own 1280x720 space.
-// Trimmed to the frames celPlayer sequences (the unused f18–f48 spray tail is
+// Trimmed to the frames waveTimeline.ts sequences (the unused f18–f48 spray tail is
 // cut — re-trim if you regenerate the full 39).
 // Regenerate: python3 frontend/.visual-check/liquid-transition/trace.py, then
-// node frontend/.visual-check/liquid-transition/gen-celdata.mjs
+// node frontend/.visual-check/liquid-transition/gen-drawings.mjs
 //
 // LICENSING: these outlines derive from motionbites' preview footage. Before a
 // production release, license the pack, swap in licensed art, or redraw the
-// poses — the player is agnostic to where the drawings come from.
+// poses — waveTimeline.ts is agnostic to where the drawings come from.
 
-export type CelDrawing = {
+export type TracedDrawing = {
   /** 1-based frame number in the source clip (24fps; it animates on twos) */
   f: number;
-  /** how many 24fps frames the film holds this drawing */
+  /** how many 24fps frames the timeline holds this drawing */
   hold: number;
   /** measured ink coverage of the drawing, 0..1 (drives transport interp) */
   c: number;
@@ -21,7 +21,7 @@ export type CelDrawing = {
   d: string;
 };
 
-export const CEL: CelDrawing[] = [
+export const DRAWINGS: TracedDrawing[] = [
   {
     f: 1,
     hold: 1,

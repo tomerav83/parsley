@@ -44,7 +44,9 @@ Break one of these and something fails in a way that isn't obvious locally.
 ## Conventions
 
 - Frontend: one folder per component, no barrel files, tests co-located, `@/`
-  aliases `src/`, CSS Modules. Direction is `lib → components → features → app`.
+  aliases `src/`, CSS Modules. The layout is moving to pages-first
+  (`app → pages → features → {navigation, api, ui}`). Place new or moved code by
+  the target tree in [decisions.md #31](docs/decisions.md#31--frontend-layout-pages-first-shared-code-in-leaves).
 - Test environments: node `unit` project (`*.test.ts`) for pure logic vs
   real-Chromium `browser` project (`*.test.tsx`) for anything needing layout,
   `ResizeObserver`, `matchMedia` or `inert`. Web-Storage-only logic can use a

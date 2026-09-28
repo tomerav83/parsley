@@ -115,8 +115,9 @@ frontend/src/
 │   ├── App.tsx            layout route: chrome + <Outlet>
 │   ├── router/            route table, typed outlet-context hook
 │   ├── screens/           Home, Extract, Paste, Recipe (+ its loader and boundary)
-│   ├── transitions/       useExtractionFlow, useRouteChoreography, screen order
-│   └── LiquidTransition/  the wave overlay
+│   └── transitions/       useExtractionFlow, useRouteChoreography, screen order
+├── navigation/
+│   └── WaveTransition/    the wave overlay + its provider (useWave)
 ├── components/    shared, feature-agnostic (Background, ThemeToggle, BackButton)
 ├── features/
 │   ├── extract/   the extraction lifecycle: state machine, error copy, forms, mascot
@@ -127,6 +128,9 @@ frontend/src/
 Direction is `lib → components → features → app`. One folder per component, no
 barrel files, tests co-located, `@/` aliases `src/`
 ([decision 20](decisions.md#20--one-folder-per-component-no-barrel-files)).
+This tree is partway through a move to the pages-first layout in
+[decision 31](decisions.md#31--frontend-layout-pages-first-shared-code-in-leaves),
+which has the target tree. New code goes where that layout puts it.
 
 **State ownership.** `useExtractionFlow` owns the journey — the current URL, the
 last-requested URL, and every navigation the flow performs — and is handed to the
@@ -135,6 +139,8 @@ screens through the router's outlet context, typed by `useAppOutlet`. Inside it,
 (`idle | submitting | success | error`) in a pure reducer, so states like "loading
 with a stale recipe" cannot be represented. `useRouteChoreography` owns
 navigation itself: `go(dir, to)` covers with the wave, swaps under cover, reveals.
+The wave comes from `useWave()`, provided by `<WaveTransition>` around the router
+([decision 22](decisions.md#22--liquid-wave-choreography-with-the-view-transition-as-fallback)).
 
 **Routes.**
 

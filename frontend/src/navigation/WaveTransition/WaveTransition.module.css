@@ -1,0 +1,30 @@
+/* Full-viewport overlay, above all chrome (ThemeToggle is 70). waveManager.ts
+   sets data-stage while a wave plays. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  visibility: hidden;
+  pointer-events: none;
+}
+.overlay[data-stage] {
+  visibility: visible;
+}
+/* Only while covering does it swallow input, so the old screen can't be
+   clicked. During "exit" the wave is decoration over the live new screen. */
+.overlay[data-stage="cover"] {
+  pointer-events: auto;
+}
+
+.wave {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.emerald {
+  fill: var(--color-brand);
+}
+.amber {
+  fill: var(--amber-500);
+}
